@@ -10,7 +10,6 @@ export default function ConcertDetailPage({
 }) {
   const { id } = use(params);
 
-  // 선택한 회차를 기억하는 상태
   const [selectedSchedule, setSelectedSchedule] = useState<number | null>(null);
 
   const concert = {
@@ -22,7 +21,6 @@ export default function ConcertDetailPage({
     prices: { VIP: 150000, R: 120000, S: 90000, A: 70000 },
   };
 
-  // 가짜 회차 데이터
   const schedules = [
     { scheduleId: 101, dateTime: "2026-08-10 19:00", round: 1 },
     { scheduleId: 102, dateTime: "2026-08-11 19:00", round: 2 },
@@ -47,7 +45,9 @@ export default function ConcertDetailPage({
               <p className="text-gray-600 mb-6">{concert.description}</p>
 
               <div className="border-t pt-4 mb-6">
-                <h2 className="font-bold text-gray-700 mb-2">좌석 등급별 가격</h2>
+                <h2 className="font-bold text-gray-700 mb-2">
+                  좌석 등급별 가격
+                </h2>
                 <div className="space-y-1 text-sm text-gray-600">
                   <p>VIP석 — {concert.prices.VIP.toLocaleString()}원</p>
                   <p>R석 — {concert.prices.R.toLocaleString()}원</p>
@@ -56,7 +56,6 @@ export default function ConcertDetailPage({
                 </div>
               </div>
 
-              {/* 회차 선택 */}
               <div className="border-t pt-4 mb-6">
                 <h2 className="font-bold text-gray-700 mb-3">회차 선택</h2>
                 <div className="flex flex-wrap gap-2">
@@ -64,11 +63,9 @@ export default function ConcertDetailPage({
                     <button
                       key={schedule.scheduleId}
                       onClick={() => setSelectedSchedule(schedule.scheduleId)}
-                      className={`px-4 py-2 rounded-lg text-sm font-semibold border transition
-                        ${
-                          selectedSchedule === schedule.scheduleId
-                            ? "bg-blue-600 text-white border-blue-600"
-                            : "bg-white text-gray-600 border-gray-200 hover:border-blue-400"
+                      className={`px-4 py-2 rounded-lg text-sm font-semibold border transition ${selectedSchedule === schedule.scheduleId
+                          ? "bg-blue-600 text-white border-blue-600"
+                          : "bg-white text-gray-600 border-gray-200 hover:border-blue-400"
                         }`}
                     >
                       {schedule.round}회차
@@ -81,7 +78,6 @@ export default function ConcertDetailPage({
                 </div>
               </div>
 
-              {/* 예매하기 버튼 */}
               {selectedSchedule ? (
                 <Link
                   href={`/concerts/${id}/seats`}
@@ -100,6 +96,44 @@ export default function ConcertDetailPage({
             </div>
           </div>
         </div>
+
+        <section className="mt-10 bg-white rounded-2xl shadow-sm overflow-hidden">
+          <div className="flex gap-8 border-b border-gray-200 px-8">
+            <button
+              type="button"
+              className="py-4 text-sm font-bold text-gray-900 border-b-2 border-gray-900"
+            >
+              공연정보
+            </button>
+            <button
+              type="button"
+              className="py-4 text-sm font-medium text-gray-400"
+            >
+              관람정보
+            </button>
+          </div>
+
+          <div className="p-8">
+            <h2 className="text-xl font-bold text-gray-800 mb-6">
+              상세 설명
+            </h2>
+
+            <div className="mb-8">
+              <h3 className="font-bold text-gray-700 mb-3">공연시간 정보</h3>
+              <p className="text-sm text-gray-600 leading-7">
+                예매가능시간: 관람일 전일 17시까지
+              </p>
+            </div>
+
+            <div className="w-full max-w-3xl mx-auto">
+              <img
+                src="/images/concert-detail-1.jpg"
+                alt="공연 상세 설명"
+                className="w-full h-auto rounded-xl border border-gray-200"
+              />
+            </div>
+          </div>
+        </section>
       </div>
     </div>
   );
