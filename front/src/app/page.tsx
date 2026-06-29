@@ -16,7 +16,15 @@ export default function Home() {
     },
     {
       concertId: 2,
+<<<<<<< HEAD
+<<<<<<< HEAD
       concertName: "흠뻑쇼 - 대전",
+=======
+      concertName: "홈백쇼 - 대전",
+>>>>>>> main
+=======
+      concertName: "흠뻑쇼 - 대전",
+>>>>>>> main
       venueName: "대전월드컵경기장",
       startDate: "2026-07-20",
       closeDate: "2026-07-19",
@@ -78,9 +86,20 @@ export default function Home() {
   );
 
   const sorted = [...filtered].sort((a, b) => {
+<<<<<<< HEAD
+<<<<<<< HEAD
     // 최신순: 공연 시작일이 늦은 순
     if (sort === "latest") return b.startDate.localeCompare(a.startDate);
     // 마감 임박순: 마감일이 가까운 순
+=======
+    if (sort === "priceLow") return a.lowestPrice - b.lowestPrice;
+    if (sort === "priceHigh") return b.lowestPrice - a.lowestPrice;
+>>>>>>> main
+=======
+    // 최신순: 공연 시작일이 늦은 순
+    if (sort === "latest") return b.startDate.localeCompare(a.startDate);
+    // 마감 임박순: 마감일이 가까운 순
+>>>>>>> main
     return a.closeDate.localeCompare(b.closeDate);
   });
 
@@ -110,7 +129,15 @@ export default function Home() {
             가장 빠르게 예매하세요
           </h1>
           <p className="text-blue-100 text-lg">
+<<<<<<< HEAD
+<<<<<<< HEAD
             콘서트부터 페스티벌까지, <span className="font-bold">티케팅고</span>에서 만나보세요.
+=======
+            콘서트부터 페스티벌까지, TicketingGo에서 만나보세요.
+>>>>>>> main
+=======
+            콘서트부터 페스티벌까지, <span className="font-bold">티케팅고</span>에서 만나보세요.
+>>>>>>> main
           </p>
         </div>
       </div>
@@ -256,8 +283,18 @@ export default function Home() {
                       key={page}
                       onClick={() => setCurrentPage(page)}
                       className={`w-10 h-10 rounded-lg border text-sm font-semibold ${currentPage === page
+<<<<<<< HEAD
+<<<<<<< HEAD
                         ? "bg-blue-600 border-blue-600 text-white"
                         : "bg-white border-gray-200 text-gray-600 hover:bg-gray-50"
+=======
+                          ? "bg-blue-600 border-blue-600 text-white"
+                          : "bg-white border-gray-200 text-gray-600 hover:bg-gray-50"
+>>>>>>> main
+=======
+                        ? "bg-blue-600 border-blue-600 text-white"
+                        : "bg-white border-gray-200 text-gray-600 hover:bg-gray-50"
+>>>>>>> main
                         }`}
                     >
                       {page}

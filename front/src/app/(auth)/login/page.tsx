@@ -26,14 +26,11 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
+    <div className="h-screen overflow-hidden flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
       <form onSubmit={handleLogin} className="w-96 p-10 bg-white rounded-2xl shadow-xl">
-        <h1 className="text-3xl font-bold text-center mb-2 text-gray-800">
-          TicketingGo 🎫
-        </h1>
-        <p className="text-center text-gray-400 text-sm mb-8">
-          로그인하고 티켓을 예매하세요
-        </p>
+        <Link href="/" className="block text-3xl font-bold text-center mb-8 text-gray-800">
+          티케팅고 🎫
+        </Link>
 
         <input
           type="text"
@@ -43,7 +40,6 @@ export default function LoginPage() {
           className="w-full p-3 mb-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
         />
 
-        {/* 비밀번호 + 보기 토글 */}
         <div className="relative mb-6">
           <input
             type={showPassword ? "text" : "password"}
@@ -70,7 +66,7 @@ export default function LoginPage() {
 
         <p className="text-center text-sm text-gray-500 mt-6">
           아직 회원이 아니신가요?{" "}
-          <Link href="/signup" className="text-blue-600 font-semibold cursor-pointer hover:underline">
+          <Link href="/signup" className="text-blue-600 font-semibold hover:underline">
             회원가입
           </Link>
         </p>
