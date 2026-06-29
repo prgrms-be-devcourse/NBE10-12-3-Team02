@@ -43,26 +43,14 @@ export default function SignupPage() {
   return (
     <div className="h-screen overflow-hidden flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
       <form onSubmit={handleSignup} className="w-96 p-10 bg-white rounded-2xl shadow-xl">
-<<<<<<< HEAD:front/src/app/(auth)/signup/page.tsx
-=======
-<<<<<<< HEAD:front/src/app/signup/page.tsx
-        <h1 className="text-3xl font-bold text-center mb-8 text-gray-800">
-          회원가입
-        </h1>
-=======
->>>>>>> main:front/src/app/signup/page.tsx
-        <div className="text-center mb-6">
+        <div className="text-center">
           <Link href="/" className="block text-3xl font-bold text-gray-800">
             티케팅고 🎫
           </Link>
-          <p className="mt-4 text-2xl font-bold text-gray-700">
+          <p className="my-4 text-2xl font-bold text-gray-800">
             회원가입
           </p>
         </div>
-<<<<<<< HEAD:front/src/app/(auth)/signup/page.tsx
-=======
->>>>>>> 75d3037 (Feat: 피드백 반영 (마이페이지 티켓 UI, 회원가입 레이아웃 개선) #17):front/src/app/(auth)/signup/page.tsx
->>>>>>> main:front/src/app/signup/page.tsx
 
         <input
           type="text"
