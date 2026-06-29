@@ -16,15 +16,7 @@ export default function Home() {
     },
     {
       concertId: 2,
-<<<<<<< HEAD
-<<<<<<< HEAD
       concertName: "흠뻑쇼 - 대전",
-=======
-      concertName: "홈백쇼 - 대전",
->>>>>>> main
-=======
-      concertName: "흠뻑쇼 - 대전",
->>>>>>> main
       venueName: "대전월드컵경기장",
       startDate: "2026-07-20",
       closeDate: "2026-07-19",
@@ -86,20 +78,7 @@ export default function Home() {
   );
 
   const sorted = [...filtered].sort((a, b) => {
-<<<<<<< HEAD
-<<<<<<< HEAD
-    // 최신순: 공연 시작일이 늦은 순
     if (sort === "latest") return b.startDate.localeCompare(a.startDate);
-    // 마감 임박순: 마감일이 가까운 순
-=======
-    if (sort === "priceLow") return a.lowestPrice - b.lowestPrice;
-    if (sort === "priceHigh") return b.lowestPrice - a.lowestPrice;
->>>>>>> main
-=======
-    // 최신순: 공연 시작일이 늦은 순
-    if (sort === "latest") return b.startDate.localeCompare(a.startDate);
-    // 마감 임박순: 마감일이 가까운 순
->>>>>>> main
     return a.closeDate.localeCompare(b.closeDate);
   });
 
@@ -129,15 +108,7 @@ export default function Home() {
             가장 빠르게 예매하세요
           </h1>
           <p className="text-blue-100 text-lg">
-<<<<<<< HEAD
-<<<<<<< HEAD
             콘서트부터 페스티벌까지, <span className="font-bold">티케팅고</span>에서 만나보세요.
-=======
-            콘서트부터 페스티벌까지, TicketingGo에서 만나보세요.
->>>>>>> main
-=======
-            콘서트부터 페스티벌까지, <span className="font-bold">티케팅고</span>에서 만나보세요.
->>>>>>> main
           </p>
         </div>
       </div>
@@ -180,14 +151,11 @@ export default function Home() {
                       마감임박
                     </span>
                   </div>
-
                   <div className="p-4">
                     <h3 className="font-bold text-gray-800 truncate">
                       {concert.concertName}
                     </h3>
-                    <p className="text-sm text-gray-500 mt-1">
-                      {concert.venueName}
-                    </p>
+                    <p className="text-sm text-gray-500 mt-1">{concert.venueName}</p>
                     <p className="text-blue-600 font-bold mt-2">
                       {concert.lowestPrice.toLocaleString()}원~
                     </p>
@@ -205,10 +173,7 @@ export default function Home() {
 
         <div className="flex flex-col md:flex-row gap-3 mb-6">
           <div className="relative flex-1">
-            <Search
-              size={18}
-              className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
-            />
+            <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
             <input
               type="text"
               placeholder="콘서트 이름으로 검색"
@@ -217,7 +182,6 @@ export default function Home() {
               className="w-full pl-10 p-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
             />
           </div>
-
           <select
             value={sort}
             onChange={handleSortChange}
@@ -229,9 +193,7 @@ export default function Home() {
         </div>
 
         {sorted.length === 0 ? (
-          <p className="text-center text-gray-400 py-20">
-            검색 결과가 없습니다.
-          </p>
+          <p className="text-center text-gray-400 py-20">검색 결과가 없습니다.</p>
         ) : (
           <>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
@@ -244,17 +206,10 @@ export default function Home() {
                   <div className="h-48 bg-gradient-to-br from-blue-200 to-indigo-300 flex items-center justify-center text-white font-bold">
                     포스터
                   </div>
-
                   <div className="p-4">
-                    <h3 className="font-bold text-gray-800 truncate">
-                      {concert.concertName}
-                    </h3>
-                    <p className="text-sm text-gray-500 mt-1">
-                      {concert.venueName}
-                    </p>
-                    <p className="text-sm text-gray-400 mt-1">
-                      {concert.startDate}
-                    </p>
+                    <h3 className="font-bold text-gray-800 truncate">{concert.concertName}</h3>
+                    <p className="text-sm text-gray-500 mt-1">{concert.venueName}</p>
+                    <p className="text-sm text-gray-400 mt-1">{concert.startDate}</p>
                     <p className="text-blue-600 font-bold mt-2">
                       {concert.lowestPrice.toLocaleString()}원~
                     </p>
@@ -267,46 +222,29 @@ export default function Home() {
               <div className="flex items-center justify-center gap-2 mt-10">
                 <button
                   type="button"
-                  onClick={() =>
-                    setCurrentPage((page) => Math.max(1, page - 1))
-                  }
+                  onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
                   disabled={currentPage === 1}
                   className="px-3 py-2 rounded-lg border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-default"
                 >
                   이전
                 </button>
-
-                {Array.from({ length: totalPages }, (_, index) => index + 1).map(
-                  (page) => (
-                    <button
-                      type="button"
-                      key={page}
-                      onClick={() => setCurrentPage(page)}
-                      className={`w-10 h-10 rounded-lg border text-sm font-semibold ${currentPage === page
-<<<<<<< HEAD
-<<<<<<< HEAD
+                {Array.from({ length: totalPages }, (_, index) => index + 1).map((page) => (
+                  <button
+                    type="button"
+                    key={page}
+                    onClick={() => setCurrentPage(page)}
+                    className={`w-10 h-10 rounded-lg border text-sm font-semibold ${
+                      currentPage === page
                         ? "bg-blue-600 border-blue-600 text-white"
                         : "bg-white border-gray-200 text-gray-600 hover:bg-gray-50"
-=======
-                          ? "bg-blue-600 border-blue-600 text-white"
-                          : "bg-white border-gray-200 text-gray-600 hover:bg-gray-50"
->>>>>>> main
-=======
-                        ? "bg-blue-600 border-blue-600 text-white"
-                        : "bg-white border-gray-200 text-gray-600 hover:bg-gray-50"
->>>>>>> main
-                        }`}
-                    >
-                      {page}
-                    </button>
-                  )
-                )}
-
+                    }`}
+                  >
+                    {page}
+                  </button>
+                ))}
                 <button
                   type="button"
-                  onClick={() =>
-                    setCurrentPage((page) => Math.min(totalPages, page + 1))
-                  }
+                  onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))}
                   disabled={currentPage === totalPages}
                   className="px-3 py-2 rounded-lg border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-default"
                 >
