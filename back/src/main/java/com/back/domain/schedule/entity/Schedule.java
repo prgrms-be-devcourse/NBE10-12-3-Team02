@@ -30,4 +30,13 @@ public class Schedule extends BaseEntity {
 
     @Column(nullable = false)
     private int round;
+
+    public static Schedule create(Concert concert, Venue venue, LocalDateTime scheduleDate, int round) {
+        Schedule schedule = new Schedule();
+        schedule.concert = concert;
+        schedule.venue = venue;
+        schedule.scheduleDate = scheduleDate;
+        schedule.round = round;
+        return schedule;
+    }
 }

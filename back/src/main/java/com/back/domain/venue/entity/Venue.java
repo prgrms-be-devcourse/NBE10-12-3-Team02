@@ -21,4 +21,12 @@ public class Venue extends BaseEntity {
 
     @Column(nullable = false)
     private Long totalSeats;
+
+    public static Venue create(String venueName, String location, Long totalSeats) {
+        Venue venue = new Venue();
+        venue.venueName = venueName;
+        venue.location = location;
+        venue.totalSeats = totalSeats;
+        return venue;
+    }
 }

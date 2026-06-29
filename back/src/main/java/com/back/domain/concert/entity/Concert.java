@@ -28,4 +28,14 @@ public class Concert extends BaseEntity {
     private LocalDateTime endDate;
 
     private String urlPoster;
+
+    public static Concert create(String concertName, String description, LocalDateTime startDate, LocalDateTime endDate, String urlPoster) {
+        Concert concert = new Concert();
+        concert.concertName = concertName;
+        concert.description = description;
+        concert.startDate = startDate;
+        concert.endDate = endDate;
+        concert.urlPoster = urlPoster;
+        return concert;
+    }
 }

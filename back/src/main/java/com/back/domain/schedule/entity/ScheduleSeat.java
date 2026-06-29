@@ -29,4 +29,14 @@ public class ScheduleSeat extends BaseEntity {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private SeatStatus seatStatus;
+
+    public static ScheduleSeat create(Schedule schedule, String seatNumber, Integer seatPrice, String gradeName, SeatStatus seatStatus) {
+        ScheduleSeat seat = new ScheduleSeat();
+        seat.schedule = schedule;
+        seat.seatNumber = seatNumber;
+        seat.seatPrice = seatPrice;
+        seat.gradeName = gradeName;
+        seat.seatStatus = seatStatus;
+        return seat;
+    }
 }
