@@ -39,4 +39,7 @@ public class ScheduleSeat extends BaseEntity {
         seat.seatStatus = seatStatus;
         return seat;
     }
+    public void updateSeatStatus(SeatStatus SeatStatus) {
+        this.seatStatus = SeatStatus;
+    }
 }
