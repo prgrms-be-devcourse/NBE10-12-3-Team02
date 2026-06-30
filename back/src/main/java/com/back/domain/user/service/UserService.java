@@ -51,11 +51,6 @@ public class UserService {
         user.withdraw();
     }
 
-    public User findByLoginId(String id) {
-        return userRepository.findByLoginIdAndDeletedAtIsNull(id)
-                .orElseThrow(() -> new ServiceException(ErrorCode.USER_NOT_FOUND));
-    }
-
     public MyPageResponse getMyPage(Long userId) {
         User user = userRepository.findByUserIdAndDeletedAtIsNull(userId)
                 .orElseThrow(() -> new ServiceException(ErrorCode.USER_NOT_FOUND));
