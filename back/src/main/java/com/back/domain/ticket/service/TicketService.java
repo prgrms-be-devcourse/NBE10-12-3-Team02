@@ -11,6 +11,7 @@ import com.back.domain.ticket.entity.Ticket;
 import com.back.domain.ticket.repository.TicketRepository;
 import com.back.domain.user.entity.User;
 import com.back.domain.user.repository.UserRepository;
+import com.back.global.exception.ErrorCode;
 import com.back.global.exception.ServiceException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -29,18 +30,18 @@ public class TicketService {
     @Transactional
     public PaymentTicketResponse createTicket(Long userId, PaymentTicketRequest request) {
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new ServiceException("404-1", "유저가 존재하지 않습니다."));
+                .orElseThrow(() -> new ServiceException(ErrorCode.USER_NOT_FOUND));
 
         Schedule schedule = scheduleRepository
                 .findByScheduleIdAndConcert_ConcertId(request.scheduleId(), request.concertId())
-                .orElseThrow(() -> new ServiceException("400-1", "해당 콘서트의 회차가 아닙니다."));
+                .orElseThrow(() -> new ServiceException(ErrorCode.INVALID_CONCERT_SCHEDULE));
 
         ScheduleSeat scheduleSeat = scheduleSeatRepository
                 .findWithLockByScheduleIdAndSeatNumber(request.scheduleId(), request.seatNumber())
-                .orElseThrow(() -> new ServiceException("404-2", "해당 좌석이 존재하지 않습니다."));
+                .orElseThrow(() -> new ServiceException(ErrorCode.SEAT_NOT_FOUND));
 
         if (scheduleSeat.getSeatStatus() != SeatStatus.HOLD) {
-            throw new ServiceException("400-2", "이미 매진된 좌석입니다.");
+            throw new ServiceException(ErrorCode.SEAT_SOLD_OUT);
         }
 
         scheduleSeat.updateSeatStatus(SeatStatus.SOLD_OUT);
@@ -69,10 +70,10 @@ public class TicketService {
     public void cancelTicket(Long userId, Long ticketId) {
 
         Ticket ticket = ticketRepository.findByTicketIdAndUser_UserId(ticketId, userId)
-                .orElseThrow(() -> new ServiceException("404-2", "해당 티켓이 존재하지 않습니다."));
+                .orElseThrow(() -> new ServiceException(ErrorCode.TICKET_NOT_FOUND_FOR_USER));
 
         if (!ticket.isValid()) {
-            throw new ServiceException("400-3", "이미 취소된 티켓입니다.");
+            throw new ServiceException(ErrorCode.TICKET_ALREADY_CANCELLED);
         }
 
         ticket.updateIsValid(false);
