@@ -36,7 +36,6 @@ public enum ErrorCode {
     // Seat
     SEAT_NOT_FOUND("404-7", "존재하지 않는 좌석입니다."),
     SEAT_SOLD_OUT("400-2", "이미 매진된 좌석입니다."),
-    SEAT_NOT_FOUND("404-7", "해당 좌석이 존재하지 않습니다."),
     SEAT_ALREADY_SOLD("409-3", "이미 판매 완료된 좌석입니다."),
     SEAT_ALREADY_HOLD("409-4", "이미 점유중인 좌석입니다."),
     SEAT_HELD_BY_OTHER_USER("409-5", "다른 사용자가 선택 중인 좌석입니다."),

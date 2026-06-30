@@ -53,7 +53,7 @@ public class TicketService {
                 scheduleSeat,
                 createTicketNumber(),
                 scheduleSeat.getSeatPrice()
-                );
+        );
 
         ticketRepository.save(ticket);
 
@@ -67,9 +67,9 @@ public class TicketService {
                 ticket.isValid()
         );
     }
+
     @Transactional
     public void cancelTicket(Long userId, Long ticketId) {
-
         Ticket ticket = ticketRepository.findByTicketIdAndUser_UserId(ticketId, userId)
                 .orElseThrow(() -> new ServiceException(ErrorCode.TICKET_NOT_FOUND_FOR_USER));
 
@@ -83,5 +83,9 @@ public class TicketService {
 
     public String createTicketNumber() {
         return UUID.randomUUID().toString();
+    }
+
+    private ServiceException exception(ErrorCode errorCode) {
+        return new ServiceException(errorCode);
     }
 }
