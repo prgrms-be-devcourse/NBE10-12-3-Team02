@@ -1,6 +1,7 @@
 package com.back.domain.schedule.repository;
 
 import com.back.domain.schedule.entity.ScheduleSeat;
+import com.back.domain.schedule.entity.SeatStatus;
 import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
@@ -26,4 +27,5 @@ public interface ScheduleSeatRepository extends JpaRepository<ScheduleSeat, Long
             @Param("scheduleId") Long scheduleId,
             @Param("seatNumber") String seatNumber
     );
+    long countBySchedule_ScheduleIdAndSeatStatus(Long scheduleId, SeatStatus seatStatus);
 }

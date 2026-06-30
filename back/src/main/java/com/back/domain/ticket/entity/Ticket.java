@@ -5,12 +5,13 @@ import com.back.domain.schedule.entity.ScheduleSeat;
 import com.back.domain.user.entity.User;
 import com.back.global.jpa.entity.BaseEntity;
 import jakarta.persistence.*;
+import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 @Entity
 @Getter
-@NoArgsConstructor
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Ticket extends BaseEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -37,22 +38,17 @@ public class Ticket extends BaseEntity {
     @Column(nullable = false)
     private boolean isValid = true;
 
-    public static Ticket create(
-            User user,
-            Schedule schedule,
-            ScheduleSeat scheduleSeat,
-            String ticketNumber,
-            int ticketPrice
-    ) {
-        Ticket ticket = new Ticket();
-        ticket.user = user;
-        ticket.schedule = schedule;
-        ticket.scheduleSeat = scheduleSeat;
-        ticket.ticketNumber = ticketNumber;
-        ticket.ticketPrice = ticketPrice;
-        ticket.isValid = true;
-        return ticket;
-    }
+   private Ticket(User user,Schedule schedule,ScheduleSeat scheduleSeat,String ticketNumber,int ticketPrice,boolean isValid) {
+       this.user = user;
+       this.schedule = schedule;
+       this.scheduleSeat = scheduleSeat;
+       this.ticketNumber = ticketNumber;
+       this.ticketPrice = ticketPrice;
+       this.isValid = isValid;
+   }
+   public static Ticket create(User user,Schedule schedule,ScheduleSeat scheduleSeat,String ticketNumber,int ticketPrice) {
+       return new Ticket(user,schedule,scheduleSeat,ticketNumber,ticketPrice,true);
+   }
     public void updateIsValid(boolean isValid) {
         this.isValid = isValid;
     }

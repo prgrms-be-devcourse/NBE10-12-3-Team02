@@ -57,15 +57,7 @@ public class TicketService {
 
         ticketRepository.save(ticket);
 
-        return new PaymentTicketResponse(
-                ticket.getTicketNumber(),
-                schedule.getConcert().getUrlPoster(),
-                schedule.getConcert().getConcertName(),
-                scheduleSeat.getSeatNumber(),
-                schedule.getScheduleDate(),
-                scheduleSeat.getSeatStatus(),
-                ticket.isValid()
-        );
+        return PaymentTicketResponse.from(scheduleSeat,schedule,ticket);
     }
 
     @Transactional

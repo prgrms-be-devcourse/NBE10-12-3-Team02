@@ -32,6 +32,7 @@ public enum ErrorCode {
     CONCERT_SCHEDULE_EMPTY("404-4", "등록된 회차가 없습니다."),
     SCHEDULE_NOT_FOUND("404-5", "존재하지 않는 회차입니다."),
     INVALID_CONCERT_SCHEDULE("400-1", "해당 콘서트의 회차가 아닙니다."),
+    CONCERT_NOT_FOUND_OR_MISMATCH("400-4", "콘서트 정보가 없거나 일치하는 콘서트가 아닙니다."),
 
     // Seat
     SEAT_NOT_FOUND("404-7", "존재하지 않는 좌석입니다."),

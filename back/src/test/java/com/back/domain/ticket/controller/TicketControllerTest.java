@@ -86,7 +86,7 @@ class TicketControllerTest {
         ));
         Venue venue = venueRepository.save(Venue.create("공연장", "서울", 15000L));
         schedule = scheduleRepository.save(Schedule.create(concert, venue, LocalDateTime.now().plusHours(12), 1));
-        seat = scheduleSeatRepository.save(ScheduleSeat.create(schedule, "A-1", 150000, "VIP", HOLD));
+        seat = scheduleSeatRepository.save(ScheduleSeat.create(schedule,  "VIP","A-1",150000, HOLD));
     }
 
     @Test
@@ -137,24 +137,14 @@ class TicketControllerTest {
     }
 
     private User saveUser() {
-        User user = new User();
-        ReflectionTestUtils.setField(user, "id", "user1");
-        ReflectionTestUtils.setField(user, "email", "user1@test.com");
-        ReflectionTestUtils.setField(user, "password", "0000");
-        ReflectionTestUtils.setField(user, "name", "테스트 유저");
-        ReflectionTestUtils.setField(user, "loginType", LoginType.NORMAL);
-        return userRepository.save(user);
+        return userRepository.save(
+                User.create(
+                        "user1",
+                        "user1@test.com",
+                        "0000",
+                        "테스트 유저",
+                        LoginType.NORMAL
+                )
+        );
     }
-    //TODO user-create 부분 하단 코드로 교체 예정
-//    private User saveUser() {
-//        return userRepository.save(
-//                User.create(
-//                        "user1",
-//                        "user1@test.com",
-//                        "0000",
-//                        "테스트 유저",
-//                        LoginType.NORMAL
-//                )
-//        );
-//    }
 }
