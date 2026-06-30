@@ -23,4 +23,13 @@ public class UserController {
     public RsData<SignupResponse> signup(@RequestBody @Valid SignupRequest request) {
         return new RsData<>("200-1", "회원가입이 완료되었습니다.", userService.signup(request));
     }
+
+    @PatchMapping("/{id}")
+    public RsData<Void> withdraw(
+            @PathVariable Long id,
+            @RequestHeader("X-Impersonate-User-Id") Long userId) {
+        // TODO: JWT 도입 시 토큰에서 userId 추출하여 본인 검증으로 교체
+        userService.withdraw(id, userId);
+        return new RsData<>("200-1", "회원 탈퇴가 정상적으로 완료되었습니다.", null);
+    }
 }

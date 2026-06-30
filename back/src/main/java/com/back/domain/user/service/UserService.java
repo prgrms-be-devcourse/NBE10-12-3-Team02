@@ -35,4 +35,19 @@ public class UserService {
         );
         return SignupResponse.from(user);
     }
+
+    @Transactional
+    public void withdraw(Long pathUserId, Long loginUserId) {
+        if (!pathUserId.equals(loginUserId)) {
+            throw new ServiceException(ErrorCode.USER_ACCESS_DENIED);
+        }
+        User user = userRepository.findByUserIdAndDeletedAtIsNull(pathUserId)
+                .orElseThrow(() -> new ServiceException(ErrorCode.USER_NOT_FOUND_OR_DELETED));
+        user.withdraw();
+    }
+
+    public User findByLoginId(String id) {
+        return userRepository.findByLoginIdAndDeletedAtIsNull(id)
+                .orElseThrow(() -> new ServiceException(ErrorCode.USER_NOT_FOUND));
+    }
 }
