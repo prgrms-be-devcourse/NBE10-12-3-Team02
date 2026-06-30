@@ -13,6 +13,8 @@ import java.util.Optional;
 public interface ScheduleSeatRepository extends JpaRepository<ScheduleSeat, Long> {
     List<ScheduleSeat> findByScheduleScheduleId(Long scheduleId);
 
+    Optional<ScheduleSeat> findByScheduleScheduleIdAndSeatNumber(Long scheduleId, String seatNumber);
+
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("""
         select ss

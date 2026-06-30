@@ -66,18 +66,18 @@ class ConcertControllerTest {
 
         ScheduleSeat seat1 = ScheduleSeat.create(
                 schedule,
+                "VIP",
                 "A-1",
                 150000,
-                "VIP",
                 AVAILABLE
         );
         scheduleSeatRepository.save(seat1);
 
         ScheduleSeat seat2 = ScheduleSeat.create(
                 schedule,
+                "A",
                 "B-2",
                 70000,
-                "A",
                 AVAILABLE
         );
         scheduleSeatRepository.save(seat2);

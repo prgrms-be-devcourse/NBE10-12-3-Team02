@@ -4,6 +4,7 @@ import com.back.domain.concert.entity.Concert;
 import com.back.global.jpa.entity.BaseEntity;
 import com.back.domain.venue.entity.Venue;
 import jakarta.persistence.*;
+import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
@@ -11,7 +12,7 @@ import java.time.LocalDateTime;
 
 @Entity
 @Getter
-@NoArgsConstructor
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Schedule extends BaseEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -31,12 +32,14 @@ public class Schedule extends BaseEntity {
     @Column(nullable = false)
     private int round;
 
+    private Schedule(Concert concert, Venue venue, LocalDateTime scheduleDate, int round) {
+        this.concert = concert;
+        this.venue = venue;
+        this.scheduleDate = scheduleDate;
+        this.round = round;
+    }
+
     public static Schedule create(Concert concert, Venue venue, LocalDateTime scheduleDate, int round) {
-        Schedule schedule = new Schedule();
-        schedule.concert = concert;
-        schedule.venue = venue;
-        schedule.scheduleDate = scheduleDate;
-        schedule.round = round;
-        return schedule;
+        return new Schedule(concert, venue, scheduleDate, round);
     }
 }
