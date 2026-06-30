@@ -99,4 +99,58 @@ class ConcertControllerTest {
                 .andExpect(jsonPath("$.data.seats[1].seatStatus").value("AVAILABLE"))
                 .andExpect(jsonPath("$.data.seats[1].gradeName").value("A"));
     }
+
+    @Test
+    @DisplayName("콘서트 목록 조회 성공")
+    void t2() throws Exception {
+        Concert concert = Concert.create("아이유 콘서트", "설명", LocalDateTime.now(), LocalDateTime.now().plusDays(1), "포스터");
+        concertRepository.save(concert);
+
+        Venue venue = Venue.create("올림픽체조경기장", "서울", 15000L);
+        venueRepository.save(venue);
+
+        Schedule schedule = Schedule.create(concert, venue, LocalDateTime.now().plusHours(12), 1);
+        scheduleRepository.save(schedule);
+
+        mockMvc.perform(get("/api/v1/concerts")
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andDo(print())
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.resultCode").value("200-1"))
+                .andExpect(jsonPath("$.msg").value("콘서트 목록 조회 성공"))
+                .andExpect(jsonPath("$.data[0].concertName").value("아이유 콘서트"))
+                .andExpect(jsonPath("$.data[0].venueName").value("올림픽체조경기장"))
+                .andExpect(jsonPath("$.data[0].status").value("AVAILABLE"));
+    }
+
+
+    @Test
+    @DisplayName("콘서트 상세 조회 성공")
+    void t3() throws Exception {
+        Concert concert = Concert.create("아이유 콘서트", "설명", LocalDateTime.now(), LocalDateTime.now().plusDays(1), "포스터");
+        concertRepository.save(concert);
+
+        Venue venue = Venue.create("올림픽체조경기장", "서울", 15000L);
+        venueRepository.save(venue);
+
+        Schedule schedule = Schedule.create(concert, venue, LocalDateTime.now().plusHours(12), 1);
+        scheduleRepository.save(schedule);
+
+        ScheduleSeat seat = ScheduleSeat.create(schedule, "VIP", "A-1", 150000, AVAILABLE);
+        scheduleSeatRepository.save(seat);
+
+        mockMvc.perform(get("/api/v1/concerts/{concertId}", concert.getConcertId())
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andDo(print())
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.resultCode").value("200-1"))
+                .andExpect(jsonPath("$.msg").value("콘서트 상세 정보 조회 성공"))
+                .andExpect(jsonPath("$.data.concertId").value(concert.getConcertId()))
+                .andExpect(jsonPath("$.data.concertName").value("아이유 콘서트"))
+                .andExpect(jsonPath("$.data.description").value("설명"))
+                .andExpect(jsonPath("$.data.venueName").value("올림픽체조경기장"))
+                .andExpect(jsonPath("$.data.location").value("서울"))
+                .andExpect(jsonPath("$.data.prices.VIP").value(150000))
+                .andExpect(jsonPath("$.data.bookable").value(true));
+    }
 }
