@@ -1,5 +1,6 @@
 package com.back.domain.user.controller;
 
+import com.back.domain.user.dto.MyPageResponse;
 import com.back.domain.user.dto.SignupRequest;
 import com.back.domain.user.dto.SignupResponse;
 import com.back.domain.user.service.UserService;
@@ -28,8 +29,12 @@ public class UserController {
     public RsData<Void> withdraw(
             @PathVariable Long id,
             @RequestHeader("X-Impersonate-User-Id") Long userId) {
-        // TODO: JWT 도입 시 토큰에서 userId 추출하여 본인 검증으로 교체
         userService.withdraw(id, userId);
         return new RsData<>("200-1", "회원 탈퇴가 정상적으로 완료되었습니다.", null);
+    }
+
+    @GetMapping("/me/{userId}")
+    public RsData<MyPageResponse> getMyPage(@PathVariable Long userId) {
+        return new RsData<>("200-1", "마이페이지 조회 성공", userService.getMyPage(userId));
     }
 }

@@ -17,8 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Map;
 
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -112,12 +111,13 @@ class UserControllerTest {
                         .content(objectMapper.writeValueAsString(Map.of(
                                 "id", "testuser",
                                 "email", "test@naver.com",
-                                "password", "q1w2e3",   // 7자
+                                "password", "q1w2e3",
                                 "name", "홍길동"
                         ))))
                 .andDo(print())
-                .andExpect(status().isBadRequest());   // 400
+                .andExpect(status().isBadRequest());
     }
+
 
     @Test
     @DisplayName("회원 탈퇴 성공")
@@ -169,5 +169,40 @@ class UserControllerTest {
                 .andDo(print())
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.resultCode").value("403-2"));
+    }
+
+
+    @Test
+    @DisplayName("마이페이지 조회 성공")
+    void t9() throws Exception {
+        User user = userRepository.save(User.create("testuser", "test@naver.com",
+                passwordEncoder.encode("q1w2e3r4"), "홍길동", LoginType.NORMAL));
+
+        mockMvc.perform(get("/api/v1/users/me/{userId}", user.getUserId()))
+                .andDo(print())
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.resultCode").value("200-1"))
+                .andExpect(jsonPath("$.msg").value("마이페이지 조회 성공"))
+                .andExpect(jsonPath("$.data.name").value("홍길동"))
+                .andExpect(jsonPath("$.data.ticketList").isArray());
+    }
+
+    @Test
+    @DisplayName("마이페이지 조회 실패 - 존재하지 않는 회원")
+    void t10() throws Exception {
+        mockMvc.perform(get("/api/v1/users/me/{userId}", 999L))
+                .andDo(print())
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.resultCode").value("404-1"));
+    }
+
+    @Test
+    @DisplayName("마이페이지 조회 실패 - 존재하지 않는 회원")
+    void t11() throws Exception {
+        mockMvc.perform(get("/api/v1/users/me/{id}", 999L)
+                        .header("X-Impersonate-User-Id", 999L))
+                .andDo(print())
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.resultCode").value("404-1"));
     }
 }

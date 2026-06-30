@@ -1,7 +1,10 @@
 package com.back.domain.user.service;
 
+import com.back.domain.ticket.repository.TicketRepository;
+import com.back.domain.user.dto.MyPageResponse;
 import com.back.domain.user.dto.SignupRequest;
 import com.back.domain.user.dto.SignupResponse;
+import com.back.domain.user.dto.TicketInfo;
 import com.back.domain.user.entity.LoginType;
 import com.back.domain.user.entity.User;
 import com.back.domain.user.repository.UserRepository;
@@ -11,6 +14,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -18,6 +22,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class UserService {
 
     private final UserRepository userRepository;
+    private final TicketRepository ticketRepository;
     private final PasswordEncoder passwordEncoder;
 
     @Transactional
@@ -49,5 +54,17 @@ public class UserService {
     public User findByLoginId(String id) {
         return userRepository.findByLoginIdAndDeletedAtIsNull(id)
                 .orElseThrow(() -> new ServiceException(ErrorCode.USER_NOT_FOUND));
+    }
+
+    public MyPageResponse getMyPage(Long userId) {
+        User user = userRepository.findByUserIdAndDeletedAtIsNull(userId)
+                .orElseThrow(() -> new ServiceException(ErrorCode.USER_NOT_FOUND));
+
+        List<TicketInfo> ticketList = ticketRepository.findAllByUserWithConcert(user)
+                .stream()
+                .map(TicketInfo::from)
+                .toList();
+
+        return MyPageResponse.from(user, ticketList);
     }
 }
