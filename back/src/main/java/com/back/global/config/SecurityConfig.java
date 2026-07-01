@@ -2,21 +2,18 @@ package com.back.global.config;
 
 import com.back.global.exception.ErrorCode;
 import com.back.global.rsData.RsData;
-import com.back.global.security.CustomAuthenticationFilter;
+import com.back.global.security.filter.CustomAuthenticationFilter;
 import com.back.standard.util.Ut;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
+import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.annotation.web.configurers.HeadersConfigurer;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
-import org.springframework.web.cors.CorsConfiguration;
-import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
-
-import java.util.List;
 
 @Configuration
 @RequiredArgsConstructor
@@ -26,7 +23,8 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) {
         http
-                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+
+                .cors(Customizer.withDefaults())
                 .authorizeHttpRequests(
                         auth -> auth
                                 .requestMatchers("/h2-console/**").permitAll()
@@ -40,6 +38,7 @@ public class SecurityConfig {
                                         HttpMethod.POST,
                                         "/api/*/auth/login",
                                         "/api/*/auth/logout",
+                                        "/api/*/auth/refresh",
                                         "/api/*/users/signin"
                                 ).permitAll()
                                 .requestMatchers("/api/*/**").authenticated()
@@ -92,29 +91,6 @@ public class SecurityConfig {
                                         }
                                 )
                 );
-
         return http.build();
-    }
-
-    @Bean
-    public UrlBasedCorsConfigurationSource corsConfigurationSource() {
-        CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setExposedHeaders(List.of("Authorization"));
-
-        // 허용할 오리진 설정
-        configuration.setAllowedOrigins(List.of("http://localhost:3000"));
-        configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
-
-        // 자격 증명 허용 설정
-        configuration.setAllowCredentials(true);
-
-        // 허용할 헤더 설정
-        configuration.setAllowedHeaders(List.of("*"));
-
-        // CORS 설정을 소스에 등록
-        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/api/**", configuration);
-
-        return source;
     }
 }

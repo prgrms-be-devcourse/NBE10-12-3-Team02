@@ -5,7 +5,7 @@ import com.back.domain.concert.enums.ConcertSortType;
 import com.back.domain.concert.service.ConcertService;
 import com.back.domain.concert.service.SeatOccupyManager;
 import com.back.global.annotation.ApiV1;
-import com.back.global.rq.Rq;
+import com.back.global.requestcontext.RequestContext;
 import com.back.global.rsData.RsData;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -22,7 +22,7 @@ import java.util.List;
 public class ConcertController {
     private final ConcertService concertService;
     private final SeatOccupyManager seatOccupyManager;
-    private final Rq rq;
+    private final RequestContext rq;
 
     @GetMapping
     @Operation(summary = "콘서트 목록 조회", description = "콘서트 목록 조회 API")
