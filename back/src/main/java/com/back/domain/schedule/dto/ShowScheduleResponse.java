@@ -11,7 +11,7 @@ public record ShowScheduleResponse(
             LocalDateTime scheduleDate,
             long remainingSeats
 ) {
-    public static ShowScheduleResponse from(Schedule schedule,long remainingSeats) {
+    public static ShowScheduleResponse of(Schedule schedule,long remainingSeats) {
         return new ShowScheduleResponse(
                 schedule.getConcert().getConcertId(),
                 schedule.getScheduleId(),

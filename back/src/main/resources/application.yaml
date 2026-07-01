@@ -32,3 +32,11 @@ custom:
     refreshToken:
       secret: GwV6FENutXhukvlvPMYU0OrYjDhCCeLRAj1mOJ9xA+qsy2HzB6fBIau8NK4Y853lzxi0JuGos6f4IyJ73bg5zw
       expirationSeconds: "#{60*60*24*7}"
+app:
+  rate-limit:
+    seat-status:
+      capacity: 5
+      refill-tokens: 5
+      refill-seconds: 1
+      expire-after-access-minutes: 10
+      maximum-size: 10000
