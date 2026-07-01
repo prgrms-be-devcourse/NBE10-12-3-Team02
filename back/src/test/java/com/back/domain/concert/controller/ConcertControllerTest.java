@@ -8,6 +8,7 @@ import com.back.domain.schedule.repository.ScheduleRepository;
 import com.back.domain.schedule.repository.ScheduleSeatRepository;
 import com.back.domain.venue.entity.Venue;
 import com.back.domain.venue.repository.VenueRepository;
+import com.back.global.security.SecurityUser;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -25,6 +26,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 
 @ActiveProfiles("test")
 @SpringBootTest
@@ -83,6 +85,7 @@ class ConcertControllerTest {
         scheduleSeatRepository.save(seat2);
 
         mockMvc.perform(get("/api/v1/concerts/{concertId}/schedules/{scheduleId}/seats", concert.getConcertId(), schedule.getScheduleId())
+                        .with(user(new SecurityUser(1L, "테스트유저")))
                         .contentType(MediaType.APPLICATION_JSON))
                 .andDo(print())
                 .andExpect(status().isOk())

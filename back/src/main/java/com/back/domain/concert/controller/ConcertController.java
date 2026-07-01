@@ -1,13 +1,11 @@
 package com.back.domain.concert.controller;
 
-import com.back.domain.concert.dto.ConcertDetailResponse;
-import com.back.domain.concert.dto.ConcertListResponse;
-import com.back.domain.concert.dto.SeatOccupyRequest;
-import com.back.domain.concert.dto.SeatOccupyResponse;
-import com.back.domain.concert.dto.SeatSelectionResponse;
+import com.back.domain.concert.dto.*;
 import com.back.domain.concert.enums.ConcertSortType;
 import com.back.domain.concert.service.ConcertService;
+import com.back.domain.concert.service.SeatOccupyManager;
 import com.back.global.annotation.ApiV1;
+import com.back.global.rq.Rq;
 import com.back.global.rsData.RsData;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -23,6 +21,8 @@ import java.util.List;
 @Tag(name = "Concert", description = "Concert API")
 public class ConcertController {
     private final ConcertService concertService;
+    private final SeatOccupyManager seatOccupyManager;
+    private final Rq rq;
 
     @GetMapping
     public RsData<List<ConcertListResponse>> getConcerts(
@@ -61,10 +61,16 @@ public class ConcertController {
     public RsData<SeatOccupyResponse> seatOccupy(
             @PathVariable Long concertId,
             @PathVariable Long scheduleId,
-            @RequestBody SeatOccupyRequest request,
-            @RequestHeader("X-User-Id") Long userId) {
+            @RequestBody SeatOccupyRequest request) {
 
-        SeatOccupyResponse response = concertService.seatOccupy(concertId, scheduleId, request.seatNumber(), userId);
+        Long userId = rq.getActor().getUserId();
+
+        SeatOccupyResponse response = seatOccupyManager.seatOccupy(
+                concertId,
+                scheduleId,
+                request.seatNumber(),
+                userId
+        );
 
         return new RsData<>(
                 "200-1",

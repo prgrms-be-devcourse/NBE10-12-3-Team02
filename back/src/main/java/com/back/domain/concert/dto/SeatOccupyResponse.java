@@ -7,4 +7,14 @@ public record SeatOccupyResponse (
         long expireInSeconds,
         SeatStatus seatStatus
 ){
+    public static SeatOccupyResponse of(
+            String occupyToken,
+            long expireInSeconds
+    ) {
+        return new SeatOccupyResponse(
+                occupyToken,
+                expireInSeconds,
+                SeatStatus.HOLD
+        );
+    }
 }
