@@ -250,4 +250,28 @@ class UserControllerTest {
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.resultCode").value("404-1"));
     }
+    @Test
+    @DisplayName("아이디 중복확인 성공")
+    void t14() throws Exception {
+        mockMvc.perform(get("/api/v1/users/check-id")
+                        .param("id", "newuser123"))
+                .andDo(print())
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.resultCode").value("200-1"))
+                .andExpect(jsonPath("$.msg").value("사용 가능한 아이디입니다."));
+    }
+
+    @Test
+    @DisplayName("아이디 중복확인 실패 - 중복")
+    void t15() throws Exception {
+        userRepository.save(User.create("existuser", "exist@naver.com",
+                passwordEncoder.encode("q1w2e3r4"), "홍길동", LoginType.NORMAL));
+
+        mockMvc.perform(get("/api/v1/users/check-id")
+                        .param("id", "existuser"))
+                .andDo(print())
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.resultCode").value("409-1"))
+                .andExpect(jsonPath("$.msg").value("이미 사용 중인 아이디입니다."));
+    }
 }

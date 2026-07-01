@@ -50,4 +50,10 @@ public class UserController {
         userService.updateMyPage(userId, request);
         return new RsData<>("200-1", "마이페이지 수정 성공", null);
     }
+    @GetMapping("/check-id")
+    @Operation(summary = "아이디 중복확인", description = "아이디 중복확인 API")
+    public RsData<Void> checkId(@RequestParam String id) {
+        userService.checkId(id);
+        return new RsData<>("200-1", "사용 가능한 아이디입니다.", null);
+    }
 }

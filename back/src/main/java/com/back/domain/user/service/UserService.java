@@ -83,4 +83,10 @@ public class UserService {
             user.updatePassword(passwordEncoder.encode(request.password()));
         }
     }
+
+    public void checkId(String id) {
+        if (userRepository.existsByIdAndDeletedAtIsNull(id)) {
+            throw new ServiceException(ErrorCode.USER_ID_ALREADY_EXISTS);
+        }
+    }
 }
