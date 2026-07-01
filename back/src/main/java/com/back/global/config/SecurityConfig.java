@@ -32,14 +32,15 @@ public class SecurityConfig {
                                         HttpMethod.GET,
                                         "/api/*/concerts",
                                         "/api/*/concerts/*",
-                                        "/api/*/schedules/*/seats/status"
+                                        "/api/*/schedules/*/seats/status",
+                                        "/api/*/users/check-id"
                                 ).permitAll()
                                 .requestMatchers(
                                         HttpMethod.POST,
                                         "/api/*/auth/login",
                                         "/api/*/auth/logout",
                                         "/api/*/auth/refresh",
-                                        "/api/*/users/signin"
+                                        "/api/*/users/signup"
                                 ).permitAll()
                                 .requestMatchers("/api/*/**").authenticated()
                                 .anyRequest().permitAll()

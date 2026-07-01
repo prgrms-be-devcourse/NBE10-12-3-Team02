@@ -24,16 +24,16 @@ public class UserController {
 
     private final UserService userService;
 
-    @PostMapping("/signin")
+    @PostMapping("/signup")
     @Operation(summary = "회원가입", description = "회원가입 API")
     public RsData<SignupResponse> signup(@RequestBody @Valid SignupRequest request) {
         return new RsData<>("200-1", "회원가입이 완료되었습니다.", userService.signup(request));
     }
 
-    @PatchMapping("/{id}")
+    @PatchMapping("/withdraw")
     @Operation(summary = "회원 탈퇴", description = "회원 탈퇴 API")
-    public RsData<Void> withdraw(@PathVariable Long id, @AuthenticationPrincipal SecurityUser securityUser) {
-        userService.withdraw(id, securityUser.getId());
+    public RsData<Void> withdraw(@AuthenticationPrincipal SecurityUser securityUser) {
+        userService.withdraw(securityUser.getId());
         return new RsData<>("200-1", "회원 탈퇴가 정상적으로 완료되었습니다.", null);
     }
 

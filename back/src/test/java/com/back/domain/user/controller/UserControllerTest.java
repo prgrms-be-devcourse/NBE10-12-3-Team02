@@ -66,11 +66,10 @@ class UserControllerTest {
         );
     }
 
-
     @Test
     @DisplayName("회원가입 성공")
     void t1() throws Exception {
-        mockMvc.perform(post("/api/v1/users/signin")
+        mockMvc.perform(post("/api/v1/users/signup")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(Map.of(
                                 "id", "testuser1",
@@ -89,7 +88,7 @@ class UserControllerTest {
     @Test
     @DisplayName("회원가입 실패 - 아이디 중복")
     void t2() throws Exception {
-        mockMvc.perform(post("/api/v1/users/signin")
+        mockMvc.perform(post("/api/v1/users/signup")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(Map.of(
                                 "id", "testuser",
@@ -106,7 +105,7 @@ class UserControllerTest {
     @Test
     @DisplayName("회원가입 실패 - 이메일 중복")
     void t3() throws Exception {
-        mockMvc.perform(post("/api/v1/users/signin")
+        mockMvc.perform(post("/api/v1/users/signup")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(Map.of(
                                 "id", "otheruser",
@@ -123,7 +122,7 @@ class UserControllerTest {
     @Test
     @DisplayName("회원가입 실패 - 비밀번호 8자 미만")
     void t4() throws Exception {
-        mockMvc.perform(post("/api/v1/users/signin")
+        mockMvc.perform(post("/api/v1/users/signup")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(Map.of(
                                 "id", "testuser",
@@ -135,11 +134,10 @@ class UserControllerTest {
                 .andExpect(status().isBadRequest());
     }
 
-
     @Test
     @DisplayName("회원 탈퇴 성공")
     void t5() throws Exception {
-        mockMvc.perform(patch("/api/v1/users/{id}", user.getUserId())
+        mockMvc.perform(patch("/api/v1/users/withdraw")
                         .with(user(securityUser)))
                 .andDo(print())
                 .andExpect(status().isOk())
@@ -150,7 +148,7 @@ class UserControllerTest {
     @Test
     @DisplayName("회원 탈퇴 실패 - 존재하지 않는 회원")
     void t6() throws Exception {
-        mockMvc.perform(patch("/api/v1/users/{id}", 999L)
+        mockMvc.perform(patch("/api/v1/users/withdraw")
                         .with(user(new SecurityUser(999L, "없는사용자"))))
                 .andDo(print())
                 .andExpect(status().isNotFound())
@@ -163,7 +161,7 @@ class UserControllerTest {
         user.withdraw();
         userRepository.saveAndFlush(user);
 
-        mockMvc.perform(patch("/api/v1/users/{id}", user.getUserId())
+        mockMvc.perform(patch("/api/v1/users/withdraw")
                         .with(user(securityUser)))
                 .andDo(print())
                 .andExpect(status().isNotFound())
@@ -171,19 +169,8 @@ class UserControllerTest {
     }
 
     @Test
-    @DisplayName("회원 탈퇴 실패 - 타인 탈퇴 시도")
-    void t8() throws Exception {
-        mockMvc.perform(patch("/api/v1/users/{id}", user.getUserId())
-                        .with(user(new SecurityUser(999L, "다른사용자"))))
-                .andDo(print())
-                .andExpect(status().isForbidden())
-                .andExpect(jsonPath("$.resultCode").value("403-2"));
-    }
-
-
-    @Test
     @DisplayName("마이페이지 조회 성공")
-    void t9() throws Exception {
+    void t8() throws Exception {
         mockMvc.perform(get("/api/v1/users/me")
                         .with(user(securityUser)))
                 .andDo(print())
@@ -196,7 +183,7 @@ class UserControllerTest {
 
     @Test
     @DisplayName("마이페이지 조회 실패 - 존재하지 않는 회원")
-    void t10() throws Exception {
+    void t9() throws Exception {
         mockMvc.perform(get("/api/v1/users/me")
                         .with(user(new SecurityUser(999L, "없는사용자"))))
                 .andDo(print())
@@ -204,10 +191,9 @@ class UserControllerTest {
                 .andExpect(jsonPath("$.resultCode").value("404-1"));
     }
 
-
     @Test
     @DisplayName("마이페이지 수정 성공 - 이름만 변경")
-    void t11() throws Exception {
+    void t10() throws Exception {
         mockMvc.perform(patch("/api/v1/users/me")
                         .with(user(securityUser))
                         .contentType(MediaType.APPLICATION_JSON)
@@ -226,7 +212,7 @@ class UserControllerTest {
 
     @Test
     @DisplayName("마이페이지 수정 실패 - 이메일 중복")
-    void t12() throws Exception {
+    void t11() throws Exception {
         userRepository.save(User.create("otheruser", "other@naver.com",
                 passwordEncoder.encode("q1w2e3r4"), "김철수", LoginType.NORMAL));
 
@@ -243,7 +229,7 @@ class UserControllerTest {
 
     @Test
     @DisplayName("마이페이지 수정 실패 - 존재하지 않는 회원")
-    void t13() throws Exception {
+    void t12() throws Exception {
         mockMvc.perform(patch("/api/v1/users/me")
                         .with(user(new SecurityUser(999L, "없는사용자")))
                         .contentType(MediaType.APPLICATION_JSON)
@@ -254,9 +240,10 @@ class UserControllerTest {
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.resultCode").value("404-1"));
     }
+
     @Test
     @DisplayName("아이디 중복확인 성공")
-    void t14() throws Exception {
+    void t13() throws Exception {
         mockMvc.perform(get("/api/v1/users/check-id")
                         .param("id", "newuser123"))
                 .andDo(print())
@@ -267,7 +254,7 @@ class UserControllerTest {
 
     @Test
     @DisplayName("아이디 중복확인 실패 - 중복")
-    void t15() throws Exception {
+    void t14() throws Exception {
         userRepository.save(User.create("existuser", "exist@naver.com",
                 passwordEncoder.encode("q1w2e3r4"), "홍길동", LoginType.NORMAL));
 

@@ -39,11 +39,8 @@ public class UserService {
     }
 
     @Transactional
-    public void withdraw(Long pathUserId, Long loginUserId) {
-        if (!pathUserId.equals(loginUserId)) {
-            throw new ServiceException(ErrorCode.USER_ACCESS_DENIED);
-        }
-        User user = userRepository.findByUserIdAndDeletedAtIsNull(pathUserId)
+    public void withdraw(Long userId) {
+        User user = userRepository.findByUserIdAndDeletedAtIsNull(userId)
                 .orElseThrow(() -> new ServiceException(ErrorCode.USER_NOT_FOUND_OR_DELETED));
         user.withdraw();
     }
