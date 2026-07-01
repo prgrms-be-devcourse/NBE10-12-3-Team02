@@ -61,4 +61,15 @@ public class User extends BaseEntity {
     public boolean isDeleted() {
         return this.deletedAt != null;
     }
+    public void updateName(String name) {
+        this.name = name;
+    }
+
+    public void updateEmail(String email) {
+        this.email = email;
+    }
+
+    public void updatePassword(String password) {
+        this.password = password;
+    }
 }

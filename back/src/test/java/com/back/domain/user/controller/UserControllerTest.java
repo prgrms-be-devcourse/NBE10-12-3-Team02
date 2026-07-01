@@ -17,6 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Map;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -43,6 +44,7 @@ class UserControllerTest {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
     }
+
 
     @Test
     @DisplayName("회원가입 성공")
@@ -196,11 +198,54 @@ class UserControllerTest {
                 .andExpect(jsonPath("$.resultCode").value("404-1"));
     }
 
+
     @Test
-    @DisplayName("마이페이지 조회 실패 - 존재하지 않는 회원")
+    @DisplayName("마이페이지 수정 성공 - 이름만 변경")
     void t11() throws Exception {
-        mockMvc.perform(get("/api/v1/users/me/{id}", 999L)
-                        .header("X-Impersonate-User-Id", 999L))
+        User user = userRepository.save(User.create("testuser", "test@naver.com",
+                passwordEncoder.encode("q1w2e3r4"), "홍길동", LoginType.NORMAL));
+
+        mockMvc.perform(patch("/api/v1/users/me/{userId}", user.getUserId())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of(
+                                "name", "김철수"
+                        ))))
+                .andDo(print())
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.resultCode").value("200-1"))
+                .andExpect(jsonPath("$.msg").value("마이페이지 수정 성공"));
+
+        User updated = userRepository.findById(user.getUserId()).orElseThrow();
+        assertThat(updated.getName()).isEqualTo("김철수");
+        assertThat(updated.getEmail()).isEqualTo("test@naver.com");
+    }
+
+    @Test
+    @DisplayName("마이페이지 수정 실패 - 이메일 중복")
+    void t12() throws Exception {
+        userRepository.save(User.create("otheruser", "other@naver.com",
+                passwordEncoder.encode("q1w2e3r4"), "김철수", LoginType.NORMAL));
+        User user = userRepository.save(User.create("testuser", "test@naver.com",
+                passwordEncoder.encode("q1w2e3r4"), "홍길동", LoginType.NORMAL));
+
+        mockMvc.perform(patch("/api/v1/users/me/{userId}", user.getUserId())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of(
+                                "email", "other@naver.com"
+                        ))))
+                .andDo(print())
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.resultCode").value("409-2"));
+    }
+
+    @Test
+    @DisplayName("마이페이지 수정 실패 - 존재하지 않는 회원")
+    void t13() throws Exception {
+        mockMvc.perform(patch("/api/v1/users/me/{userId}", 999L)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of(
+                                "name", "김철수"
+                        ))))
                 .andDo(print())
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.resultCode").value("404-1"));

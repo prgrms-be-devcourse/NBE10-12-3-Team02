@@ -24,6 +24,7 @@ public enum ErrorCode {
     USER_EMAIL_ALREADY_EXISTS("409-2", "이미 사용 중인 이메일입니다."),
     USER_ACCESS_DENIED("403-2", "본인의 정보만 조회할 수 있습니다."),
     USER_NOT_FOUND_OR_DELETED("404-2", "존재하지 않거나 이미 탈퇴한 회원입니다."),
+    USER_NAME_INVALID("400-6", "이름에 공백을 포함할 수 없습니다."),
 
     // Concert
     CONCERT_NOT_FOUND("404-3", "존재하지 않는 콘서트입니다."),

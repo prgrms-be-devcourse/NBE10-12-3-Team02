@@ -25,6 +25,7 @@ public class ConcertController {
     private final Rq rq;
 
     @GetMapping
+    @Operation(summary = "콘서트 목록 조회", description = "콘서트 목록 조회 API")
     public RsData<List<ConcertListResponse>> getConcerts(
             @RequestParam(required = false) String keyword,
             @RequestParam(defaultValue = "closingSoon") ConcertSortType sort) {
@@ -34,6 +35,7 @@ public class ConcertController {
     }
 
     @GetMapping("/{concertId}")
+    @Operation(summary = "콘서트 상세 조회", description = "콘서트 상세 정보 조회 API")
     public RsData<ConcertDetailResponse> getConcertDetail(
             @PathVariable Long concertId) {
 
