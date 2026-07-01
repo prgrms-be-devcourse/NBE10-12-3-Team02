@@ -13,6 +13,7 @@ import com.back.domain.user.entity.User;
 import com.back.domain.user.repository.UserRepository;
 import com.back.domain.venue.entity.Venue;
 import com.back.domain.venue.repository.VenueRepository;
+import com.back.global.security.SecurityUser;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -31,6 +32,7 @@ import static com.back.domain.schedule.entity.SeatStatus.AVAILABLE;
 import static com.back.domain.schedule.entity.SeatStatus.HOLD;
 import static com.back.domain.schedule.entity.SeatStatus.SOLD_OUT;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
@@ -51,6 +53,7 @@ class TicketControllerTest {
     private final TicketRepository ticketRepository;
 
     private User user;
+    private SecurityUser securityUser;
     private Concert concert;
     private Schedule schedule;
     private ScheduleSeat seat;
@@ -77,6 +80,7 @@ class TicketControllerTest {
     @BeforeEach
     void setUp() {
         user = saveUser();
+        securityUser = new SecurityUser(user.getUserId(), user.getName());
         concert = concertRepository.save(Concert.create(
                 "싸이 콘서트",
                 "설명",
@@ -101,7 +105,7 @@ class TicketControllerTest {
                 """.formatted(concert.getConcertId(), schedule.getScheduleId());
 
         mockMvc.perform(post("/api/v1/tickets/reserve")
-                        .header("userId", user.getUserId())
+                        .with(user(securityUser))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(requestBody))
                 .andDo(print())
@@ -126,7 +130,7 @@ class TicketControllerTest {
         Ticket ticket = ticketRepository.save(Ticket.create(user, schedule, seat, "ticket-number", seat.getSeatPrice()));
 
         mockMvc.perform(patch("/api/v1/tickets/cancel/{ticketId}", ticket.getTicketId())
-                        .header("userId", user.getUserId()))
+                .with(user(securityUser)))
                 .andDo(print())
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.resultCode").value("200-1"))

@@ -20,7 +20,7 @@ import org.springframework.web.bind.annotation.*;
 @RequiredArgsConstructor
 @Tag(name = "Auth", description = "Auth API")
 public class AuthController {
-    private final RequestContext rq;
+    private final RequestContext requestContext;
     private final AuthService authService;
 
     @PostMapping("/login")
@@ -31,8 +31,8 @@ public class AuthController {
         String accessToken = tokenResponse.accessToken();
         String refreshToken = tokenResponse.refreshToken();
 
-        rq.setCookie("refreshToken", refreshToken, "/api/v1/auth");
-        rq.setHeader("Authorization", "Bearer " + accessToken);
+        requestContext.setCookie("refreshToken", refreshToken, "/api/v1/auth");
+        requestContext.setHeader("Authorization", "Bearer " + accessToken);
 
         return new RsData<>(
                 "200-1",
@@ -44,10 +44,10 @@ public class AuthController {
     @Operation(summary = "로그아웃", description = "로그아웃 API")
     public RsData<Void> logout() {
 
-        String refreshToken = rq.getCookieValue("refreshToken", "");
+        String refreshToken = requestContext.getCookieValue("refreshToken", "");
         authService.logout(refreshToken);
 
-        rq.deleteCookie("refreshToken", "/api/v1/auth");
+        requestContext.deleteCookie("refreshToken", "/api/v1/auth");
 
         return new RsData<>(
                 "200-1",
@@ -58,7 +58,7 @@ public class AuthController {
     @PostMapping("/refresh")
     @Operation(summary = "토큰 재발급", description = "토큰 재발급 API")
     public RsData<Void> refresh() {
-        String refreshToken = rq.getCookieValue("refreshToken", "");
+        String refreshToken = requestContext.getCookieValue("refreshToken", "");
 
         if (refreshToken.isBlank()) {
             throw new ServiceException(ErrorCode.AUTH_LOGIN_REQUIRED);
@@ -66,8 +66,8 @@ public class AuthController {
 
         TokenResponse tokenResponse = authService.refresh(refreshToken);
 
-        rq.setCookie("refreshToken", tokenResponse.refreshToken(), "/api/v1/auth");
-        rq.setHeader("Authorization", "Bearer " + tokenResponse.accessToken());
+        requestContext.setCookie("refreshToken", tokenResponse.refreshToken(), "/api/v1/auth");
+        requestContext.setHeader("Authorization", "Bearer " + tokenResponse.accessToken());
 
         return new RsData<>(
                 "200-1",

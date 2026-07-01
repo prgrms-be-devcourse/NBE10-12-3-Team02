@@ -7,10 +7,12 @@ import com.back.domain.user.dto.UpdateMyPageRequest;
 import com.back.domain.user.service.UserService;
 import com.back.global.annotation.ApiV1;
 import com.back.global.rsData.RsData;
+import com.back.global.security.SecurityUser;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 @ApiV1
@@ -30,24 +32,21 @@ public class UserController {
 
     @PatchMapping("/{id}")
     @Operation(summary = "회원 탈퇴", description = "회원 탈퇴 API")
-    public RsData<Void> withdraw(
-            @PathVariable Long id,
-            @RequestHeader("X-Impersonate-User-Id") Long userId) {
-        userService.withdraw(id, userId);
+    public RsData<Void> withdraw(@PathVariable Long id, @AuthenticationPrincipal SecurityUser securityUser) {
+        userService.withdraw(id, securityUser.getId());
         return new RsData<>("200-1", "회원 탈퇴가 정상적으로 완료되었습니다.", null);
     }
 
-    @GetMapping("/me/{userId}")
+    @GetMapping("/me")
     @Operation(summary = "마이페이지 조회", description = "마이페이지 조회 API")
-    public RsData<MyPageResponse> getMyPage(@PathVariable Long userId) {
-        return new RsData<>("200-1", "마이페이지 조회 성공", userService.getMyPage(userId));
+    public RsData<MyPageResponse> getMyPage(@AuthenticationPrincipal SecurityUser securityUser) {
+        return new RsData<>("200-1", "마이페이지 조회 성공", userService.getMyPage(securityUser.getId()));
     }
-    @PatchMapping("/me/{userId}")
+
+    @PatchMapping("/me")
     @Operation(summary = "마이페이지 수정", description = "마이페이지 수정 API")
-    public RsData<Void> updateMyPage(
-            @PathVariable Long userId,
-            @RequestBody @Valid UpdateMyPageRequest request) {
-        userService.updateMyPage(userId, request);
+    public RsData<Void> updateMyPage(@RequestBody @Valid UpdateMyPageRequest request, @AuthenticationPrincipal SecurityUser securityUser) {
+        userService.updateMyPage(securityUser.getId(), request);
         return new RsData<>("200-1", "마이페이지 수정 성공", null);
     }
     @GetMapping("/check-id")

@@ -3,7 +3,9 @@ package com.back.domain.user.controller;
 import com.back.domain.user.entity.LoginType;
 import com.back.domain.user.entity.User;
 import com.back.domain.user.repository.UserRepository;
+import com.back.global.security.SecurityUser;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,6 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -33,6 +36,8 @@ class UserControllerTest {
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private User user;
+    private SecurityUser securityUser;
 
     @Autowired
     public UserControllerTest(
@@ -45,6 +50,22 @@ class UserControllerTest {
         this.passwordEncoder = passwordEncoder;
     }
 
+    @BeforeEach
+    void setUp() {
+        user = userRepository.save(User.create(
+                "testuser",
+                "test@naver.com",
+                passwordEncoder.encode("q1w2e3r4"),
+                "홍길동",
+                LoginType.NORMAL
+        ));
+
+        securityUser = new SecurityUser(
+                user.getUserId(),
+                user.getName()
+        );
+    }
+
 
     @Test
     @DisplayName("회원가입 성공")
@@ -52,8 +73,8 @@ class UserControllerTest {
         mockMvc.perform(post("/api/v1/users/signin")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(Map.of(
-                                "id", "testuser",
-                                "email", "test@naver.com",
+                                "id", "testuser1",
+                                "email", "test1@naver.com",
                                 "password", "q1w2e3r4",
                                 "name", "홍길동"
                         ))))
@@ -68,9 +89,6 @@ class UserControllerTest {
     @Test
     @DisplayName("회원가입 실패 - 아이디 중복")
     void t2() throws Exception {
-        userRepository.save(User.create("testuser", "test@naver.com",
-                passwordEncoder.encode("q1w2e3r4"), "홍길동", LoginType.NORMAL));
-
         mockMvc.perform(post("/api/v1/users/signin")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(Map.of(
@@ -88,9 +106,6 @@ class UserControllerTest {
     @Test
     @DisplayName("회원가입 실패 - 이메일 중복")
     void t3() throws Exception {
-        userRepository.save(User.create("testuser", "test@naver.com",
-                passwordEncoder.encode("q1w2e3r4"), "홍길동", LoginType.NORMAL));
-
         mockMvc.perform(post("/api/v1/users/signin")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(Map.of(
@@ -124,11 +139,8 @@ class UserControllerTest {
     @Test
     @DisplayName("회원 탈퇴 성공")
     void t5() throws Exception {
-        User user = userRepository.save(User.create("testuser", "test@naver.com",
-                passwordEncoder.encode("q1w2e3r4"), "홍길동", LoginType.NORMAL));
-
         mockMvc.perform(patch("/api/v1/users/{id}", user.getUserId())
-                        .header("X-Impersonate-User-Id", user.getUserId()))
+                        .with(user(securityUser)))
                 .andDo(print())
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.resultCode").value("200-1"))
@@ -139,7 +151,7 @@ class UserControllerTest {
     @DisplayName("회원 탈퇴 실패 - 존재하지 않는 회원")
     void t6() throws Exception {
         mockMvc.perform(patch("/api/v1/users/{id}", 999L)
-                        .header("X-Impersonate-User-Id", 999L))
+                        .with(user(new SecurityUser(999L, "없는사용자"))))
                 .andDo(print())
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.resultCode").value("404-2"));
@@ -148,13 +160,11 @@ class UserControllerTest {
     @Test
     @DisplayName("회원 탈퇴 실패 - 이미 탈퇴한 회원")
     void t7() throws Exception {
-        User user = userRepository.save(User.create("testuser", "test@naver.com",
-                passwordEncoder.encode("q1w2e3r4"), "홍길동", LoginType.NORMAL));
         user.withdraw();
         userRepository.saveAndFlush(user);
 
         mockMvc.perform(patch("/api/v1/users/{id}", user.getUserId())
-                        .header("X-Impersonate-User-Id", user.getUserId()))
+                        .with(user(securityUser)))
                 .andDo(print())
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.resultCode").value("404-2"));
@@ -163,11 +173,8 @@ class UserControllerTest {
     @Test
     @DisplayName("회원 탈퇴 실패 - 타인 탈퇴 시도")
     void t8() throws Exception {
-        User user = userRepository.save(User.create("testuser", "test@naver.com",
-                passwordEncoder.encode("q1w2e3r4"), "홍길동", LoginType.NORMAL));
-
         mockMvc.perform(patch("/api/v1/users/{id}", user.getUserId())
-                        .header("X-Impersonate-User-Id", 999L))
+                        .with(user(new SecurityUser(999L, "다른사용자"))))
                 .andDo(print())
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.resultCode").value("403-2"));
@@ -177,10 +184,8 @@ class UserControllerTest {
     @Test
     @DisplayName("마이페이지 조회 성공")
     void t9() throws Exception {
-        User user = userRepository.save(User.create("testuser", "test@naver.com",
-                passwordEncoder.encode("q1w2e3r4"), "홍길동", LoginType.NORMAL));
-
-        mockMvc.perform(get("/api/v1/users/me/{userId}", user.getUserId()))
+        mockMvc.perform(get("/api/v1/users/me")
+                        .with(user(securityUser)))
                 .andDo(print())
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.resultCode").value("200-1"))
@@ -192,7 +197,8 @@ class UserControllerTest {
     @Test
     @DisplayName("마이페이지 조회 실패 - 존재하지 않는 회원")
     void t10() throws Exception {
-        mockMvc.perform(get("/api/v1/users/me/{userId}", 999L))
+        mockMvc.perform(get("/api/v1/users/me")
+                        .with(user(new SecurityUser(999L, "없는사용자"))))
                 .andDo(print())
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.resultCode").value("404-1"));
@@ -202,10 +208,8 @@ class UserControllerTest {
     @Test
     @DisplayName("마이페이지 수정 성공 - 이름만 변경")
     void t11() throws Exception {
-        User user = userRepository.save(User.create("testuser", "test@naver.com",
-                passwordEncoder.encode("q1w2e3r4"), "홍길동", LoginType.NORMAL));
-
-        mockMvc.perform(patch("/api/v1/users/me/{userId}", user.getUserId())
+        mockMvc.perform(patch("/api/v1/users/me")
+                        .with(user(securityUser))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(Map.of(
                                 "name", "김철수"
@@ -225,10 +229,9 @@ class UserControllerTest {
     void t12() throws Exception {
         userRepository.save(User.create("otheruser", "other@naver.com",
                 passwordEncoder.encode("q1w2e3r4"), "김철수", LoginType.NORMAL));
-        User user = userRepository.save(User.create("testuser", "test@naver.com",
-                passwordEncoder.encode("q1w2e3r4"), "홍길동", LoginType.NORMAL));
 
-        mockMvc.perform(patch("/api/v1/users/me/{userId}", user.getUserId())
+        mockMvc.perform(patch("/api/v1/users/me")
+                        .with(user(securityUser))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(Map.of(
                                 "email", "other@naver.com"
@@ -241,7 +244,8 @@ class UserControllerTest {
     @Test
     @DisplayName("마이페이지 수정 실패 - 존재하지 않는 회원")
     void t13() throws Exception {
-        mockMvc.perform(patch("/api/v1/users/me/{userId}", 999L)
+        mockMvc.perform(patch("/api/v1/users/me")
+                        .with(user(new SecurityUser(999L, "없는사용자")))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(Map.of(
                                 "name", "김철수"

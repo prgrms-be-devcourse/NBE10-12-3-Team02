@@ -5,11 +5,13 @@ import com.back.domain.ticket.dto.PaymentTicketResponse;
 import com.back.domain.ticket.service.TicketService;
 import com.back.global.annotation.ApiV1;
 import com.back.global.rsData.RsData;
+import com.back.global.security.SecurityUser;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 @ApiV1
@@ -25,8 +27,10 @@ public class TicketController {
     @ResponseStatus(HttpStatus.CREATED)
     @Operation(summary = "결제 및 티켓 생성", description = "결제 및 티켓 생성 API")
     public RsData<PaymentTicketResponse> createTicket(
-            @RequestHeader(value = "userId") Long userId, @RequestBody @Valid PaymentTicketRequest request) {
-        PaymentTicketResponse response = ticketService.createTicket(userId, request);
+            @RequestBody @Valid PaymentTicketRequest request,
+            @AuthenticationPrincipal SecurityUser securityUser
+    ) {
+        PaymentTicketResponse response = ticketService.createTicket(securityUser.getId(), request);
         return new RsData<>(
                 "201-1",
                 "결제 및 티켓 생성 성공",
@@ -37,8 +41,10 @@ public class TicketController {
     @PatchMapping("/cancel/{ticketId}")
     @Operation(summary = "결제 취소", description = "결제 취소 API")
     public RsData<Void> cancelTicket(
-            @RequestHeader(value = "userId") Long userId, @PathVariable(value = "ticketId") Long ticketId) {
-        ticketService.cancelTicket(userId, ticketId);
+            @PathVariable(value = "ticketId") Long ticketId,
+            @AuthenticationPrincipal SecurityUser securityUser
+    ) {
+        ticketService.cancelTicket(securityUser.getId(), ticketId);
         return new RsData<>(
                 "200-1",
                 "티켓 취소 성공",

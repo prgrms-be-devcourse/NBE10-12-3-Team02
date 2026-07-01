@@ -19,19 +19,6 @@ public class RequestContext {
     private final HttpServletRequest req;
     private final HttpServletResponse resp;
 
-    public User getActor() {
-        return Optional.ofNullable(
-                        SecurityContextHolder
-                                .getContext()
-                                .getAuthentication()
-                )
-                .map(Authentication::getPrincipal)
-                .filter(principal -> principal instanceof SecurityUser)
-                .map(principal -> (SecurityUser) principal)
-                .map(securityUser -> User.create(securityUser.getId(), securityUser.getName()))
-                .orElse(null);
-    }
-
     public String getHeader(String name, String defaultValue) {
         return Optional
                 .ofNullable(req.getHeader(name))
@@ -56,10 +43,6 @@ public class RequestContext {
                 .filter(value -> value != null && !value.isBlank())
                 .findFirst()
                 .orElse(defaultValue);
-    }
-
-    public void setCookie(String name, String value) {
-        setCookie(name, value, "/");
     }
 
     public void setCookie(String name, String value, String path) {

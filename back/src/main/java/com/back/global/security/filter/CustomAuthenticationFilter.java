@@ -22,7 +22,7 @@ import java.io.IOException;
 @Component
 @RequiredArgsConstructor
 public class CustomAuthenticationFilter extends OncePerRequestFilter {
-    private final RequestContext rq;
+    private final RequestContext requestContext;
     private final JwtTokenProvider jwtTokenProvider;
     private final BearerTokenExtractor bearerTokenExtractor;
     private final CustomAuthenticationFilterSkipMatcher skipMatcher;
@@ -49,7 +49,7 @@ public class CustomAuthenticationFilter extends OncePerRequestFilter {
     }
 
     private void authenticateByAccessToken() {
-        String authorization = rq.getHeader("Authorization", "");
+        String authorization = requestContext.getHeader("Authorization", "");
 
         if (authorization.isBlank()) {
             return;
