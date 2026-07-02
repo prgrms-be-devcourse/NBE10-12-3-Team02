@@ -2,8 +2,6 @@ package com.back.domain.concert.service;
 
 import com.back.domain.concert.dto.ConcertDetailResponse;
 import com.back.domain.concert.dto.ConcertListResponse;
-import com.back.domain.concert.dto.SeatSelectionResponse;
-import com.back.domain.concert.dto.SeatSelectionResponse.SeatDetailResponse;
 import com.back.domain.concert.entity.Concert;
 import com.back.domain.concert.entity.ConcertDetail;
 import com.back.domain.concert.enums.ConcertSortType;
@@ -97,49 +95,26 @@ public class ConcertService {
         );
     }
 
-    public SeatSelectionResponse getSeatSelection(Long concertId, Long scheduleId) {
-        validateConcertScheduleMatch(concertId, scheduleId);
-
-        List<ScheduleSeat> scheduleSeats = scheduleSeatRepository.findByScheduleScheduleId(scheduleId);
-        Map<String, Integer> pricesMap = convertToPriceMap(scheduleSeats);
-
-        List<SeatDetailResponse> seatResponses = scheduleSeats.stream()
-                .map(SeatDetailResponse::from)
-                .toList();
-
-        return SeatSelectionResponse.of(
-                concertId,
-                scheduleId,
-                pricesMap,
-                seatResponses
-        );
+    public List<ScheduleSeat> getScheduleSeats(Long scheduleId) {
+        return scheduleSeatRepository.findByScheduleScheduleId(scheduleId);
     }
 
-    @Transactional
-    public void updateSeatStatusToHold(Long scheduleId, String seatNumber) {
-        ScheduleSeat scheduleSeat = scheduleSeatRepository.findWithLockByScheduleIdAndSeatNumber(scheduleId, seatNumber)
+    public void validateSeatAvailable(Long scheduleId, String seatNumber) {
+        ScheduleSeat seat = scheduleSeatRepository
+                .findWithLockByScheduleIdAndSeatNumber(scheduleId, seatNumber)
                 .orElseThrow(() -> new ServiceException(ErrorCode.SEAT_NOT_FOUND));
 
-        if (scheduleSeat.getSeatStatus() == SeatStatus.SOLD_OUT) {
+        if (seat.getSeatStatus() == SeatStatus.SOLD_OUT) {
             throw new ServiceException(ErrorCode.SEAT_ALREADY_SOLD);
         }
-        if (scheduleSeat.getSeatStatus() == SeatStatus.HOLD) {
-            throw new ServiceException(ErrorCode.SEAT_ALREADY_HOLD);
-        }
-
-        scheduleSeat.updateSeatStatus(SeatStatus.HOLD);
     }
 
     public void validateConcertScheduleMatch(Long concertId, Long scheduleId) {
-        Schedule schedule = scheduleRepository.findById(scheduleId)
-                .orElseThrow(() -> new ServiceException(ErrorCode.SCHEDULE_NOT_FOUND));
-
-        if (!schedule.getConcert().getConcertId().equals(concertId)) {
-            throw new ServiceException(ErrorCode.INVALID_CONCERT_SCHEDULE);
-        }
+        scheduleRepository.findByScheduleIdAndConcert_ConcertId(scheduleId, concertId)
+                .orElseThrow(() -> new ServiceException(ErrorCode.INVALID_CONCERT_SCHEDULE));
     }
 
-    private Map<String, Integer> convertToPriceMap(List<ScheduleSeat> scheduleSeats) {
+    public Map<String, Integer> convertToPriceMap(List<ScheduleSeat> scheduleSeats) {
         return scheduleSeats.stream()
                 .collect(Collectors.toMap(
                         ScheduleSeat::getGradeName,

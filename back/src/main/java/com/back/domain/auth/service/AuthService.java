@@ -82,10 +82,10 @@ public class AuthService {
             throw new ServiceException(ErrorCode.AUTH_REFRESH_TOKEN_MISMATCH);
         }
 
-        User user = userRepository.findById(payload.userId())
-                .orElseThrow(() -> new ServiceException(ErrorCode.USER_NOT_FOUND));
-
         refreshTokenRepository.delete(payload.userId(), payload.jti());
+
+        User user = userRepository.findByUserIdAndDeletedAtIsNull(payload.userId())
+                .orElseThrow(() -> new ServiceException(ErrorCode.USER_NOT_FOUND));
 
         String newAccessToken = jwtTokenProvider.createAccessToken(user);
 
