@@ -6,6 +6,7 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import java.time.LocalDate;
+import java.util.UUID;
 
 @Entity
 @Getter
@@ -55,7 +56,10 @@ public class User extends BaseEntity {
     }
 
     public void withdraw() {
+        String uuid = UUID.randomUUID().toString();
         this.deletedAt = LocalDate.now();
+        this.id = uuid;
+        this.email = uuid + "@deleted.local";
     }
 
     public boolean isDeleted() {
