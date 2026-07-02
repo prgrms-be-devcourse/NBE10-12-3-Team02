@@ -89,15 +89,17 @@ export default function ConcertDetailPage({
       <div className="max-w-4xl mx-auto">
         <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
           <div className="flex flex-col md:flex-row">
-            <div className="md:w-1/3 aspect-[3/4] self-start bg-gradient-to-br from-blue-200 to-indigo-300 flex items-center justify-center text-white font-bold text-xl overflow-hidden">
+            <div className="md:w-1/3 self-start bg-gradient-to-br from-blue-200 to-indigo-300 flex items-center justify-center text-white font-bold text-xl overflow-hidden">
               {concert.urlPoster ? (
                 <img
                   src={concert.urlPoster}
                   alt={concert.concertName}
-                  className="w-full h-full object-cover"
+                  className="w-full h-auto object-cover"
                 />
               ) : (
-                "포스터"
+                <div className="w-full aspect-[3/4] flex items-center justify-center">
+                  포스터
+                </div>
               )}
             </div>
 

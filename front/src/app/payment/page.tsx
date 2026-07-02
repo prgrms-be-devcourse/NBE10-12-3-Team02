@@ -131,13 +131,22 @@ export default function PaymentPage() {
               🎉 결제가 완료되었습니다!
             </h2>
             <div className="space-y-2 text-gray-600 mb-6">
-              <p><span className="inline-block w-24 text-gray-400">티켓 번호</span>{ticketResult.ticketNumber}</p>
-              <p><span className="inline-block w-24 text-gray-400">콘서트</span>{ticketResult.concertName}</p>
-              <p><span className="inline-block w-24 text-gray-400">좌석</span>{ticketResult.seatNumber}</p>
-              <p>
-                <span className="inline-block w-24 text-gray-400">공연 일시</span>
-                {ticketResult.scheduleDate?.slice(0, 16).replace("T", " ")}
-              </p>
+              <div className="flex items-start gap-2">
+                <span className="w-20 flex-shrink-0 text-gray-400">티켓 번호</span>
+                <span className="break-all">{ticketResult.ticketNumber}</span>
+              </div>
+              <div className="flex items-start gap-2">
+                <span className="w-20 flex-shrink-0 text-gray-400">콘서트</span>
+                <span className="break-words">{ticketResult.concertName}</span>
+              </div>
+              <div className="flex items-start gap-2">
+                <span className="w-20 flex-shrink-0 text-gray-400">좌석</span>
+                <span>{ticketResult.seatNumber}</span>
+              </div>
+              <div className="flex items-start gap-2">
+                <span className="w-20 flex-shrink-0 text-gray-400">공연 일시</span>
+                <span>{ticketResult.scheduleDate?.slice(0, 16).replace("T", " ")}</span>
+              </div>
             </div>
             <button
               onClick={() => router.push("/mypage")}

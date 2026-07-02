@@ -21,8 +21,10 @@ const GRADE_STYLES: Record<string, { seat: string; dot: string }> = {
   VIP: { seat: "bg-yellow-300 hover:bg-yellow-400 text-yellow-900", dot: "bg-yellow-300" },
   R: { seat: "bg-blue-300 hover:bg-blue-400 text-blue-900", dot: "bg-blue-300" },
   S: { seat: "bg-green-300 hover:bg-green-400 text-green-900", dot: "bg-green-300" },
+  A: { seat: "bg-orange-300 hover:bg-orange-400 text-orange-900", dot: "bg-orange-300" },
 };
 const DEFAULT_STYLE = { seat: "bg-gray-200 hover:bg-gray-300 text-gray-700", dot: "bg-gray-300" };
+const GRADE_ORDER = ["VIP", "R", "S", "A"];
 
 export default function SeatSelectPage({
   params,
@@ -39,20 +41,6 @@ export default function SeatSelectPage({
   const [error, setError] = useState("");
   const [selectedSeats, setSelectedSeats] = useState<string[]>([]);
   const [isReserving, setIsReserving] = useState(false);
-  const [timeLeft, setTimeLeft] = useState(300);
-
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setTimeLeft((prev) => (prev <= 1 ? 0 : prev - 1));
-    }, 1000);
-    return () => clearInterval(timer);
-  }, []);
-
-  const formatTime = (seconds: number) => {
-    const min = Math.floor(seconds / 60);
-    const sec = seconds % 60;
-    return `${min}:${sec.toString().padStart(2, "0")}`;
-  };
 
   useEffect(() => {
     if (!scheduleId) {
@@ -107,9 +95,9 @@ export default function SeatSelectPage({
     if (status !== "AVAILABLE") return;
 
     if (selectedSeats.includes(seatNumber)) {
-      setSelectedSeats([]); // 이미 선택된 좌석 다시 누르면 선택 해제
+      setSelectedSeats([]);
     } else {
-      setSelectedSeats([seatNumber]); // 무조건 이 좌석 하나로 교체
+      setSelectedSeats([seatNumber]);
     }
   };
 
@@ -162,71 +150,87 @@ export default function SeatSelectPage({
     );
   }
 
-  const gradeEntries = Object.entries(seatData?.prices ?? {});
+  const gradeEntries = Object.entries(seatData?.prices ?? {}).sort(
+    ([a], [b]) => GRADE_ORDER.indexOf(a) - GRADE_ORDER.indexOf(b)
+  );
+
+  const renderSeat = (seat: SeatDetail) => {
+    const isSelected = selectedSeats.includes(seat.seatNumber);
+    const isTaken = seat.seatStatus !== "AVAILABLE";
+    const col = seat.seatNumber.split("-")[1];
+    const style = GRADE_STYLES[seat.gradeName] ?? DEFAULT_STYLE;
+
+    let seatClass = "";
+    if (seat.seatStatus === "SOLD_OUT") {
+      seatClass = "bg-gray-400 text-gray-400 cursor-not-allowed";
+    } else if (seat.seatStatus === "HOLD") {
+      seatClass = "bg-red-400 text-red-400 cursor-not-allowed";
+    } else if (isSelected) {
+      seatClass = "bg-purple-500 hover:bg-purple-600 text-white cursor-pointer";
+    } else {
+      seatClass = `${style.seat} cursor-pointer`;
+    }
+
+    return (
+      <button
+        key={seat.seatNumber}
+        onClick={() => handleSeatClick(seat.seatNumber)}
+        disabled={isTaken}
+        className={`w-[18px] h-[18px] rounded-full flex items-center justify-center text-[7px] font-semibold transition ${seatClass}`}
+      >
+        {col}
+      </button>
+    );
+  };
 
   return (
     <div className="min-h-screen bg-gray-50 p-6">
-      <div className="max-w-6xl mx-auto bg-white rounded-2xl shadow-sm p-8">
-        <div className="flex items-center justify-between mb-8">
+      <div className="max-w-[1600px] mx-auto bg-white rounded-2xl shadow-sm p-8">
+        <div className="mb-6">
           <h1 className="text-lg font-bold text-gray-800">좌석 선택</h1>
-          <div className="text-red-500 font-bold">{formatTime(timeLeft)}</div>
         </div>
 
         <div className="flex flex-col lg:flex-row gap-8">
           {/* 좌석 배치도 */}
-          <div className="flex-1">
-            <div className="bg-gray-300 text-gray-600 text-center py-3 rounded-lg mb-8 font-bold tracking-widest">
+          <div className="flex-1 min-w-0">
+            <div className="bg-gray-300 text-gray-600 text-center py-2 rounded-lg mb-6 font-bold tracking-widest text-sm">
               STAGE
             </div>
 
-            <div className="space-y-3 overflow-x-auto pb-4">
-              {rows.map((row) => (
-                <div key={row} className="flex items-center gap-3 justify-center min-w-max">
-                  <span className="w-6 font-bold text-gray-400 text-sm">{row}</span>
-                  <div className="flex gap-2">
-                    {seatsByRow(row).map((seat) => {
-                      const isSelected = selectedSeats.includes(seat.seatNumber);
-                      const isTaken = seat.seatStatus !== "AVAILABLE";
-                      const col = seat.seatNumber.split("-")[1];
-                      const style = GRADE_STYLES[seat.gradeName] ?? DEFAULT_STYLE;
+            <div className="space-y-1.5 overflow-x-auto pb-4">
+              {rows.map((row) => {
+                const seats = seatsByRow(row);
+                const mid = Math.ceil(seats.length / 2);
+                const leftBlock = seats.slice(0, mid);
+                const rightBlock = seats.slice(mid);
 
-                      let seatClass = "";
-                      if (isTaken) {
-                        seatClass = "bg-white border-2 border-gray-200 text-gray-300 cursor-not-allowed";
-                      } else if (isSelected) {
-                        seatClass = "bg-purple-500 hover:bg-purple-600 text-white cursor-pointer";
-                      } else {
-                        seatClass = `${style.seat} cursor-pointer`;
-                      }
-
-                      return (
-                        <button
-                          key={seat.seatNumber}
-                          onClick={() => handleSeatClick(seat.seatNumber)}
-                          disabled={isTaken}
-                          className={`w-8 h-8 rounded-full flex items-center justify-center text-[10px] font-semibold transition ${seatClass}`}
-                        >
-                          {col}
-                        </button>
-                      );
-                    })}
+                return (
+                  <div key={row} className="flex items-center gap-2 justify-center min-w-max">
+                    <span className="w-4 text-right font-bold text-gray-400 text-[10px]">{row}</span>
+                    <div className="flex gap-1">{leftBlock.map(renderSeat)}</div>
+                    <div className="w-4" /> {/* 중앙 통로 */}
+                    <div className="flex gap-1">{rightBlock.map(renderSeat)}</div>
+                    <span className="w-4" /> {/* 왼쪽 라벨과 대칭 맞추는 빈 공간 */}
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
 
-            <div className="flex gap-6 justify-center mt-8 text-sm text-gray-500 flex-wrap">
+            <div className="flex gap-6 justify-center mt-6 text-xs text-gray-500 flex-wrap">
               <div className="flex items-center gap-2">
-                <div className="w-5 h-5 rounded-full bg-purple-500"></div> 선택됨
+                <div className="w-4 h-4 rounded-full bg-purple-500"></div> 선택됨
               </div>
               <div className="flex items-center gap-2">
-                <div className="w-5 h-5 rounded-full bg-white border-2 border-gray-200"></div> 예매완료
+                <div className="w-4 h-4 rounded-full bg-red-400"></div> 점유중
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-4 rounded-full bg-gray-400"></div> 예매완료
               </div>
             </div>
           </div>
 
           {/* 사이드 패널 */}
-          <div className="w-full lg:w-80 flex-shrink-0 space-y-6">
+          <div className="w-full lg:w-96 flex-shrink-0 space-y-6">
             <div>
               <div className="flex items-center justify-between mb-3">
                 <h2 className="font-bold text-gray-700">선택 좌석 {selectedSeats.length}</h2>
