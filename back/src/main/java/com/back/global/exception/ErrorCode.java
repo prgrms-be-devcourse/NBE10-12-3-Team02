@@ -18,6 +18,9 @@ public enum ErrorCode {
     AUTH_REFRESH_TOKEN_NOT_FOUND_IN_REDIS("401-6", "Redis에 리프레시 토큰이 존재하지 않습니다."),
     AUTH_REFRESH_TOKEN_MISMATCH("401-7", "리프레시 토큰이 일치하지 않습니다."),
     AUTH_LOGIN_REQUIRED("401-8", "로그인 후 이용해주세요."),
+    AUTH_EXPIRED_ACCESS_TOKEN("401-9", "Access Token이 만료되었습니다."),
+    AUTH_INVALID_ACCESS_TOKEN("401-10", "유효하지 않은 Access Token입니다."),
+
     AUTH_FORBIDDEN("403-1", "권한이 없습니다."),
 
     // User

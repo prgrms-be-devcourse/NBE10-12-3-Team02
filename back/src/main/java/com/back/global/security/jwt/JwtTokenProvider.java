@@ -5,7 +5,8 @@ import com.back.global.exception.ErrorCode;
 import com.back.global.exception.ServiceException;
 import com.back.global.security.jwt.payload.AccessTokenPayload;
 import com.back.global.security.jwt.payload.RefreshTokenPayload;
-import com.back.standard.util.Ut;
+import com.back.domain.auth.util.Ut;
+import io.jsonwebtoken.ExpiredJwtException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -28,13 +29,9 @@ public class JwtTokenProvider {
     private int refreshTokenExpireSeconds;
 
     public RefreshTokenPayload parseRefreshToken(String refreshToken) {
-        Map<String, Object> payload = Ut.jwt.payload(refreshTokenSecret, refreshToken);
-
-        if (payload == null) {
-            return null;
-        }
-
         try {
+            Map<String, Object> payload = Ut.jwt.payload(refreshTokenSecret, refreshToken);
+
             Long userId = getLongClaim(payload, "id");
             String jti = getStringClaim(payload, "jti");
 
@@ -45,19 +42,17 @@ public class JwtTokenProvider {
     }
 
     public AccessTokenPayload parseAccessToken(String accessToken) {
-        Map<String, Object> payload = Ut.jwt.payload(accessTokenSecret, accessToken);
-
-        if (payload == null) {
-            throw new ServiceException(ErrorCode.AUTH_INVALID_CREDENTIALS);
-        }
-
         try {
+            Map<String, Object> payload = Ut.jwt.payload(accessTokenSecret, accessToken);
+
             Long userId = getLongClaim(payload, "id");
             String name = getStringClaim(payload, "name");
 
             return new AccessTokenPayload(userId, name);
+        } catch (ExpiredJwtException e) {
+            throw new ServiceException(ErrorCode.AUTH_EXPIRED_ACCESS_TOKEN);
         } catch (RuntimeException e) {
-            throw new ServiceException(ErrorCode.AUTH_INVALID_CREDENTIALS);
+            throw new ServiceException(ErrorCode.AUTH_INVALID_ACCESS_TOKEN);
         }
     }
 
@@ -77,18 +72,14 @@ public class JwtTokenProvider {
         Object value = payload.get(key);
 
         if (value == null) {
-            throw new ServiceException(ErrorCode.AUTH_INVALID_CREDENTIALS);
+            throw new IllegalArgumentException("Missing claim: " + "id");
         }
 
         if (value instanceof Number number) {
             return number.longValue();
         }
 
-        try {
-            return Long.valueOf(value.toString());
-        } catch (NumberFormatException e) {
-            throw new ServiceException(ErrorCode.AUTH_INVALID_CREDENTIALS);
-        }
+        return Long.valueOf(value.toString());
     }
 
     private String getStringClaim(Map<String, Object> payload, String key) {

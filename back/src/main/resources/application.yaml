@@ -32,6 +32,8 @@ custom:
     refreshToken:
       secret: GwV6FENutXhukvlvPMYU0OrYjDhCCeLRAj1mOJ9xA+qsy2HzB6fBIau8NK4Y853lzxi0JuGos6f4IyJ73bg5zw
       expirationSeconds: "#{60*60*24*7}"
+  cors:
+    allowed-origins: http://localhost:3000
 app:
   rate-limit:
     seat-status:

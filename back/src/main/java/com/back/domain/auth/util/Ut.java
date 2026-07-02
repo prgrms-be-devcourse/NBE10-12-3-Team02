@@ -1,17 +1,13 @@
-package com.back.standard.util;
+package com.back.domain.auth.util;
 
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.ClaimsBuilder;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
-import lombok.SneakyThrows;
 import tools.jackson.databind.ObjectMapper;
 
 import javax.crypto.SecretKey;
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
 import java.security.Key;
-import java.util.Arrays;
 import java.util.Date;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -44,18 +40,13 @@ public class Ut {
 
         public static Map<String, Object> payload(String secret, String jwtStr) {
             SecretKey secretKey = Keys.hmacShaKeyFor(secret.getBytes());
-
-            try {
-                return new LinkedHashMap<>(
-                        Jwts.parser()
-                                .verifyWith(secretKey)
-                                .build()
-                                .parseSignedClaims(jwtStr)
-                                .getPayload()
-                );
-            } catch (Exception e) {
-                return null;
-            }
+            return new LinkedHashMap<>(
+                    Jwts.parser()
+                            .verifyWith(secretKey)
+                            .build()
+                            .parseSignedClaims(jwtStr)
+                            .getPayload()
+            );
         }
     }
 

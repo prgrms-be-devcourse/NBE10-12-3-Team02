@@ -6,13 +6,12 @@ import com.back.domain.user.dto.SignupResponse;
 import com.back.domain.user.dto.UpdateMyPageRequest;
 import com.back.domain.user.service.UserService;
 import com.back.global.annotation.ApiV1;
+import com.back.global.requestcontext.RequestContext;
 import com.back.global.rsData.RsData;
-import com.back.global.security.SecurityUser;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 @ApiV1
@@ -23,6 +22,7 @@ import org.springframework.web.bind.annotation.*;
 public class UserController {
 
     private final UserService userService;
+    private final RequestContext requestContext;
 
     @PostMapping("/signup")
     @Operation(summary = "회원가입", description = "회원가입 API")
@@ -32,24 +32,21 @@ public class UserController {
 
     @PatchMapping("/withdraw")
     @Operation(summary = "회원 탈퇴", description = "회원 탈퇴 API")
-    public RsData<Void> withdraw(
-            @AuthenticationPrincipal SecurityUser securityUser,
-            @RequestHeader("Authorization") String authorization) {
-        userService.withdraw(securityUser.getId(), authorization);
+    public RsData<Void> withdraw(@RequestHeader("Authorization") String authorization) {
+        userService.withdraw(requestContext.getActor().getId(), authorization);
         return new RsData<>("200-1", "회원 탈퇴가 정상적으로 완료되었습니다.", null);
     }
 
     @GetMapping("/me")
     @Operation(summary = "마이페이지 조회", description = "마이페이지 조회 API")
-    public RsData<MyPageResponse> getMyPage(@AuthenticationPrincipal SecurityUser securityUser) {
-        return new RsData<>("200-1", "마이페이지 조회 성공", userService.getMyPage(securityUser.getId()));
+    public RsData<MyPageResponse> getMyPage() {
+        return new RsData<>("200-1", "마이페이지 조회 성공", userService.getMyPage(requestContext.getActor().getId()));
     }
 
     @PatchMapping("/me")
     @Operation(summary = "마이페이지 수정", description = "마이페이지 수정 API")
-    public RsData<Void> updateMyPage(@RequestBody @Valid UpdateMyPageRequest request,
-                                     @AuthenticationPrincipal SecurityUser securityUser) {
-        userService.updateMyPage(securityUser.getId(), request);
+    public RsData<Void> updateMyPage(@RequestBody @Valid UpdateMyPageRequest request) {
+        userService.updateMyPage(requestContext.getActor().getId(), request);
         return new RsData<>("200-1", "마이페이지 수정 성공", null);
     }
 

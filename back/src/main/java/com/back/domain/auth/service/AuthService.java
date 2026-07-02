@@ -35,8 +35,6 @@ public class AuthService {
         if (!passwordEncoder.matches(password, user.getPassword()))
             throw new ServiceException(ErrorCode.AUTH_PASSWORD_MISMATCH);
 
-        refreshTokenRepository.deleteAllByUserId(user.getUserId());
-
         String accessToken = jwtTokenProvider.createAccessToken(user);
 
         String refreshTokenJti = UUID.randomUUID().toString();

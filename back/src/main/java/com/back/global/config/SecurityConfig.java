@@ -3,7 +3,7 @@ package com.back.global.config;
 import com.back.global.exception.ErrorCode;
 import com.back.global.rsData.RsData;
 import com.back.global.security.filter.CustomAuthenticationFilter;
-import com.back.standard.util.Ut;
+import com.back.domain.auth.util.Ut;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -34,7 +34,6 @@ public class SecurityConfig {
                                         "/api/*/concerts/*",
                                         "/api/*/schedules/**",
                                         "/api/*/users/check-id"
-
                                 ).permitAll()
                                 .requestMatchers(
                                         HttpMethod.POST,

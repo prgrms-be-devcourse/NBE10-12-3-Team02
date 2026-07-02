@@ -1,6 +1,7 @@
 package com.back.global.requestcontext;
 
 import com.back.domain.user.entity.User;
+import com.back.global.exception.ErrorCode;
 import com.back.global.security.SecurityUser;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
@@ -18,6 +19,16 @@ import java.util.Optional;
 public class RequestContext {
     private final HttpServletRequest req;
     private final HttpServletResponse resp;
+
+    public SecurityUser getActor() {
+        return (SecurityUser) Optional.ofNullable(
+                        SecurityContextHolder
+                                .getContext()
+                                .getAuthentication()
+                )
+                .map(Authentication::getPrincipal)
+                .filter(principal -> principal instanceof SecurityUser).orElse(null);
+    }
 
     public String getHeader(String name, String defaultValue) {
         return Optional

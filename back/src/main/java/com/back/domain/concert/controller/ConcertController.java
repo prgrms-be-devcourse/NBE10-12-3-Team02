@@ -5,12 +5,11 @@ import com.back.domain.concert.enums.ConcertSortType;
 import com.back.domain.concert.service.ConcertService;
 import com.back.domain.concert.service.SeatOccupyManager;
 import com.back.global.annotation.ApiV1;
+import com.back.global.requestcontext.RequestContext;
 import com.back.global.rsData.RsData;
-import com.back.global.security.SecurityUser;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -23,6 +22,7 @@ import java.util.List;
 public class ConcertController {
     private final ConcertService concertService;
     private final SeatOccupyManager seatOccupyManager;
+    private final RequestContext requestContext;
 
     @GetMapping
     @Operation(summary = "콘서트 목록 조회", description = "콘서트 목록 조회 API")
@@ -63,14 +63,13 @@ public class ConcertController {
     public RsData<SeatOccupyResponse> seatOccupy(
             @PathVariable Long concertId,
             @PathVariable Long scheduleId,
-            @RequestBody SeatOccupyRequest request,
-            @AuthenticationPrincipal SecurityUser securityUser
+            @RequestBody SeatOccupyRequest request
     ) {
         SeatOccupyResponse response = seatOccupyManager.seatOccupy(
                 concertId,
                 scheduleId,
                 request.seatNumber(),
-                securityUser.getId()
+                requestContext.getActor().getId()
         );
 
         return new RsData<>(
