@@ -14,11 +14,17 @@ public class SeatGenerator {
     private static final List<SeatGrade> GRADES = List.of(
             new SeatGrade("VIP", 150000, "A"),
             new SeatGrade("R", 120000, "B"),
-            new SeatGrade("S", 90000, "C"),
-            new SeatGrade("S", 90000, "D")
+            new SeatGrade("R", 120000, "C"),
+            new SeatGrade("S", 90000, "D"),
+            new SeatGrade("S", 90000, "E"),
+            new SeatGrade("S", 90000, "F"),
+            new SeatGrade("A", 70000, "G"),
+            new SeatGrade("A", 70000, "H"),
+            new SeatGrade("A", 70000, "I"),
+            new SeatGrade("A", 70000, "J")
     );
 
-    private static final int SEATS_PER_ROW = 10;
+    private static final int SEATS_PER_ROW = 60;
 
     public static List<ScheduleSeat> generate(Schedule schedule) {
         List<ScheduleSeat> seats = new ArrayList<>();

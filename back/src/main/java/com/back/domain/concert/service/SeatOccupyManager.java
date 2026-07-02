@@ -20,8 +20,6 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.stream.IntStream;
 
-;
-
 @Component
 @RequiredArgsConstructor
 public class SeatOccupyManager {
