@@ -45,11 +45,11 @@ public class TicketService {
                 .findWithLockByScheduleIdAndSeatNumber(request.scheduleId(), request.seatNumber())
                 .orElseThrow(() -> new ServiceException(ErrorCode.SEAT_NOT_FOUND));
 
-        validateSeatHold(userId, request);
-
         if (scheduleSeat.getSeatStatus() == SeatStatus.SOLD_OUT) {
             throw new ServiceException(ErrorCode.SEAT_ALREADY_SOLD);
         }
+
+        validateSeatHold(userId, request);
 
         scheduleSeat.updateSeatStatus(SeatStatus.SOLD_OUT);
         removeSeatHold(request.concertId(), request.scheduleId(), request.seatNumber());

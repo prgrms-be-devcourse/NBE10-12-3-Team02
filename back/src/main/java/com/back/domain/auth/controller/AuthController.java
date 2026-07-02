@@ -42,10 +42,10 @@ public class AuthController {
 
     @PostMapping("/logout")
     @Operation(summary = "로그아웃", description = "로그아웃 API")
-    public RsData<Void> logout() {
+    public RsData<Void> logout(@RequestHeader(value = "Authorization", required = false) String authorization) {
 
         String refreshToken = requestContext.getCookieValue("refreshToken", "");
-        authService.logout(refreshToken);
+        authService.logout(refreshToken, authorization);
 
         requestContext.deleteCookie("refreshToken", "/api/v1/auth");
 

@@ -5,6 +5,8 @@ import com.back.domain.user.entity.User;
 import com.back.domain.user.repository.UserRepository;
 import com.back.global.exception.ErrorCode;
 import com.back.global.exception.ServiceException;
+import com.back.global.security.filter.BearerTokenExtractor;
+import com.back.global.security.jwt.BlacklistRepository;
 import com.back.global.security.jwt.JwtTokenProvider;
 import com.back.global.security.jwt.payload.RefreshTokenPayload;
 import com.back.global.security.jwt.RefreshTokenRepository;
@@ -21,9 +23,11 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class AuthService {
     private final RefreshTokenRepository refreshTokenRepository;
+    private final BlacklistRepository blacklistRepository;
     private final UserRepository userRepository;
     private final JwtTokenProvider jwtTokenProvider;
     private final PasswordEncoder passwordEncoder;
+    private final BearerTokenExtractor bearerTokenExtractor;
 
     @Value("${custom.jwt.refreshToken.expirationSeconds}")
     private int refreshTokenExpireSeconds;
@@ -52,11 +56,23 @@ public class AuthService {
         return new TokenResponse(accessToken, refreshToken);
     }
 
-    public void logout(String refreshToken) {
+    public void logout(String refreshToken, String authorization) {
         RefreshTokenPayload payload = jwtTokenProvider.parseRefreshToken(refreshToken);
-        if (payload == null) return;
+        if (payload != null) {
+            refreshTokenRepository.delete(payload.userId(), payload.jti());
+        }
 
-        refreshTokenRepository.delete(payload.userId(), payload.jti());
+        String accessToken = bearerTokenExtractor.extractAccessTokenOrNull(authorization);
+        if (accessToken != null) {
+            try {
+                long remaining = jwtTokenProvider.getRemainingSeconds(accessToken);
+
+                if (remaining > 0) {
+                    blacklistRepository.add(accessToken, Duration.ofSeconds(remaining + 60));
+                }
+            } catch (RuntimeException ignored) {
+            }
+        }
     }
 
     public TokenResponse refresh(String refreshToken) {

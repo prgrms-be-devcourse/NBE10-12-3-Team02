@@ -21,4 +21,22 @@ public class BearerTokenExtractor {
 
         return accessToken;
     }
+
+    public String extractAccessTokenOrNull(String authorization) {
+        if (authorization == null || authorization.isBlank()) {
+            return null;
+        }
+
+        if (!authorization.startsWith("Bearer ")) {
+            return null;
+        }
+
+        String accessToken = authorization.substring("Bearer ".length()).trim();
+
+        if (accessToken.isBlank()) {
+            return null;
+        }
+
+        return accessToken;
+    }
 }

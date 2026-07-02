@@ -14,7 +14,7 @@ public class CustomAuthenticationFilterSkipMatcher {
                 path.matches("/api/[^/]+/auth/login")
                         || path.matches("/api/[^/]+/auth/refresh")
                         || path.matches("/api/[^/]+/auth/logout")
-                        || path.matches("/api/[^/]+/users/signin")
+                        || path.matches("/api/[^/]+/users/signup")
         ));
     }
 }

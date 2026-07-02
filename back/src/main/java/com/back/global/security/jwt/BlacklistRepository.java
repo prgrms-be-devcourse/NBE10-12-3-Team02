@@ -14,10 +14,12 @@ public class BlacklistRepository {
     private static final String PREFIX = "auth:blacklist:";
 
     public void add(String accessToken, Duration ttl) {
-        redisTemplate.opsForValue().set(PREFIX + accessToken, "blacklisted", ttl);
+        String tokenHash = TokenHashUtil.sha256(accessToken);
+        redisTemplate.opsForValue().set(PREFIX + tokenHash, "blacklisted", ttl);
     }
 
     public boolean isBlacklisted(String accessToken) {
-        return Boolean.TRUE.equals(redisTemplate.hasKey(PREFIX + accessToken));
+        String tokenHash = TokenHashUtil.sha256(accessToken);
+        return Boolean.TRUE.equals(redisTemplate.hasKey(PREFIX + tokenHash));
     }
 }

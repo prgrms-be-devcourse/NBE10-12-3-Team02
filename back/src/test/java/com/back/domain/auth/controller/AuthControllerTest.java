@@ -3,6 +3,9 @@ package com.back.domain.auth.controller;
 import com.back.domain.user.entity.LoginType;
 import com.back.domain.user.entity.User;
 import com.back.domain.user.repository.UserRepository;
+import com.back.global.security.jwt.BlacklistRepository;
+import com.back.global.security.jwt.RefreshTokenRepository;
+import com.back.global.security.jwt.TokenHashUtil;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.Cookie;
 import org.junit.jupiter.api.BeforeEach;
@@ -14,14 +17,22 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.transaction.annotation.Transactional;
+import static org.mockito.Mockito.verify;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.any;
 
+import java.time.Duration;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.startsWith;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.cookie;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
@@ -37,6 +48,12 @@ class AuthControllerTest {
     private final ObjectMapper objectMapper;
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+
+    @MockitoBean
+    private RefreshTokenRepository refreshTokenRepository;
+
+    @MockitoBean
+    private BlacklistRepository blacklistRepository;
 
     private static final String LOGIN_ID = "testuser";
     private static final String PASSWORD = "q1w2e3r4";
@@ -101,6 +118,9 @@ class AuthControllerTest {
     void t3() throws Exception {
         Cookie refreshTokenCookie = loginAndGetRefreshTokenCookie();
 
+        when(refreshTokenRepository.find(anyLong(), anyString()))
+                .thenReturn(TokenHashUtil.sha256(refreshTokenCookie.getValue()));
+
         mockMvc.perform(post("/api/v1/auth/refresh")
                         .cookie(refreshTokenCookie))
                 .andExpect(status().isOk())
@@ -133,6 +153,25 @@ class AuthControllerTest {
                 .andExpect(jsonPath("$.msg").value("로그아웃이 완료되었습니다. 토큰 및 세션 정보가 무효화되었습니다."));
     }
 
+    @Test
+    @DisplayName("로그아웃 성공 - accessToken 블랙리스트 등록")
+    void t6() throws Exception {
+        MvcResult loginResult = login();
+
+        Cookie refreshTokenCookie = loginResult.getResponse().getCookie("refreshToken");
+        String authorization = loginResult.getResponse().getHeader("Authorization");
+        String accessToken = authorization.substring("Bearer ".length());
+
+        mockMvc.perform(post("/api/v1/auth/logout")
+                        .header("Authorization", authorization)
+                        .cookie(refreshTokenCookie))
+                .andExpect(status().isOk())
+                .andExpect(cookie().maxAge("refreshToken", 0))
+                .andExpect(jsonPath("$.resultCode").value("200-1"));
+
+        verify(blacklistRepository).add(eq(accessToken), any(Duration.class));
+    }
+
     private Cookie loginAndGetRefreshTokenCookie() throws Exception {
         MvcResult result = mockMvc.perform(post("/api/v1/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -148,5 +187,16 @@ class AuthControllerTest {
         assertThat(refreshTokenCookie).isNotNull();
 
         return refreshTokenCookie;
+    }
+
+    private MvcResult login() throws Exception {
+        return mockMvc.perform(post("/api/v1/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of(
+                                "id", LOGIN_ID,
+                                "password", PASSWORD
+                        ))))
+                .andExpect(status().isOk())
+                .andReturn();
     }
 }
