@@ -4,16 +4,21 @@ import com.back.domain.user.entity.LoginType;
 import com.back.domain.user.entity.User;
 import com.back.domain.user.repository.UserRepository;
 import com.back.global.security.SecurityUser;
+import com.back.global.security.jwt.BlacklistRepository;
+import com.back.global.security.jwt.JwtTokenProvider;
+import com.back.global.security.jwt.payload.AccessTokenPayload;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -38,6 +43,12 @@ class UserControllerTest {
     private final PasswordEncoder passwordEncoder;
     private User user;
     private SecurityUser securityUser;
+
+    @MockitoBean
+    private BlacklistRepository blacklistRepository;
+
+    @MockitoBean
+    private JwtTokenProvider jwtTokenProvider;
 
     @Autowired
     public UserControllerTest(
@@ -64,6 +75,12 @@ class UserControllerTest {
                 user.getUserId(),
                 user.getName()
         );
+
+        Mockito.when(jwtTokenProvider.parseAccessToken(Mockito.anyString()))
+                .thenReturn(new AccessTokenPayload(user.getUserId(), user.getName()));
+
+        Mockito.when(jwtTokenProvider.getRemainingSeconds(Mockito.anyString()))
+                .thenReturn(600L);
     }
 
     @Test
@@ -138,7 +155,8 @@ class UserControllerTest {
     @DisplayName("회원 탈퇴 성공")
     void t5() throws Exception {
         mockMvc.perform(patch("/api/v1/users/withdraw")
-                        .with(user(securityUser)))
+                        .with(user(securityUser))
+                        .header("Authorization", "Bearer test-access-token"))
                 .andDo(print())
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.resultCode").value("200-1"))
@@ -148,8 +166,12 @@ class UserControllerTest {
     @Test
     @DisplayName("회원 탈퇴 실패 - 존재하지 않는 회원")
     void t6() throws Exception {
+        Mockito.when(jwtTokenProvider.parseAccessToken(Mockito.anyString()))
+                .thenReturn(new AccessTokenPayload(999L, "없는사용자"));
+
         mockMvc.perform(patch("/api/v1/users/withdraw")
-                        .with(user(new SecurityUser(999L, "없는사용자"))))
+                        .with(user(new SecurityUser(999L, "없는사용자")))
+                        .header("Authorization", "Bearer test-access-token"))
                 .andDo(print())
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.resultCode").value("404-2"));
@@ -162,7 +184,8 @@ class UserControllerTest {
         userRepository.saveAndFlush(user);
 
         mockMvc.perform(patch("/api/v1/users/withdraw")
-                        .with(user(securityUser)))
+                        .with(user(securityUser))
+                        .header("Authorization", "Bearer test-access-token"))
                 .andDo(print())
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.resultCode").value("404-2"));
