@@ -20,7 +20,7 @@ interface ScheduleItem {
   scheduleId: number;
   round: number;
   scheduleDate: string;
-  remainingSeats?: number;
+  remainingSeats: number;
 }
 
 export default function ConcertDetailPage({
@@ -128,10 +128,11 @@ export default function ConcertDetailPage({
                       <button
                         key={schedule.scheduleId}
                         onClick={() => setSelectedSchedule(schedule.scheduleId)}
-                        className={`px-4 py-2 rounded-lg text-sm font-semibold border transition ${selectedSchedule === schedule.scheduleId
+                        className={`px-4 py-2 rounded-lg text-sm font-semibold border transition ${
+                          selectedSchedule === schedule.scheduleId
                             ? "bg-blue-600 text-white border-blue-600"
                             : "bg-white text-gray-600 border-gray-200 hover:border-blue-400"
-                          }`}
+                        }`}
                       >
                         {schedule.round}회차
                         <br />
@@ -139,13 +140,13 @@ export default function ConcertDetailPage({
                           {schedule.scheduleDate?.slice(0, 16).replace("T", " ")}
                         </span>
                         <br />
-                        {schedule.remainingSeats !== undefined && (
-                          <span
-                            className={`text-xs font-normal ${schedule.remainingSeats === 0 ? "text-red-500" : "text-gray-400"}`}
-                          >
-                            {schedule.remainingSeats === 0 ? "매진" : `잔여 ${schedule.remainingSeats}석`}
-                          </span>
-                        )}
+                        <span
+                          className={`text-xs font-normal ${
+                            schedule.remainingSeats === 0 ? "text-red-500" : "text-gray-400"
+                          }`}
+                        >
+                          {schedule.remainingSeats === 0 ? "매진" : `잔여 ${schedule.remainingSeats}석`}
+                        </span>
                       </button>
                     ))}
                   </div>

@@ -22,8 +22,7 @@ export function getAccessToken() {
 export function decodeToken(): { id: number; name: string } | null {
   if (!accessToken) return null;
   try {
-    let base64 = accessToken.split(".")[1].replace(/-/g, "+").replace(/_/g, "/");
-    base64 += "=".repeat((4 - (base64.length % 4)) % 4);
+    const base64 = accessToken.split(".")[1].replace(/-/g, "+").replace(/_/g, "/");
     const binary = atob(base64);
     const bytes = Uint8Array.from(binary, (c) => c.charCodeAt(0));
     const json = JSON.parse(new TextDecoder("utf-8").decode(bytes));
@@ -59,4 +58,13 @@ export async function apiFetch<T>(
   }
 
   return json;
+}
+
+// 새로고침 등으로 메모리 토큰이 사라졌을 때, refreshToken 쿠키로 세션 복구 시도
+export async function restoreSession(): Promise<void> {
+  try {
+    await apiFetch("/auth/refresh", { method: "POST" });
+  } catch {
+    // refreshToken이 없거나 만료됐으면 조용히 비로그인 상태로 둠
+  }
 }

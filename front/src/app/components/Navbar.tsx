@@ -2,13 +2,12 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { useRouter, usePathname } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { Ticket, User } from "lucide-react";
-import { apiFetch, decodeToken, setAccessToken } from "@/lib/api";
+import { apiFetch, decodeToken, setAccessToken, restoreSession } from "@/lib/api";
 
 export default function Navbar() {
   const router = useRouter();
-  const pathname = usePathname();
   const [userName, setUserName] = useState<string | null>(null);
 
   useEffect(() => {
@@ -16,15 +15,13 @@ export default function Navbar() {
       const decoded = decodeToken();
       setUserName(decoded?.name ?? null);
     };
-    syncAuth();
+
+    // 새로고침으로 메모리 토큰이 날아갔어도, refreshToken 쿠키로 세션 복구 시도
+    restoreSession().then(syncAuth);
+
     window.addEventListener("auth-changed", syncAuth);
     return () => window.removeEventListener("auth-changed", syncAuth);
   }, []);
-
-  useEffect(() => {
-    const decoded = decodeToken();
-    setUserName(decoded?.name ?? null);
-  }, [pathname]);
 
   const handleLogout = async () => {
     try {

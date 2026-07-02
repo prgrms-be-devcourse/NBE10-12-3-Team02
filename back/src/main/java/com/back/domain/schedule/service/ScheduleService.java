@@ -36,7 +36,6 @@ public class ScheduleService {
     }
 
     public List<ShowScheduleListResponse> showScheduleList(Long concertId) {
-
         if (!concertRepository.existsById(concertId)) {
             throw new ServiceException(ErrorCode.CONCERT_NOT_FOUND);
         }
@@ -48,7 +47,11 @@ public class ScheduleService {
         }
 
         return schedules.stream()
-                .map(ShowScheduleListResponse::of)
+                .map(schedule -> {
+                    long remainingSeats = scheduleSeatRepository
+                            .countBySchedule_ScheduleIdAndSeatStatus(schedule.getScheduleId(), SeatStatus.AVAILABLE);
+                    return ShowScheduleListResponse.of(schedule, remainingSeats);
+                })
                 .toList();
     }
 }
