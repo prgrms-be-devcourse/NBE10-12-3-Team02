@@ -34,6 +34,7 @@ public class SecurityConfig {
                                         "/api/*/concerts/*",
                                         "/api/*/schedules/**",
                                         "/api/*/users/check-id"
+
                                 ).permitAll()
                                 .requestMatchers(
                                         HttpMethod.POST,

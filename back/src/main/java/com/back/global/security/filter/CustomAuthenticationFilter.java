@@ -1,9 +1,11 @@
 package com.back.global.security.filter;
 
+import com.back.global.exception.ErrorCode;
 import com.back.global.exception.ServiceException;
 import com.back.global.requestcontext.RequestContext;
 import com.back.global.rsData.RsData;
 import com.back.global.security.auth.SecurityAuthenticationFactory;
+import com.back.global.security.jwt.BlacklistRepository;
 import com.back.global.security.jwt.JwtTokenProvider;
 import com.back.global.security.jwt.payload.AccessTokenPayload;
 import com.back.standard.util.Ut;
@@ -27,6 +29,7 @@ public class CustomAuthenticationFilter extends OncePerRequestFilter {
     private final BearerTokenExtractor bearerTokenExtractor;
     private final CustomAuthenticationFilterSkipMatcher skipMatcher;
     private final SecurityAuthenticationFactory securityAuthenticationFactory;
+    private final BlacklistRepository blacklistRepository;
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
@@ -56,8 +59,12 @@ public class CustomAuthenticationFilter extends OncePerRequestFilter {
         }
 
         String accessToken = bearerTokenExtractor.extract(authorization);
-        AccessTokenPayload payload = jwtTokenProvider.parseAccessToken(accessToken);
 
+        if (blacklistRepository.isBlacklisted(accessToken)) {
+            throw new ServiceException(ErrorCode.AUTH_LOGIN_REQUIRED);
+        }
+
+        AccessTokenPayload payload = jwtTokenProvider.parseAccessToken(accessToken);
         Authentication authentication = securityAuthenticationFactory.create(payload);
         SecurityContextHolder.getContext().setAuthentication(authentication);
     }

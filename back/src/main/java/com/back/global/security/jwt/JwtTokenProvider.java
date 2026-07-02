@@ -61,6 +61,18 @@ public class JwtTokenProvider {
         }
     }
 
+    public long getRemainingSeconds(String accessToken) {
+        Map<String, Object> payload = Ut.jwt.payload(accessTokenSecret, accessToken);
+        if (payload == null) return 0;
+
+        Object exp = payload.get("exp");
+        if (exp == null) return 0;
+
+        long expTime = ((Number) exp).longValue();
+        long now = System.currentTimeMillis() / 1000;
+        return Math.max(0, expTime - now);
+    }
+
     private Long getLongClaim(Map<String, Object> payload, String key) {
         Object value = payload.get(key);
 
@@ -110,5 +122,9 @@ public class JwtTokenProvider {
                         "jti", jti
                 )
         );
+    }
+
+    public int getAccessTokenExpireSeconds() {
+        return accessTokenExpireSeconds;
     }
 }
