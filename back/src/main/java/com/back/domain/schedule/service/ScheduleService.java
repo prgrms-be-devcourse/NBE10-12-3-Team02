@@ -51,5 +51,4 @@ public class ScheduleService {
                 .map(ShowScheduleListResponse::of)
                 .toList();
     }
-
 }

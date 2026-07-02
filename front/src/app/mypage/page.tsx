@@ -1,58 +1,98 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { apiFetch, decodeToken, setAccessToken } from "@/lib/api";
+
+interface TicketInfo {
+  ticketId: number;
+  urlPoster: string;
+  concertName: string;
+  startDate: string;
+  endDate: string;
+  isValid: boolean;
+  ticketPrice: number;
+  createdAt: string;
+  ticketNumber: string;
+}
+
+interface MyPageData {
+  name: string;
+  id: string;
+  email: string;
+  loginType: string;
+  ticketList: TicketInfo[];
+}
 
 export default function MyPage() {
+  const router = useRouter();
+
+  const [data, setData] = useState<MyPageData | null>(null);
+  const [loading, setLoading] = useState(true);
   const [showWithdrawModal, setShowWithdrawModal] = useState(false);
   const [cancelTargetId, setCancelTargetId] = useState<number | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const ticketsPerPage = 5;
 
-  const user = {
-    name: "홍길동",
-    loginId: "exampleId",
-    email: "example@naver.com",
+  useEffect(() => {
+    if (!decodeToken()) {
+      alert("로그인이 필요합니다.");
+      router.push("/login");
+      return;
+    }
+
+    apiFetch<MyPageData>(`/users/me`)
+      .then((res) => setData(res.data))
+      .catch((e) => alert(e instanceof Error ? e.message : "마이페이지 조회에 실패했습니다."))
+      .finally(() => setLoading(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const handleWithdraw = async () => {
+    try {
+      await apiFetch(`/users/withdraw`, { method: "PATCH" });
+      setAccessToken(null);
+      alert("회원 탈퇴가 완료되었습니다.");
+      router.push("/");
+    } catch (e) {
+      alert(e instanceof Error ? e.message : "탈퇴 처리 중 오류가 발생했습니다.");
+    } finally {
+      setShowWithdrawModal(false);
+    }
   };
 
-  const [tickets, setTickets] = useState([
-    {
-      ticketId: 1,
-      concertName: "흠뻑쇼 - 대전",
-      seatNumber: "A-12",
-      startDate: "2026-06-06",
-      endDate: "2026-06-08",
-      ticketPrice: 120000,
-      ticketNumber: "TKT-101-20260606-A12",
-      status: "BOOKED",
-    },
-    {
-      ticketId: 2,
-      concertName: "2026 SUMMER LIVE",
-      seatNumber: "B-3",
-      startDate: "2026-08-10",
-      endDate: "2026-08-12",
-      ticketPrice: 150000,
-      ticketNumber: "TKT-102-20260810-B3",
-      status: "BOOKED",
-    },
-  ]);
-
-  const handleWithdraw = () => {
-    setShowWithdrawModal(false);
-    alert("회원 탈퇴가 완료되었습니다. (나중에 API 연동)");
-  };
-
-  const handleCancel = () => {
+  const handleCancel = async () => {
     if (cancelTargetId === null) return;
-    setTickets((prev) =>
-      prev.map((t) =>
-        t.ticketId === cancelTargetId ? { ...t, status: "CANCELED" } : t
-      )
-    );
-    setCancelTargetId(null);
+    try {
+      await apiFetch(`/tickets/cancel/${cancelTargetId}`, { method: "PATCH" });
+      setData((prev) =>
+        prev
+          ? {
+              ...prev,
+              ticketList: prev.ticketList.map((t) =>
+                t.ticketId === cancelTargetId ? { ...t, isValid: false } : t
+              ),
+            }
+          : prev
+      );
+    } catch (e) {
+      alert(e instanceof Error ? e.message : "취소 처리 중 오류가 발생했습니다.");
+    } finally {
+      setCancelTargetId(null);
+    }
   };
 
-  const sortedTickets = [...tickets].sort((a, b) => b.ticketId - a.ticketId);
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <p className="text-gray-400">불러오는 중...</p>
+      </div>
+    );
+  }
+
+  if (!data) return null;
+
+  const sortedTickets = [...data.ticketList].sort((a, b) => b.ticketId - a.ticketId);
   const totalPages = Math.ceil(sortedTickets.length / ticketsPerPage);
   const pagedTickets = sortedTickets.slice(
     (currentPage - 1) * ticketsPerPage,
@@ -65,7 +105,7 @@ export default function MyPage() {
         <div className="flex justify-between items-center mb-8">
           <div>
             <p className="text-gray-400 text-sm">안녕하세요</p>
-            <h1 className="text-2xl font-bold text-gray-800">{user.name}님 👋</h1>
+            <h1 className="text-2xl font-bold text-gray-800">{data.name}님 👋</h1>
           </div>
           <button
             onClick={() => setShowWithdrawModal(true)}
@@ -78,25 +118,26 @@ export default function MyPage() {
         <div className="bg-white rounded-2xl shadow-sm p-8 mb-8">
           <h2 className="text-lg font-bold text-gray-700 mb-4">내 정보</h2>
           <div className="space-y-2 text-gray-600">
-            <p><span className="inline-block w-20 text-gray-400">이름</span>{user.name}</p>
-            <p><span className="inline-block w-20 text-gray-400">아이디</span>{user.loginId}</p>
-            <p><span className="inline-block w-20 text-gray-400">이메일</span>{user.email}</p>
+            <p><span className="inline-block w-20 text-gray-400">이름</span>{data.name}</p>
+            <p><span className="inline-block w-20 text-gray-400">아이디</span>{data.id}</p>
+            <p><span className="inline-block w-20 text-gray-400">이메일</span>{data.email}</p>
           </div>
         </div>
 
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-bold text-gray-700">내 티켓</h2>
-          <span className="text-sm text-gray-400">{tickets.length}개의 티켓</span>
+          <span className="text-sm text-gray-400">{data.ticketList.length}개의 티켓</span>
         </div>
 
         <div className="space-y-6">
           {pagedTickets.map((ticket) => (
-            <div
-              key={ticket.ticketId}
-              className="flex shadow-md rounded-2xl overflow-hidden"
-            >
-              <div className="flex-shrink-0 w-36 bg-gradient-to-br from-blue-200 to-indigo-300 flex items-center justify-center text-white font-bold text-sm">
-                포스터
+            <div key={ticket.ticketId} className="flex shadow-md rounded-2xl overflow-hidden">
+              <div className="flex-shrink-0 w-36 bg-gradient-to-br from-blue-200 to-indigo-300 flex items-center justify-center text-white font-bold text-sm overflow-hidden">
+                {ticket.urlPoster ? (
+                  <img src={ticket.urlPoster} alt={ticket.concertName} className="w-full h-full object-cover" />
+                ) : (
+                  "포스터"
+                )}
               </div>
 
               <div className="border-l-2 border-dashed border-gray-200 my-4" />
@@ -105,7 +146,7 @@ export default function MyPage() {
                 <div className="flex justify-between items-start mb-3">
                   <h3 className="font-bold text-gray-800 text-lg">{ticket.concertName}</h3>
                   <div className="flex items-center gap-2">
-                    {ticket.status !== "CANCELED" && (
+                    {ticket.isValid && (
                       <button
                         onClick={() => setCancelTargetId(ticket.ticketId)}
                         className="text-xs text-gray-400 hover:text-red-500 border border-gray-200 hover:border-red-300 px-3 py-1 rounded-lg transition"
@@ -114,11 +155,9 @@ export default function MyPage() {
                       </button>
                     )}
                     <span className={`px-2 py-1 text-xs rounded-full font-semibold ${
-                      ticket.status === "CANCELED"
-                        ? "bg-gray-100 text-gray-400"
-                        : "bg-green-100 text-green-700"
+                      !ticket.isValid ? "bg-gray-100 text-gray-400" : "bg-green-100 text-green-700"
                     }`}>
-                      {ticket.status === "CANCELED" ? "취소됨" : "예매완료"}
+                      {!ticket.isValid ? "취소됨" : "예매완료"}
                     </span>
                   </div>
                 </div>
@@ -133,14 +172,8 @@ export default function MyPage() {
                     {ticket.startDate} ~ {ticket.endDate}
                   </p>
                   <p>
-                    <span className="inline-block w-20 text-gray-400">좌석</span>
-                    {ticket.seatNumber}
-                  </p>
-                  <p>
                     <span className="inline-block w-20 text-gray-400">결제금액</span>
-                    <span className="text-blue-600 font-bold">
-                      {ticket.ticketPrice.toLocaleString()}원
-                    </span>
+                    <span className="text-blue-600 font-bold">{ticket.ticketPrice.toLocaleString()}원</span>
                   </p>
                 </div>
               </div>
@@ -184,12 +217,8 @@ export default function MyPage() {
       {cancelTargetId !== null && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl p-8 max-w-sm w-full">
-            <h2 className="text-xl font-bold text-center text-gray-800 mb-3">
-              예매를 취소하시겠어요?
-            </h2>
-            <p className="text-center text-gray-500 text-sm mb-6">
-              취소 후에는 되돌릴 수 없습니다.
-            </p>
+            <h2 className="text-xl font-bold text-center text-gray-800 mb-3">예매를 취소하시겠어요?</h2>
+            <p className="text-center text-gray-500 text-sm mb-6">취소 후에는 되돌릴 수 없습니다.</p>
             <div className="flex gap-3">
               <button
                 onClick={() => setCancelTargetId(null)}
@@ -211,12 +240,9 @@ export default function MyPage() {
       {showWithdrawModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl p-8 max-w-sm w-full">
-            <h2 className="text-xl font-bold text-center text-gray-800 mb-3">
-              정말 탈퇴하시겠어요?
-            </h2>
+            <h2 className="text-xl font-bold text-center text-gray-800 mb-3">정말 탈퇴하시겠어요?</h2>
             <p className="text-center text-gray-500 text-sm mb-6">
-              탈퇴 시 모든 예매 내역이 사라지며,<br />
-              되돌릴 수 없습니다.
+              탈퇴 시 모든 예매 내역이 사라지며,<br />되돌릴 수 없습니다.
             </p>
             <div className="flex gap-3">
               <button

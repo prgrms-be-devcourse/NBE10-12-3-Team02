@@ -1,7 +1,6 @@
 package com.back.domain.concert.dto;
 
 import com.back.domain.concert.entity.Concert;
-
 import java.util.List;
 import java.util.Map;
 
@@ -11,6 +10,7 @@ public record ConcertDetailResponse(
         String description,
         String venueName,
         String location,
+        String urlPoster,
         List<String> detailUrlList,
         Map<String, Integer> prices,
         boolean bookable
@@ -29,6 +29,7 @@ public record ConcertDetailResponse(
                 concert.getDescription(),
                 venueName,
                 location,
+                concert.getUrlPoster(),
                 detailUrlList,
                 prices,
                 bookable

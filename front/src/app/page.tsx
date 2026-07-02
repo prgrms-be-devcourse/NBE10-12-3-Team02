@@ -1,60 +1,26 @@
 "use client";
 
-import { useState, type ChangeEvent } from "react";
+import { useState, useEffect, type ChangeEvent } from "react";
 import Link from "next/link";
 import { Search, ChevronLeft, ChevronRight } from "lucide-react";
+import { apiFetch } from "@/lib/api";
+
+interface ConcertListItem {
+  concertId: number;
+  concertName: string;
+  venueName: string;
+  startDate: string;
+  endDate: string;
+  imageUrl: string;
+  status: string;
+}
 
 export default function Home() {
-  const concerts = [
-    {
-      concertId: 1,
-      concertName: "2026 SUMMER LIVE",
-      venueName: "올림픽 체조경기장",
-      startDate: "2026-08-10",
-      closeDate: "2026-08-09",
-      lowestPrice: 77000,
-    },
-    {
-      concertId: 2,
-      concertName: "흠뻑쇼 - 대전",
-      venueName: "대전월드컵경기장",
-      startDate: "2026-07-20",
-      closeDate: "2026-07-19",
-      lowestPrice: 99000,
-    },
-    {
-      concertId: 3,
-      concertName: "재즈 페스티벌",
-      venueName: "올림픽공원",
-      startDate: "2026-09-05",
-      closeDate: "2026-09-04",
-      lowestPrice: 55000,
-    },
-    {
-      concertId: 4,
-      concertName: "클래식 갈라쇼",
-      venueName: "예술의전당",
-      startDate: "2026-08-25",
-      closeDate: "2026-08-24",
-      lowestPrice: 120000,
-    },
-    {
-      concertId: 5,
-      concertName: "인디밴드 페스타",
-      venueName: "홍대 롤링홀",
-      startDate: "2026-07-30",
-      closeDate: "2026-07-29",
-      lowestPrice: 44000,
-    },
-    {
-      concertId: 6,
-      concertName: "트로트 콘서트",
-      venueName: "잠실실내체육관",
-      startDate: "2026-08-15",
-      closeDate: "2026-08-14",
-      lowestPrice: 88000,
-    },
-  ];
+  const [concerts, setConcerts] = useState<ConcertListItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  const [topConcerts, setTopConcerts] = useState<ConcertListItem[]>([]);
 
   const [keyword, setKeyword] = useState("");
   const [sort, setSort] = useState("closingSoon");
@@ -64,26 +30,42 @@ export default function Home() {
   const visibleCount = 3;
   const itemsPerPage = 12;
 
-  const topConcerts = [...concerts]
-    .sort((a, b) => a.closeDate.localeCompare(b.closeDate))
-    .slice(0, 5);
+  // 검색/정렬에 반응하는 전체 목록
+  useEffect(() => {
+    const fetchConcerts = async () => {
+      try {
+        setLoading(true);
+        setError("");
+        const params = new URLSearchParams();
+        if (keyword.trim() !== "") params.append("keyword", keyword);
+        params.append("sort", sort);
+
+        const res = await apiFetch<ConcertListItem[]>(`/concerts?${params.toString()}`);
+        setConcerts(res.data);
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "콘서트를 불러오지 못했습니다.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchConcerts();
+  }, [keyword, sort]);
+
+  // 마감임박 슬라이드는 검색어/정렬과 무관하게 최초 1회만
+  useEffect(() => {
+    apiFetch<ConcertListItem[]>(`/concerts?sort=closingSoon`)
+      .then((res) => setTopConcerts(res.data.slice(0, 5)))
+      .catch(() => setTopConcerts([]));
+  }, []);
 
   const maxIndex = Math.max(0, topConcerts.length - visibleCount);
 
   const prevSlide = () => setSlideIndex((i) => Math.max(0, i - 1));
   const nextSlide = () => setSlideIndex((i) => Math.min(maxIndex, i + 1));
 
-  const filtered = concerts.filter((concert) =>
-    concert.concertName.toLowerCase().includes(keyword.toLowerCase())
-  );
-
-  const sorted = [...filtered].sort((a, b) => {
-    if (sort === "latest") return b.startDate.localeCompare(a.startDate);
-    return a.closeDate.localeCompare(b.closeDate);
-  });
-
-  const totalPages = Math.ceil(sorted.length / itemsPerPage);
-  const pagedConcerts = sorted.slice(
+  const totalPages = Math.ceil(concerts.length / itemsPerPage);
+  const pagedConcerts = concerts.slice(
     (currentPage - 1) * itemsPerPage,
     currentPage * itemsPerPage
   );
@@ -145,19 +127,25 @@ export default function Home() {
                   className="shrink-0 bg-white rounded-2xl shadow-sm overflow-hidden hover:shadow-lg transition"
                   style={{ width: `calc((100% - 32px) / 3)` }}
                 >
-                  <div className="h-56 bg-gradient-to-br from-blue-200 to-indigo-300 flex items-center justify-center text-white font-bold relative">
-                    포스터
-                    <span className="absolute top-3 left-3 bg-red-600 text-white text-xs px-2 py-1 rounded-full">
-                      마감임박
-                    </span>
+                  <div className="h-56 bg-gradient-to-br from-blue-200 to-indigo-300 flex items-center justify-center text-white font-bold relative overflow-hidden">
+                    {concert.imageUrl ? (
+                      <img src={concert.imageUrl} alt={concert.concertName} className="w-full h-full object-cover" />
+                    ) : (
+                      "포스터"
+                    )}
+                    {concert.status === "CLOSED" && (
+                      <span className="absolute top-3 left-3 bg-gray-600 text-white text-xs px-2 py-1 rounded-full">
+                        마감
+                      </span>
+                    )}
                   </div>
                   <div className="p-4">
                     <h3 className="font-bold text-gray-800 truncate">
                       {concert.concertName}
                     </h3>
                     <p className="text-sm text-gray-500 mt-1">{concert.venueName}</p>
-                    <p className="text-blue-600 font-bold mt-2">
-                      {concert.lowestPrice.toLocaleString()}원~
+                    <p className="text-sm text-gray-400 mt-1">
+                      {concert.startDate?.slice(0, 10)}
                     </p>
                   </div>
                 </Link>
@@ -168,7 +156,7 @@ export default function Home() {
 
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-2xl font-bold text-gray-800">전체 공연</h2>
-          <span className="text-sm text-gray-400">{sorted.length}개의 공연</span>
+          <span className="text-sm text-gray-400">{concerts.length}개의 공연</span>
         </div>
 
         <div className="flex flex-col md:flex-row gap-3 mb-6">
@@ -192,7 +180,11 @@ export default function Home() {
           </select>
         </div>
 
-        {sorted.length === 0 ? (
+        {loading ? (
+          <p className="text-center text-gray-400 py-20">불러오는 중...</p>
+        ) : error ? (
+          <p className="text-center text-red-400 py-20">{error}</p>
+        ) : concerts.length === 0 ? (
           <p className="text-center text-gray-400 py-20">검색 결과가 없습니다.</p>
         ) : (
           <>
@@ -203,15 +195,23 @@ export default function Home() {
                   key={concert.concertId}
                   className="bg-white rounded-2xl shadow-sm overflow-hidden hover:shadow-lg hover:-translate-y-1 transition-all duration-200 cursor-pointer"
                 >
-                  <div className="h-48 bg-gradient-to-br from-blue-200 to-indigo-300 flex items-center justify-center text-white font-bold">
-                    포스터
+                  <div className="h-48 bg-gradient-to-br from-blue-200 to-indigo-300 flex items-center justify-center text-white font-bold relative overflow-hidden">
+                    {concert.imageUrl ? (
+                      <img src={concert.imageUrl} alt={concert.concertName} className="w-full h-full object-cover" />
+                    ) : (
+                      "포스터"
+                    )}
+                    {concert.status === "CLOSED" && (
+                      <span className="absolute top-2 left-2 bg-gray-600 text-white text-xs px-2 py-1 rounded-full">
+                        마감
+                      </span>
+                    )}
                   </div>
                   <div className="p-4">
                     <h3 className="font-bold text-gray-800 truncate">{concert.concertName}</h3>
                     <p className="text-sm text-gray-500 mt-1">{concert.venueName}</p>
-                    <p className="text-sm text-gray-400 mt-1">{concert.startDate}</p>
-                    <p className="text-blue-600 font-bold mt-2">
-                      {concert.lowestPrice.toLocaleString()}원~
+                    <p className="text-sm text-gray-400 mt-1">
+                      {concert.startDate?.slice(0, 10)}
                     </p>
                   </div>
                 </Link>
