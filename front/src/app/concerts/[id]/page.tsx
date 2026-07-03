@@ -89,18 +89,21 @@ export default function ConcertDetailPage({
       <div className="max-w-4xl mx-auto">
         <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
           <div className="flex flex-col md:flex-row">
-            <div className="md:w-1/3 self-start bg-gradient-to-br from-blue-200 to-indigo-300 flex items-center justify-center text-white font-bold text-xl overflow-hidden">
-              {concert.urlPoster ? (
-                <img
-                  src={concert.urlPoster}
-                  alt={concert.concertName}
-                  className="w-full h-auto object-cover"
-                />
-              ) : (
-                <div className="w-full aspect-[3/4] flex items-center justify-center">
-                  포스터
-                </div>
-              )}
+            <div className="md:w-1/3 flex flex-col">
+              <div className="self-start bg-gradient-to-br from-blue-200 to-indigo-300 flex items-center justify-center text-white font-bold text-xl overflow-hidden">
+                {concert.urlPoster ? (
+                  <img
+                    src={concert.urlPoster}
+                    alt={concert.concertName}
+                    className="w-full h-auto object-cover"
+                  />
+                ) : (
+                  <div className="w-full aspect-[3/4] flex items-center justify-center">
+                    포스터
+                  </div>
+                )}
+              </div>
+              <p className="text-sm text-gray-500 mt-3 px-3">예매 가능 시간: 관람일 전일 17시까지</p>
             </div>
 
             <div className="p-8 flex-1">
@@ -175,22 +178,8 @@ export default function ConcertDetailPage({
         </div>
 
         <section className="mt-10 bg-white rounded-2xl shadow-sm overflow-hidden">
-          <div className="flex gap-8 border-b border-gray-200 px-8">
-            <button type="button" className="py-4 text-sm font-bold text-gray-900 border-b-2 border-gray-900">
-              공연정보
-            </button>
-            <button type="button" className="py-4 text-sm font-medium text-gray-400">
-              관람정보
-            </button>
-          </div>
-
           <div className="p-8">
             <h2 className="text-xl font-bold text-gray-800 mb-6">상세 설명</h2>
-
-            <div className="mb-8">
-              <h3 className="font-bold text-gray-700 mb-3">공연시간 정보</h3>
-              <p className="text-sm text-gray-600 leading-7">예매가능시간: 관람일 전일 17시까지</p>
-            </div>
 
             {concert.detailUrlList?.length > 0 ? (
               concert.detailUrlList.map((url) => (

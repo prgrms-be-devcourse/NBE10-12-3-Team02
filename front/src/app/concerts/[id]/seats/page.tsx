@@ -25,6 +25,7 @@ const GRADE_STYLES: Record<string, { seat: string; dot: string }> = {
 };
 const DEFAULT_STYLE = { seat: "bg-gray-200 hover:bg-gray-300 text-gray-700", dot: "bg-gray-300" };
 const GRADE_ORDER = ["VIP", "R", "S", "A"];
+const SELECTION_TIME_LIMIT = 300; // 5분
 
 export default function SeatSelectPage({
   params,
@@ -41,6 +42,30 @@ export default function SeatSelectPage({
   const [error, setError] = useState("");
   const [selectedSeats, setSelectedSeats] = useState<string[]>([]);
   const [isReserving, setIsReserving] = useState(false);
+  const [timeLeft, setTimeLeft] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (timeLeft === null) return;
+
+    if (timeLeft <= 0) {
+      setSelectedSeats([]);
+      setTimeLeft(null);
+      alert("좌석 선택 시간이 만료되어 선택이 취소되었습니다.");
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      setTimeLeft((prev) => (prev !== null ? prev - 1 : null));
+    }, 1000);
+
+    return () => clearTimeout(timer);
+  }, [timeLeft]);
+
+  const formatTime = (seconds: number) => {
+    const min = Math.floor(seconds / 60);
+    const sec = seconds % 60;
+    return `${min}:${sec.toString().padStart(2, "0")}`;
+  };
 
   useEffect(() => {
     if (!scheduleId) {
@@ -96,8 +121,10 @@ export default function SeatSelectPage({
 
     if (selectedSeats.includes(seatNumber)) {
       setSelectedSeats([]);
+      setTimeLeft(null);
     } else {
       setSelectedSeats([seatNumber]);
+      setTimeLeft(SELECTION_TIME_LIMIT);
     }
   };
 
@@ -234,14 +261,22 @@ export default function SeatSelectPage({
             <div>
               <div className="flex items-center justify-between mb-3">
                 <h2 className="font-bold text-gray-700">선택 좌석 {selectedSeats.length}</h2>
-                {selectedSeats.length > 0 && (
-                  <button
-                    onClick={() => setSelectedSeats([])}
-                    className="text-xs text-gray-400 hover:text-red-500"
-                  >
-                    전체삭제
-                  </button>
-                )}
+                <div className="flex items-center gap-3">
+                  {timeLeft !== null && (
+                    <span className="text-red-500 text-sm font-bold">{formatTime(timeLeft)}</span>
+                  )}
+                  {selectedSeats.length > 0 && (
+                    <button
+                      onClick={() => {
+                        setSelectedSeats([]);
+                        setTimeLeft(null);
+                      }}
+                      className="text-xs text-gray-400 hover:text-red-500"
+                    >
+                      전체삭제
+                    </button>
+                  )}
+                </div>
               </div>
 
               {selectedSeats.length === 0 ? (

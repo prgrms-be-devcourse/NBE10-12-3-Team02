@@ -18,4 +18,11 @@ public class ConcertDetail extends BaseEntity {
     private Concert concert;
 
     private String urlDetail;
+
+    public static ConcertDetail create(Concert concert, String urlDetail) {
+        ConcertDetail detail = new ConcertDetail();
+        detail.concert = concert;
+        detail.urlDetail = urlDetail;
+        return detail;
+    }
 }
