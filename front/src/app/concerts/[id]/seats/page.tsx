@@ -2,7 +2,7 @@
 
 import { Suspense, useState, useEffect, use } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { apiFetch } from "@/lib/api";
+import { apiFetch, decodeToken, restoreSession } from "@/lib/api";
 
 interface SeatDetail {
   seatNumber: string;
@@ -75,31 +75,49 @@ function SeatSelectContent({
     }
 
     let active = true;
+    let intervalId: NodeJS.Timeout;
 
-    const fetchSeats = async () => {
-      try {
-        const res = await apiFetch<SeatSelectionData>(
-          `/concerts/${id}/schedules/${scheduleId}/seats`
-        );
-        if (active) {
-          setSeatData(res.data);
-          setError("");
+    const initAndFetchSeats = async () => {
+      await restoreSession();
+
+      if (!decodeToken()) {
+        alert("로그인이 필요합니다.");
+        router.push("/login");
+        return;
+      }
+
+      const fetchSeats = async () => {
+        try {
+          const res = await apiFetch<SeatSelectionData>(
+            `/concerts/${id}/schedules/${scheduleId}/seats`
+          );
+          if (active) {
+            setSeatData(res.data);
+            setError("");
+          }
+        } catch (e) {
+          if (active) {
+            setError(e instanceof Error ? e.message : "좌석 정보를 불러오지 못했습니다.");
+          }
+        } finally {
+          if (active) setLoading(false);
         }
-      } catch (e) {
-        if (active) {
-          setError(e instanceof Error ? e.message : "좌석 정보를 불러오지 못했습니다.");
-        }
-      } finally {
-        if (active) setLoading(false);
+      };
+
+      await fetchSeats();
+
+      if (active) {
+        intervalId = setInterval(fetchSeats, 3000);
       }
     };
 
-    fetchSeats();
-    const intervalId = setInterval(fetchSeats, 3000);
+    initAndFetchSeats();
 
     return () => {
       active = false;
-      clearInterval(intervalId);
+      if (intervalId) {
+        clearInterval(intervalId);
+      }
     };
   }, [id, scheduleId]);
 

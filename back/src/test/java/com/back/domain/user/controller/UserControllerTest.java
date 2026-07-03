@@ -4,7 +4,7 @@ import com.back.domain.user.entity.LoginType;
 import com.back.domain.user.entity.User;
 import com.back.domain.user.repository.UserRepository;
 import com.back.global.security.SecurityUser;
-import com.back.global.security.jwt.BlacklistRepository;
+import com.back.global.security.jwt.repository.BlacklistRepository;
 import com.back.global.security.jwt.JwtTokenProvider;
 import com.back.global.security.jwt.payload.AccessTokenPayload;
 import com.fasterxml.jackson.databind.ObjectMapper;

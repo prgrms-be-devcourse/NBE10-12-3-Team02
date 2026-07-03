@@ -36,6 +36,10 @@ custom:
       grace-seconds: 60
   cors:
     allowed-origins: http://localhost:3000
+  redis:
+    refresh-token:
+      prefix: "auth:refresh:"
+      index-prefix: "auth:refresh:index:"
 app:
   rate-limit:
     seat-status:

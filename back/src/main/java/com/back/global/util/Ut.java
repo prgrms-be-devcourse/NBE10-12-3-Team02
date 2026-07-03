@@ -1,4 +1,4 @@
-package com.back.domain.auth.util;
+package com.back.global.util;
 
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.ClaimsBuilder;

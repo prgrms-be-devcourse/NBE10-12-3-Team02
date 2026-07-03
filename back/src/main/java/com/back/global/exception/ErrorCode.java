@@ -23,6 +23,8 @@ public enum ErrorCode {
 
     AUTH_FORBIDDEN("403-1", "권한이 없습니다."),
 
+    AUTH_REFRESH_TOKEN_ROTATION_FAILED("500-1", "리프레시 토큰 교체 처리 중 오류가 발생했습니다."),
+
     // User
     USER_NOT_FOUND("404-1", "회원이 존재하지 않습니다."),
     USER_ID_ALREADY_EXISTS("409-1", "이미 사용 중인 아이디입니다."),

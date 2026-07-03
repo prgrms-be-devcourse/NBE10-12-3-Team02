@@ -1,5 +1,6 @@
-package com.back.global.security.jwt;
+package com.back.global.security.jwt.repository;
 
+import com.back.global.security.jwt.TokenHashUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Repository;

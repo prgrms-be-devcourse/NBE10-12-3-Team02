@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { apiFetch, decodeToken, setAccessToken } from "@/lib/api";
+import { apiFetch, decodeToken, restoreSession, setAccessToken } from "@/lib/api";
 import { getLocalConcertPoster } from "@/lib/concertDetailImages";
 import { Loader2 } from "lucide-react";
 
@@ -49,16 +49,26 @@ export default function MyPage() {
     if (hasCheckedAuth.current) return;
     hasCheckedAuth.current = true;
 
-    if (!decodeToken()) {
-      alert("로그인이 필요합니다.");
-      router.push("/login");
-      return;
-    }
+    const initializeMyPage = async () => {
+      await restoreSession();
 
-    apiFetch<MyPageData>(`/users/me`)
-      .then((res) => setData(res.data))
-      .catch((e) => alert(e instanceof Error ? e.message : "마이페이지 조회에 실패했습니다."))
-      .finally(() => setLoading(false));
+      if (!decodeToken()) {
+        alert("로그인이 필요합니다.");
+        router.push("/login");
+        return;
+      }
+
+      try {
+        const res = await apiFetch<MyPageData>(`/users/me`);
+        setData(res.data);
+      } catch (e) {
+        alert(e instanceof Error ? e.message : "마이페이지 조회에 실패했습니다.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    initializeMyPage();
   }, []);
 
   const handleWithdraw = async () => {
