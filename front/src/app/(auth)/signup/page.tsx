@@ -16,6 +16,7 @@ export default function SignupPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isIdChecked, setIsIdChecked] = useState(false);
+  const [isChecking, setIsChecking] = useState(false);
 
   const handleLoginIdChange = (value: string) => {
     setLoginId(value);
@@ -27,13 +28,16 @@ export default function SignupPage() {
       alert("아이디를 입력해주세요.");
       return;
     }
+    setIsChecking(true);
     try {
       await apiFetch(`/users/check-id?id=${encodeURIComponent(loginId)}`);
       alert("사용 가능한 아이디입니다.");
       setIsIdChecked(true);
-    } catch (err) {
-      alert(err instanceof Error ? err.message : "중복확인에 실패했습니다.");
+    } catch (e) {
+      alert(e instanceof Error ? e.message : "중복확인에 실패했습니다.");
       setIsIdChecked(false);
+    } finally {
+      setIsChecking(false);
     }
   };
 
@@ -61,7 +65,7 @@ export default function SignupPage() {
       return;
     }
     if (!isIdChecked) {
-      alert("아이디 중복확인을 해주세요.");
+      alert("아이디 중복확인을 먼저 진행해주세요.");
       return;
     }
 
@@ -84,8 +88,8 @@ export default function SignupPage() {
     <div className="h-screen overflow-hidden flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
       <form onSubmit={handleSignup} className="w-96 p-10 bg-white rounded-2xl shadow-xl">
         <div className="text-center">
-          <Link href="/" className="block text-3xl font-bold text-gray-800">
-            티케팅고 🎫
+          <Link href="/" className="flex justify-center">
+            <img src="/images/logo.png" alt="티케팅고" className="h-32 w-auto" />
           </Link>
           <p className="my-4 text-2xl font-bold text-gray-800">회원가입</p>
         </div>
@@ -116,13 +120,14 @@ export default function SignupPage() {
           <button
             type="button"
             onClick={handleCheckId}
+            disabled={isChecking}
             className={`px-4 rounded-lg text-sm font-semibold whitespace-nowrap transition ${
               isIdChecked
                 ? "bg-green-100 text-green-700"
                 : "bg-gray-100 hover:bg-gray-200 text-gray-700"
-            }`}
+            } disabled:opacity-50`}
           >
-            {isIdChecked ? "확인완료" : "중복확인"}
+            {isChecking ? "확인 중..." : isIdChecked ? "확인완료" : "중복확인"}
           </button>
         </div>
 

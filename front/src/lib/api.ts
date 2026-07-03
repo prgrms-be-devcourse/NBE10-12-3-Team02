@@ -60,11 +60,9 @@ export async function apiFetch<T>(
   return json;
 }
 
-// 새로고침 등으로 메모리 토큰이 사라졌을 때, refreshToken 쿠키로 세션 복구 시도
 export async function restoreSession(): Promise<void> {
   try {
     await apiFetch("/auth/refresh", { method: "POST" });
   } catch {
-    // refreshToken이 없거나 만료됐으면 조용히 비로그인 상태로 둠
   }
 }

@@ -42,8 +42,8 @@ export default function LoginPage() {
   return (
     <div className="h-screen overflow-hidden flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
       <form onSubmit={handleLogin} className="w-96 p-10 bg-white rounded-2xl shadow-xl">
-        <Link href="/" className="block text-3xl font-bold text-center mb-8 text-gray-800">
-          티케팅고 🎫
+        <Link href="/" className="flex justify-center mb-8">
+          <img src="/images/logo.png" alt="티케팅고" className="h-40 w-auto" />
         </Link>
 
         <input

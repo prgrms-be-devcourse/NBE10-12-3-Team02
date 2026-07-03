@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Ticket, User } from "lucide-react";
+import { User } from "lucide-react";
 import { apiFetch, decodeToken, setAccessToken, restoreSession } from "@/lib/api";
 
 export default function Navbar() {
@@ -16,7 +16,6 @@ export default function Navbar() {
       setUserName(decoded?.name ?? null);
     };
 
-    // 새로고침으로 메모리 토큰이 날아갔어도, refreshToken 쿠키로 세션 복구 시도
     restoreSession().then(syncAuth);
 
     window.addEventListener("auth-changed", syncAuth);
@@ -27,7 +26,6 @@ export default function Navbar() {
     try {
       await apiFetch("/auth/logout", { method: "POST" });
     } catch {
-      // 로그아웃 API가 실패해도 클라이언트 토큰은 지움
     } finally {
       setAccessToken(null);
       router.push("/");
@@ -37,11 +35,9 @@ export default function Navbar() {
   return (
     <nav className="sticky top-0 z-50 bg-white border-b border-gray-100 shadow-sm">
       <div className="max-w-5xl mx-auto px-6 h-16 flex items-center justify-between">
-        <Link href="/" className="flex items-center gap-2 font-bold text-xl text-blue-600">
-          <Ticket size={24} />
-          티케팅고
+        <Link href="/" className="flex items-center">
+          <img src="/images/logo-horizontal.png" alt="티케팅고" className="h-7 w-auto" />
         </Link>
-
         <div className="flex items-center gap-6 text-sm font-semibold text-gray-600">
           <Link href="/mypage" className="flex items-center gap-1 hover:text-blue-600 transition">
             <User size={18} />

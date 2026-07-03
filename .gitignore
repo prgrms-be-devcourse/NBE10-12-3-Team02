@@ -1,0 +1,4 @@
+.idea/
+db_dev.mv.db
+db_dev.lock.db
+db_dev.trace.db

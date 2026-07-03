@@ -18,10 +18,12 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -33,7 +35,7 @@ public class ConcertService {
     private final ConcertRepository concertRepository;
     private final ConcertDeatilRepository concertDeatilRepository;
 
-    public List<ConcertListResponse> getConcerts(String keyword, ConcertSortType sort) {
+    public List<ConcertListResponse> getConcerts(String keyword, ConcertSortType sort, LocalDate date) {
         List<Concert> concerts = concertRepository.findByKeyword(keyword);
 
         List<Long> concertIds = concerts.stream()
@@ -41,6 +43,17 @@ public class ConcertService {
                 .toList();
 
         List<Schedule> schedules = scheduleRepository.findAllWithVenueByConcertIds(concertIds);
+
+        if (date != null) {
+            Set<Long> concertIdsWithMatchingSchedule = schedules.stream()
+                    .filter(schedule -> schedule.getScheduleDate().toLocalDate().equals(date))
+                    .map(schedule -> schedule.getConcert().getConcertId())
+                    .collect(Collectors.toSet());
+
+            concerts = concerts.stream()
+                    .filter(concert -> concertIdsWithMatchingSchedule.contains(concert.getConcertId()))
+                    .toList();
+        }
 
         Map<Long, String> venueNameMap = schedules.stream()
                 .collect(Collectors.toMap(
@@ -122,4 +135,5 @@ public class ConcertService {
                         (oldPrice, newPrice) -> oldPrice
                 ));
     }
+
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { apiFetch, decodeToken } from "@/lib/api";
 import { Loader2 } from "lucide-react";
@@ -29,6 +29,7 @@ export default function PaymentPage() {
   const [showModal, setShowModal] = useState(false);
   const [ticketResult, setTicketResult] = useState<PaymentTicketResponse | null>(null);
   const [timeLeft, setTimeLeft] = useState(600);
+  const paymentCompletedRef = useRef(false);
   const [isProcessing, setIsProcessing] = useState(false);
 
   useEffect(() => {
@@ -44,6 +45,22 @@ export default function PaymentPage() {
 
     return () => clearInterval(timer);
   }, []);
+  
+  useEffect(() => {
+    return () => {
+      if (!paymentCompletedRef.current && concertId && scheduleId && seatNumber) {
+        apiFetch(`/concerts/seats/occupy`, {
+          method: "DELETE",
+          body: JSON.stringify({
+            concertId: Number(concertId),
+            scheduleId: Number(scheduleId),
+            seatNumber,
+          }),
+        }).catch(() => {
+        });
+      }
+    };
+  }, [concertId, scheduleId, seatNumber]);
 
   const formatTime = (seconds: number) => {
     const min = Math.floor(seconds / 60);
@@ -79,6 +96,7 @@ export default function PaymentPage() {
           occupyToken,
         }),
       });
+      paymentCompletedRef.current = true;
       setTicketResult(res.data);
       setShowModal(true);
     } catch (e) {

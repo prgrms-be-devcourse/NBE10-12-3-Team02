@@ -10,8 +10,10 @@ import com.back.global.rsData.RsData;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
 import java.util.List;
 
 @ApiV1
@@ -28,9 +30,10 @@ public class ConcertController {
     @Operation(summary = "콘서트 목록 조회", description = "콘서트 목록 조회 API")
     public RsData<List<ConcertListResponse>> getConcerts(
             @RequestParam(required = false) String keyword,
-            @RequestParam(defaultValue = "closingSoon") ConcertSortType sort) {
+            @RequestParam(defaultValue = "closingSoon") ConcertSortType sort,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
 
-        List<ConcertListResponse> data = concertService.getConcerts(keyword, sort);
+        List<ConcertListResponse> data = concertService.getConcerts(keyword, sort, date);
         return new RsData<>("200-1", "콘서트 목록 조회 성공", data);
     }
 

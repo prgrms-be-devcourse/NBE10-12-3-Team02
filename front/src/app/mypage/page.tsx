@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { apiFetch, decodeToken, setAccessToken } from "@/lib/api";
 import { Loader2 } from "lucide-react";
@@ -27,6 +27,7 @@ interface MyPageData {
 
 export default function MyPage() {
   const router = useRouter();
+  const hasCheckedAuth = useRef(false);
 
   const [data, setData] = useState<MyPageData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -36,7 +37,17 @@ export default function MyPage() {
   const [isProcessing, setIsProcessing] = useState(false);
   const ticketsPerPage = 5;
 
+  const [isEditing, setIsEditing] = useState(false);
+  const [editName, setEditName] = useState("");
+  const [editEmail, setEditEmail] = useState("");
+  const [editPassword, setEditPassword] = useState("");
+  const [editPasswordCheck, setEditPasswordCheck] = useState("");
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
+
   useEffect(() => {
+    if (hasCheckedAuth.current) return;
+    hasCheckedAuth.current = true;
+
     if (!decodeToken()) {
       alert("로그인이 필요합니다.");
       router.push("/login");
@@ -47,7 +58,6 @@ export default function MyPage() {
       .then((res) => setData(res.data))
       .catch((e) => alert(e instanceof Error ? e.message : "마이페이지 조회에 실패했습니다."))
       .finally(() => setLoading(false));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleWithdraw = async () => {
@@ -87,6 +97,72 @@ export default function MyPage() {
     }
   };
 
+  const startEditing = () => {
+    if (!data) return;
+    setEditName(data.name);
+    setEditEmail(data.email);
+    setEditPassword("");
+    setEditPasswordCheck("");
+    setIsEditing(true);
+  };
+
+  const cancelEditing = () => {
+    setIsEditing(false);
+    setEditPassword("");
+    setEditPasswordCheck("");
+  };
+
+  const handleSaveProfile = async () => {
+    if (editName.trim() === "") {
+      alert("이름을 입력해주세요.");
+      return;
+    }
+    if (editName.includes(" ")) {
+      alert("이름에 공백을 포함할 수 없습니다.");
+      return;
+    }
+    if (editEmail.trim() === "") {
+      alert("이메일을 입력해주세요.");
+      return;
+    }
+    if (editPassword !== "") {
+      if (editPassword.length < 8) {
+        alert("비밀번호는 8자 이상이어야 합니다.");
+        return;
+      }
+      if (editPassword !== editPasswordCheck) {
+        alert("새 비밀번호가 일치하지 않습니다.");
+        return;
+      }
+    }
+
+    setIsSavingProfile(true);
+    try {
+      const body: Record<string, string> = {
+        name: editName,
+        email: editEmail,
+      };
+      if (editPassword !== "") {
+        body.password = editPassword;
+      }
+
+      await apiFetch("/users/me", {
+        method: "PATCH",
+        body: JSON.stringify(body),
+      });
+
+      setData((prev) => (prev ? { ...prev, name: editName, email: editEmail } : prev));
+      setIsEditing(false);
+      setEditPassword("");
+      setEditPasswordCheck("");
+      alert("정보가 수정되었습니다.");
+    } catch (e) {
+      alert(e instanceof Error ? e.message : "정보 수정 중 오류가 발생했습니다.");
+    } finally {
+      setIsSavingProfile(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -96,6 +172,8 @@ export default function MyPage() {
   }
 
   if (!data) return null;
+
+  const isSocialLogin = data.loginType !== "NORMAL";
 
   const sortedTickets = [...data.ticketList].sort((a, b) => b.ticketId - a.ticketId);
   const totalPages = Math.ceil(sortedTickets.length / ticketsPerPage);
@@ -121,12 +199,89 @@ export default function MyPage() {
         </div>
 
         <div className="bg-white rounded-2xl shadow-sm p-8 mb-8">
-          <h2 className="text-lg font-bold text-gray-700 mb-4">내 정보</h2>
-          <div className="space-y-2 text-gray-600">
-            <p><span className="inline-block w-20 text-gray-400">이름</span>{data.name}</p>
-            <p><span className="inline-block w-20 text-gray-400">아이디</span>{data.id}</p>
-            <p><span className="inline-block w-20 text-gray-400">이메일</span>{data.email}</p>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-bold text-gray-700">내 정보</h2>
+            {!isEditing && (
+              <button
+                onClick={startEditing}
+                className="text-xs text-blue-600 hover:text-blue-700 border border-blue-200 hover:border-blue-300 px-3 py-1 rounded-lg transition"
+              >
+                정보 수정
+              </button>
+            )}
           </div>
+
+          {isEditing ? (
+            <div className="space-y-3">
+              <div>
+                <label className="block text-xs text-gray-400 mb-1">이름</label>
+                <input
+                  type="text"
+                  value={editName}
+                  onChange={(e) => setEditName(e.target.value)}
+                  className="w-full p-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-gray-400 mb-1">이메일</label>
+                <input
+                  type="email"
+                  value={editEmail}
+                  onChange={(e) => setEditEmail(e.target.value)}
+                  className="w-full p-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
+                />
+              </div>
+              {!isSocialLogin && (
+                <>
+                  <div>
+                    <label className="block text-xs text-gray-400 mb-1">
+                      새 비밀번호 (변경 시에만 입력)
+                    </label>
+                    <input
+                      type="password"
+                      value={editPassword}
+                      onChange={(e) => setEditPassword(e.target.value)}
+                      placeholder="8자 이상"
+                      className="w-full p-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
+                    />
+                  </div>
+                  {editPassword !== "" && (
+                    <div>
+                      <label className="block text-xs text-gray-400 mb-1">새 비밀번호 확인</label>
+                      <input
+                        type="password"
+                        value={editPasswordCheck}
+                        onChange={(e) => setEditPasswordCheck(e.target.value)}
+                        className="w-full p-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
+                      />
+                    </div>
+                  )}
+                </>
+              )}
+              <div className="flex gap-2 pt-2">
+                <button
+                  onClick={cancelEditing}
+                  disabled={isSavingProfile}
+                  className="flex-1 p-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-semibold text-sm transition disabled:opacity-50"
+                >
+                  취소
+                </button>
+                <button
+                  onClick={handleSaveProfile}
+                  disabled={isSavingProfile}
+                  className="flex-1 p-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold text-sm transition disabled:opacity-50"
+                >
+                  {isSavingProfile ? "저장 중..." : "저장"}
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-2 text-gray-600">
+              <p><span className="inline-block w-20 text-gray-400">이름</span>{data.name}</p>
+              <p><span className="inline-block w-20 text-gray-400">아이디</span>{data.id}</p>
+              <p><span className="inline-block w-20 text-gray-400">이메일</span>{data.email}</p>
+            </div>
+          )}
         </div>
 
         <div className="flex items-center justify-between mb-4">
