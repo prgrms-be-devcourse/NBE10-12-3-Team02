@@ -60,6 +60,10 @@ export default function SignupPage() {
       alert("비밀번호를 입력해주세요.");
       return;
     }
+    if (password.length < 8) {
+      alert("비밀번호는 8자 이상이어야 합니다.");
+      return;
+    }
     if (password !== passwordCheck) {
       alert("비밀번호가 일치하지 않습니다.");
       return;

@@ -1,9 +1,13 @@
-# 1. 기본적으로 모든 파일은 LF로 통일 (맥/윈도우 공통)
 * text eol=lf
 
-# 2. 단, 윈도우 전용 배치 파일은 무조건 CRLF로 유지 (윈도우 실행 에러 방지)
 *.bat text eol=crlf
 *.cmd text eol=crlf
 
-# 3. 바이너리 파일 제외
 *.jar binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.webp binary
+*.gif binary
+*.ico binary
+*.pdf binary
