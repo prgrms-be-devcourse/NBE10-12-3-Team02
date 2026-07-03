@@ -58,16 +58,14 @@ public class ConcertController {
         );
     }
 
-    @PostMapping("/{concertId}/schedules/{scheduleId}/seats/occupy")
+    @PostMapping("/seats/occupy")
     @Operation(summary = "Redis 실시간 좌석 선점 요청", description = "Redis 실시간 좌석 선점 요청 API")
     public RsData<SeatOccupyResponse> seatOccupy(
-            @PathVariable Long concertId,
-            @PathVariable Long scheduleId,
             @RequestBody SeatOccupyRequest request
     ) {
         SeatOccupyResponse response = seatOccupyManager.seatOccupy(
-                concertId,
-                scheduleId,
+                request.concertId(),
+                request.scheduleId(),
                 request.seatNumber(),
                 requestContext.getActor().getId()
         );
@@ -76,6 +74,24 @@ public class ConcertController {
                 "200-1",
                 "좌석 임시 선점에 성공했습니다.",
                 response
+        );
+    }
+
+    @DeleteMapping("/seats/occupy")
+    @Operation(summary = "Redis 실시간 좌석 선점 취소", description = "Redis 실시간 좌석 선점 취소 API")
+    public RsData<Void> seatOccupyCancel(
+            @RequestBody SeatOccupyRequest request
+    ) {
+        seatOccupyManager.seatOccupyCancel(
+                request.concertId(),
+                request.scheduleId(),
+                request.seatNumber(),
+                requestContext.getActor().getId()
+        );
+
+        return new RsData<>(
+                "200-1",
+                "좌석 선점이 정상적으로 취소되었습니다."
         );
     }
 }

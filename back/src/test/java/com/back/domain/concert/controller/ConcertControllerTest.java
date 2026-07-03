@@ -2,6 +2,7 @@ package com.back.domain.concert.controller;
 
 import com.back.domain.concert.entity.Concert;
 import com.back.domain.concert.repository.ConcertRepository;
+import com.back.domain.concert.service.SeatOccupyManager;
 import com.back.domain.schedule.entity.Schedule;
 import com.back.domain.schedule.entity.ScheduleSeat;
 import com.back.domain.schedule.repository.ScheduleRepository;
@@ -15,6 +16,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.data.redis.core.HashOperations;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
@@ -28,10 +30,10 @@ import java.util.List;
 import static com.back.domain.schedule.entity.SeatStatus.AVAILABLE;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -155,18 +157,20 @@ class ConcertControllerTest {
         when(redisTemplate.execute(
                 any(org.springframework.data.redis.core.script.RedisScript.class),
                 anyList(),
-                any(),
-                any(),
-                any()
+                any(Object.class),
+                any(Object.class),
+                any(Object.class)
         )).thenReturn(1L);
 
-        String requestBody = """
+        String requestBody = String.format("""
                 {
+                  "concertId": %d,
+                  "scheduleId": %d,
                   "seatNumber": "A-1"
                 }
-                """;
+                """, concert.getConcertId(), schedule.getScheduleId());
 
-        mockMvc.perform(post("/api/v1/concerts/{concertId}/schedules/{scheduleId}/seats/occupy", concert.getConcertId(), schedule.getScheduleId())
+        mockMvc.perform(post("/api/v1/concerts/seats/occupy")
                         .with(user(new SecurityUser(1L, "테스트유저")))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(requestBody))
@@ -177,5 +181,34 @@ class ConcertControllerTest {
                 .andExpect(jsonPath("$.data.occupyToken").isString())
                 .andExpect(jsonPath("$.data.expireInSeconds").value(600))
                 .andExpect(jsonPath("$.data.seatStatus").value("HOLD"));
+    }
+
+    @Test
+    @DisplayName("좌석 임시 선점 취소 성공")
+    void t5() throws Exception {
+        Long userId = 1L;
+        String seatNumber = "A-1";
+        String redisKey = SeatOccupyManager.generateKey(concert.getConcertId(), schedule.getScheduleId(), seatNumber);
+
+        HashOperations<String, Object, Object> hashOperations = mock(HashOperations.class);
+        when(redisTemplate.opsForHash()).thenReturn(hashOperations);
+        when(hashOperations.get(redisKey, "userId")).thenReturn(userId.toString());
+
+        String requestBody = String.format("""
+                {
+                  "concertId": %d,
+                  "scheduleId": %d,
+                  "seatNumber": "%s"
+                }
+                """, concert.getConcertId(), schedule.getScheduleId(), seatNumber);
+
+        mockMvc.perform(delete("/api/v1/concerts/seats/occupy")
+                        .with(user(new SecurityUser(userId, "테스트유저")))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(requestBody))
+                .andDo(print())
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.resultCode").value("200-1"))
+                .andExpect(jsonPath("$.msg").value("좌석 선점이 정상적으로 취소되었습니다."));
     }
 }

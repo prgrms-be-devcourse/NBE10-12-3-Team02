@@ -68,6 +68,22 @@ public class SeatOccupyManager {
         return SeatOccupyResponse.of(occupyToken, OCCUPY_TTL_SECONDS);
     }
 
+    public void seatOccupyCancel(Long concertId, Long scheduleId, String seatNumber, Long userId) {
+        concertService.validateConcertScheduleMatch(concertId, scheduleId);
+
+        String redisKey = generateKey(concertId, scheduleId, seatNumber);
+
+        String occupyUserId = (String) redisTemplate.opsForHash().get(redisKey, "userId");
+        if (occupyUserId == null) {
+            throw new ServiceException(ErrorCode.SEAT_HOLD_EXPIRED);
+        }
+        if (!occupyUserId.equals(userId.toString())) {
+            throw new ServiceException(ErrorCode.SEAT_HELD_BY_OTHER_USER);
+        }
+
+        redisTemplate.delete(redisKey);
+    }
+
     public SeatSelectionResponse getSeatSelection(Long concertId, Long scheduleId) {
         concertService.validateConcertScheduleMatch(concertId, scheduleId);
         List<ScheduleSeat> seats = concertService.getScheduleSeats(scheduleId);

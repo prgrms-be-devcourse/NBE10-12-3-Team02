@@ -35,6 +35,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest
 @AutoConfigureMockMvc
 @Transactional
+@org.springframework.context.annotation.Import(com.back.global.RedisTestConfig.class)
 class UserControllerTest {
 
     private final MockMvc mockMvc;
