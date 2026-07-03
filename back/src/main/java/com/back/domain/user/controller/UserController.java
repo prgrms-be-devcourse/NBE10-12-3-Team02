@@ -34,6 +34,7 @@ public class UserController {
     @Operation(summary = "회원 탈퇴", description = "회원 탈퇴 API")
     public RsData<Void> withdraw(@RequestHeader("Authorization") String authorization) {
         userService.withdraw(requestContext.getActor().getId(), authorization);
+        requestContext.deleteCookie("refreshToken", "/api/v1/auth");
         return new RsData<>("200-1", "회원 탈퇴가 정상적으로 완료되었습니다.", null);
     }
 

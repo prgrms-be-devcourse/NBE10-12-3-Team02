@@ -18,8 +18,8 @@ public class User extends BaseEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long userId;
 
-    @Column(nullable = false, unique = true)
-    private String id;
+    @Column(name = "id", nullable = false, unique = true)
+    private String loginId;
 
     @Column(nullable = false, unique = true)
     private String email;
@@ -36,35 +36,29 @@ public class User extends BaseEntity {
 
     private LocalDate deletedAt;
 
-    private User(String id, String email, String password, String name, LoginType loginType) {
-        this.id = id;
+    private User(String loginId, String email, String password, String name, LoginType loginType) {
+        this.loginId = loginId;
         this.email = email;
         this.password = password;
         this.name = name;
         this.loginType = loginType;
     }
 
-    public static User create(String id, String email, String password, String name, LoginType loginType) {
-        return new User(id, email, password, name, loginType);
-    }
-
-    public static User create(Long userId, String name) {
-        User user = new User();
-        user.userId = userId;
-        user.name = name;
-        return user;
+    public static User create(String loginId, String email, String password, String name, LoginType loginType) {
+        return new User(loginId, email, password, name, loginType);
     }
 
     public void withdraw() {
         String uuid = UUID.randomUUID().toString();
         this.deletedAt = LocalDate.now();
-        this.id = uuid;
+        this.loginId = uuid;
         this.email = uuid + "@deleted.local";
     }
 
     public boolean isDeleted() {
         return this.deletedAt != null;
     }
+
     public void updateName(String name) {
         this.name = name;
     }

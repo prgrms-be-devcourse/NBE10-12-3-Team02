@@ -13,7 +13,7 @@ public record MyPageResponse(
     public static MyPageResponse from(User user, List<TicketInfo> ticketList) {
         return new MyPageResponse(
                 user.getName(),
-                user.getId(),
+                user.getLoginId(),
                 user.getEmail(),
                 user.getLoginType().name(),
                 ticketList
