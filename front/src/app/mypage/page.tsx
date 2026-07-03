@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { apiFetch, decodeToken, setAccessToken } from "@/lib/api";
+import { Loader2 } from "lucide-react";
 
 interface TicketInfo {
   ticketId: number;
@@ -32,6 +33,7 @@ export default function MyPage() {
   const [showWithdrawModal, setShowWithdrawModal] = useState(false);
   const [cancelTargetId, setCancelTargetId] = useState<number | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
+  const [isProcessing, setIsProcessing] = useState(false);
   const ticketsPerPage = 5;
 
   useEffect(() => {
@@ -63,7 +65,9 @@ export default function MyPage() {
 
   const handleCancel = async () => {
     if (cancelTargetId === null) return;
+    setIsProcessing(true);
     try {
+      await new Promise((resolve) => setTimeout(resolve, 2000));
       await apiFetch(`/tickets/cancel/${cancelTargetId}`, { method: "PATCH" });
       setData((prev) =>
         prev
@@ -79,6 +83,7 @@ export default function MyPage() {
       alert(e instanceof Error ? e.message : "취소 처리 중 오류가 발생했습니다.");
     } finally {
       setCancelTargetId(null);
+      setIsProcessing(false);
     }
   };
 
@@ -257,6 +262,18 @@ export default function MyPage() {
               >
                 탈퇴하기
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {isProcessing && (
+        <div className="fixed inset-0 z-50 bg-black/30 backdrop-blur-[2px] flex items-center justify-center">
+          <div className="bg-white rounded-2xl p-8 shadow-2xl flex flex-col items-center gap-4 max-w-xs w-full border border-gray-100">
+            <Loader2 className="h-10 w-10 text-blue-600 animate-spin" />
+            <div className="text-center">
+              <h3 className="font-bold text-gray-800 text-lg">예매 취소 처리 중</h3>
+              <p className="text-xs text-gray-400 mt-1">안전하게 예매 취소를 완료하고 있습니다.</p>
             </div>
           </div>
         </div>

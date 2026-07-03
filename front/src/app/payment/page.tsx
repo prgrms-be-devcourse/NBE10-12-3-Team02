@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { apiFetch, decodeToken } from "@/lib/api";
+import { Loader2 } from "lucide-react";
 
 interface PaymentTicketResponse {
   ticketNumber: string;
@@ -28,6 +29,7 @@ export default function PaymentPage() {
   const [showModal, setShowModal] = useState(false);
   const [ticketResult, setTicketResult] = useState<PaymentTicketResponse | null>(null);
   const [timeLeft, setTimeLeft] = useState(600);
+  const [isProcessing, setIsProcessing] = useState(false);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -65,7 +67,9 @@ export default function PaymentPage() {
       return;
     }
 
+    setIsProcessing(true);
     try {
+      await new Promise((resolve) => setTimeout(resolve, 2000));
       const res = await apiFetch<PaymentTicketResponse>("/tickets/reserve", {
         method: "POST",
         body: JSON.stringify({
@@ -79,6 +83,8 @@ export default function PaymentPage() {
       setShowModal(true);
     } catch (e) {
       alert(e instanceof Error ? e.message : "결제 중 오류가 발생했습니다.");
+    } finally {
+      setIsProcessing(false);
     }
   };
 
@@ -118,11 +124,24 @@ export default function PaymentPage() {
 
         <button
           onClick={handlePayment}
-          className="w-full p-4 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold text-lg transition"
+          disabled={isProcessing}
+          className="w-full p-4 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold text-lg transition disabled:bg-blue-400 disabled:cursor-not-allowed"
         >
           결제하기
         </button>
       </div>
+
+      {isProcessing && (
+        <div className="fixed inset-0 z-50 bg-black/30 backdrop-blur-[2px] flex items-center justify-center">
+          <div className="bg-white rounded-2xl p-8 shadow-2xl flex flex-col items-center gap-4 max-w-xs w-full border border-gray-100">
+            <Loader2 className="h-10 w-10 text-blue-600 animate-spin" />
+            <div className="text-center">
+              <h3 className="font-bold text-gray-800 text-lg">결제 처리 중</h3>
+              <p className="text-xs text-gray-400 mt-1">안전하게 예매를 완료하고 있습니다.</p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {showModal && ticketResult && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4">

@@ -139,8 +139,15 @@ export default function SeatSelectPage({
     setIsReserving(true);
     try {
       const res = await apiFetch<{ occupyToken: string; expireInSeconds: number }>(
-        `/concerts/${id}/schedules/${scheduleId}/seats/occupy`,
-        { method: "POST", body: JSON.stringify({ seatNumber }) }
+        `/concerts/seats/occupy`,
+        {
+          method: "POST",
+          body: JSON.stringify({
+            concertId: Number(id),
+            scheduleId: Number(scheduleId),
+            seatNumber,
+          }),
+        }
       );
 
       const grade = seatGradeMap.get(seatNumber);
