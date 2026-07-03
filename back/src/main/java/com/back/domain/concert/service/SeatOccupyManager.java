@@ -9,7 +9,7 @@ import com.back.global.exception.ErrorCode;
 import com.back.global.exception.ServiceException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.RedisCallback;
-import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.data.redis.core.script.RedisScript;
 import org.springframework.stereotype.Component;
@@ -24,7 +24,7 @@ import java.util.stream.IntStream;
 @RequiredArgsConstructor
 public class SeatOccupyManager {
     private final ConcertService concertService;
-    private final RedisTemplate<String, String> redisTemplate;
+    private final StringRedisTemplate redisTemplate;
 
     private static final long OCCUPY_TTL_SECONDS = 600;
     private static final RedisScript<Long> OCCUPY_SCRIPT = new DefaultRedisScript<>(

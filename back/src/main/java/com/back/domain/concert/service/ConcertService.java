@@ -112,6 +112,7 @@ public class ConcertService {
         return scheduleSeatRepository.findByScheduleScheduleId(scheduleId);
     }
 
+    @Transactional
     public void validateSeatAvailable(Long scheduleId, String seatNumber) {
         ScheduleSeat seat = scheduleSeatRepository
                 .findWithLockByScheduleIdAndSeatNumber(scheduleId, seatNumber)

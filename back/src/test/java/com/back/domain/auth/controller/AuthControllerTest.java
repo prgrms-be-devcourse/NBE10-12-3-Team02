@@ -3,15 +3,9 @@ package com.back.domain.auth.controller;
 import com.back.domain.user.entity.LoginType;
 import com.back.domain.user.entity.User;
 import com.back.domain.user.repository.UserRepository;
-<<<<<<< HEAD
 import com.back.global.security.jwt.RefreshTokenRotateResult;
 import com.back.global.security.jwt.repository.BlacklistRepository;
 import com.back.global.security.jwt.repository.RefreshTokenRepository;
-=======
-import com.back.global.security.jwt.repository.BlacklistRepository;
-import com.back.global.security.jwt.repository.RefreshTokenRepository;
-import com.back.global.security.jwt.TokenHashUtil;
->>>>>>> 0beb93a (Refactor: RefreshTokenRepository 내용을 파일별로 분리 #94)
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.Cookie;
 import org.junit.jupiter.api.BeforeEach;
@@ -27,23 +21,17 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.transaction.annotation.Transactional;
-import static org.mockito.Mockito.verify;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.ArgumentMatchers.any;
 
 import java.time.Duration;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.startsWith;
-import static org.mockito.ArgumentMatchers.anyLong;
-import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.cookie;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @ActiveProfiles("test")
 @SpringBootTest

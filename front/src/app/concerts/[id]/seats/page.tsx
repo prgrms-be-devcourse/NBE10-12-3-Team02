@@ -1,8 +1,8 @@
 "use client";
 
-import { Suspense, useState, useEffect, use } from "react";
-import { useSearchParams, useRouter } from "next/navigation";
 import { apiFetch, decodeToken, restoreSession } from "@/lib/api";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense, use, useEffect, useState } from "react";
 
 interface SeatDetail {
   seatNumber: string;
@@ -18,20 +18,31 @@ interface SeatSelectionData {
 }
 
 const GRADE_STYLES: Record<string, { seat: string; dot: string }> = {
-  VIP: { seat: "bg-yellow-300 hover:bg-yellow-400 text-yellow-900", dot: "bg-yellow-300" },
-  R: { seat: "bg-blue-300 hover:bg-blue-400 text-blue-900", dot: "bg-blue-300" },
-  S: { seat: "bg-green-300 hover:bg-green-400 text-green-900", dot: "bg-green-300" },
-  A: { seat: "bg-orange-300 hover:bg-orange-400 text-orange-900", dot: "bg-orange-300" },
+  VIP: {
+    seat: "bg-yellow-300 hover:bg-yellow-400 text-yellow-900",
+    dot: "bg-yellow-300",
+  },
+  R: {
+    seat: "bg-blue-300 hover:bg-blue-400 text-blue-900",
+    dot: "bg-blue-300",
+  },
+  S: {
+    seat: "bg-green-300 hover:bg-green-400 text-green-900",
+    dot: "bg-green-300",
+  },
+  A: {
+    seat: "bg-orange-300 hover:bg-orange-400 text-orange-900",
+    dot: "bg-orange-300",
+  },
 };
-const DEFAULT_STYLE = { seat: "bg-gray-200 hover:bg-gray-300 text-gray-700", dot: "bg-gray-300" };
+const DEFAULT_STYLE = {
+  seat: "bg-gray-200 hover:bg-gray-300 text-gray-700",
+  dot: "bg-gray-300",
+};
 const GRADE_ORDER = ["VIP", "R", "S", "A"];
 const SELECTION_TIME_LIMIT = 300; // 5분
 
-function SeatSelectContent({
-  params,
-}: {
-  params: Promise<{ id: string }>;
-}) {
+function SeatSelectContent({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const searchParams = useSearchParams();
   const scheduleId = searchParams.get("scheduleId");
@@ -89,7 +100,7 @@ function SeatSelectContent({
       const fetchSeats = async () => {
         try {
           const res = await apiFetch<SeatSelectionData>(
-            `/concerts/${id}/schedules/${scheduleId}/seats`
+            `/concerts/${id}/schedules/${scheduleId}/seats`,
           );
           if (active) {
             setSeatData(res.data);
@@ -97,7 +108,11 @@ function SeatSelectContent({
           }
         } catch (e) {
           if (active) {
-            setError(e instanceof Error ? e.message : "좌석 정보를 불러오지 못했습니다.");
+            setError(
+              e instanceof Error
+                ? e.message
+                : "좌석 정보를 불러오지 못했습니다.",
+            );
           }
         } finally {
           if (active) setLoading(false);
@@ -107,7 +122,7 @@ function SeatSelectContent({
       await fetchSeats();
 
       if (active) {
-        intervalId = setInterval(fetchSeats, 3000);
+        intervalId = setInterval(fetchSeats, 1000);
       }
     };
 
@@ -121,17 +136,25 @@ function SeatSelectContent({
     };
   }, [id, scheduleId]);
 
-  const seatStatusMap = new Map(seatData?.seats.map((s) => [s.seatNumber, s.seatStatus]) ?? []);
-  const seatGradeMap = new Map(seatData?.seats.map((s) => [s.seatNumber, s.gradeName]) ?? []);
+  const seatStatusMap = new Map(
+    seatData?.seats.map((s) => [s.seatNumber, s.seatStatus]) ?? [],
+  );
+  const seatGradeMap = new Map(
+    seatData?.seats.map((s) => [s.seatNumber, s.gradeName]) ?? [],
+  );
 
   const rows = Array.from(
-    new Set(seatData?.seats.map((s) => s.seatNumber.split("-")[0]) ?? [])
+    new Set(seatData?.seats.map((s) => s.seatNumber.split("-")[0]) ?? []),
   ).sort();
 
   const seatsByRow = (row: string) =>
     (seatData?.seats ?? [])
       .filter((s) => s.seatNumber.startsWith(`${row}-`))
-      .sort((a, b) => parseInt(a.seatNumber.split("-")[1]) - parseInt(b.seatNumber.split("-")[1]));
+      .sort(
+        (a, b) =>
+          parseInt(a.seatNumber.split("-")[1]) -
+          parseInt(b.seatNumber.split("-")[1]),
+      );
 
   const handleSeatClick = (seatNumber: string) => {
     const status = seatStatusMap.get(seatNumber);
@@ -148,7 +171,7 @@ function SeatSelectContent({
 
   const totalPrice = selectedSeats.reduce((sum, seatNumber) => {
     const grade = seatGradeMap.get(seatNumber);
-    const price = grade ? seatData?.prices[grade] ?? 0 : 0;
+    const price = grade ? (seatData?.prices[grade] ?? 0) : 0;
     return sum + price;
   }, 0);
 
@@ -156,20 +179,20 @@ function SeatSelectContent({
     const seatNumber = selectedSeats[0];
     setIsReserving(true);
     try {
-      const res = await apiFetch<{ occupyToken: string; expireInSeconds: number }>(
-        `/concerts/seats/occupy`,
-        {
-          method: "POST",
-          body: JSON.stringify({
-            concertId: Number(id),
-            scheduleId: Number(scheduleId),
-            seatNumber,
-          }),
-        }
-      );
+      const res = await apiFetch<{
+        occupyToken: string;
+        expireInSeconds: number;
+      }>(`/concerts/seats/occupy`, {
+        method: "POST",
+        body: JSON.stringify({
+          concertId: Number(id),
+          scheduleId: Number(scheduleId),
+          seatNumber,
+        }),
+      });
 
       const grade = seatGradeMap.get(seatNumber);
-      const price = grade ? seatData?.prices[grade] ?? 0 : 0;
+      const price = grade ? (seatData?.prices[grade] ?? 0) : 0;
 
       const params = new URLSearchParams({
         concertId: id,
@@ -203,7 +226,7 @@ function SeatSelectContent({
   }
 
   const gradeEntries = Object.entries(seatData?.prices ?? {}).sort(
-    ([a], [b]) => GRADE_ORDER.indexOf(a) - GRADE_ORDER.indexOf(b)
+    ([a], [b]) => GRADE_ORDER.indexOf(a) - GRADE_ORDER.indexOf(b),
   );
 
   const renderSeat = (seat: SeatDetail) => {
@@ -257,12 +280,22 @@ function SeatSelectContent({
                 const rightBlock = seats.slice(mid);
 
                 return (
-                  <div key={row} className="flex items-center gap-2 justify-center min-w-max">
-                    <span className="w-4 text-right font-bold text-gray-400 text-[10px]">{row}</span>
-                    <div className="flex gap-1">{leftBlock.map(renderSeat)}</div>
+                  <div
+                    key={row}
+                    className="flex items-center gap-2 justify-center min-w-max"
+                  >
+                    <span className="w-4 text-right font-bold text-gray-400 text-[10px]">
+                      {row}
+                    </span>
+                    <div className="flex gap-1">
+                      {leftBlock.map(renderSeat)}
+                    </div>
                     <div className="w-4" /> {/* 중앙 통로 */}
-                    <div className="flex gap-1">{rightBlock.map(renderSeat)}</div>
-                    <span className="w-4" /> {/* 왼쪽 라벨과 대칭 맞추는 빈 공간 */}
+                    <div className="flex gap-1">
+                      {rightBlock.map(renderSeat)}
+                    </div>
+                    <span className="w-4" />{" "}
+                    {/* 왼쪽 라벨과 대칭 맞추는 빈 공간 */}
                   </div>
                 );
               })}
@@ -270,13 +303,15 @@ function SeatSelectContent({
 
             <div className="flex gap-6 justify-center mt-6 text-xs text-gray-500 flex-wrap">
               <div className="flex items-center gap-2">
-                <div className="w-4 h-4 rounded-full bg-purple-500"></div> 선택됨
+                <div className="w-4 h-4 rounded-full bg-purple-500"></div>{" "}
+                선택됨
               </div>
               <div className="flex items-center gap-2">
                 <div className="w-4 h-4 rounded-full bg-red-400"></div> 점유중
               </div>
               <div className="flex items-center gap-2">
-                <div className="w-4 h-4 rounded-full bg-gray-400"></div> 예매완료
+                <div className="w-4 h-4 rounded-full bg-gray-400"></div>{" "}
+                예매완료
               </div>
             </div>
           </div>
@@ -285,10 +320,14 @@ function SeatSelectContent({
           <div className="w-full lg:w-96 flex-shrink-0 space-y-6">
             <div>
               <div className="flex items-center justify-between mb-3">
-                <h2 className="font-bold text-gray-700">선택 좌석 {selectedSeats.length}</h2>
+                <h2 className="font-bold text-gray-700">
+                  선택 좌석 {selectedSeats.length}
+                </h2>
                 <div className="flex items-center gap-3">
                   {timeLeft !== null && (
-                    <span className="text-red-500 text-sm font-bold">{formatTime(timeLeft)}</span>
+                    <span className="text-red-500 text-sm font-bold">
+                      {formatTime(timeLeft)}
+                    </span>
                   )}
                   {selectedSeats.length > 0 && (
                     <button
@@ -320,7 +359,9 @@ function SeatSelectContent({
                           <p className="font-semibold text-gray-700 text-sm">
                             {grade} · {seatNumber}
                           </p>
-                          <p className="text-xs text-gray-400">{price.toLocaleString()}원</p>
+                          <p className="text-xs text-gray-400">
+                            {price.toLocaleString()}원
+                          </p>
                         </div>
                         <button
                           onClick={() => handleSeatClick(seatNumber)}
@@ -336,13 +377,20 @@ function SeatSelectContent({
             </div>
 
             <div className="border border-gray-200 rounded-xl p-4">
-              <h3 className="font-bold text-gray-700 text-sm mb-3">등급별 가격</h3>
+              <h3 className="font-bold text-gray-700 text-sm mb-3">
+                등급별 가격
+              </h3>
               <div className="space-y-2">
                 {gradeEntries.map(([grade, price]) => {
                   const style = GRADE_STYLES[grade] ?? DEFAULT_STYLE;
                   return (
-                    <div key={grade} className="flex items-center gap-2 text-sm text-gray-600">
-                      <div className={`w-3 h-3 rounded-full ${style.dot}`}></div>
+                    <div
+                      key={grade}
+                      className="flex items-center gap-2 text-sm text-gray-600"
+                    >
+                      <div
+                        className={`w-3 h-3 rounded-full ${style.dot}`}
+                      ></div>
                       {grade} : {price.toLocaleString()}
                     </div>
                   );
@@ -377,7 +425,11 @@ export default function SeatSelectPage({
   params: Promise<{ id: string }>;
 }) {
   return (
-    <Suspense fallback={<p className="text-center text-gray-400 py-20">불러오는 중...</p>}>
+    <Suspense
+      fallback={
+        <p className="text-center text-gray-400 py-20">불러오는 중...</p>
+      }
+    >
       <SeatSelectContent params={params} />
     </Suspense>
   );

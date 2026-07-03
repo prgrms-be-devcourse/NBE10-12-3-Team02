@@ -1,6 +1,7 @@
 package com.back.domain.concert.service;
 
 import com.back.domain.concert.entity.Concert;
+import com.back.domain.concert.repository.ConcertDeatilRepository;
 import com.back.domain.concert.repository.ConcertRepository;
 import com.back.domain.schedule.entity.Schedule;
 import com.back.domain.schedule.entity.ScheduleSeat;
@@ -44,6 +45,8 @@ class ConcertServiceTest {
     private ScheduleRepository scheduleRepository;
     @Autowired
     private ScheduleSeatRepository scheduleSeatRepository;
+    @Autowired
+    private ConcertDeatilRepository concertDeatilRepository;
 
     @MockitoSpyBean
     private StringRedisTemplate redisTemplate;
@@ -56,6 +59,7 @@ class ConcertServiceTest {
     void setUp() {
         scheduleSeatRepository.deleteAll();
         scheduleRepository.deleteAll();
+        concertDeatilRepository.deleteAll();
         concertRepository.deleteAll();
         venueRepository.deleteAll();
 

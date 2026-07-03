@@ -30,6 +30,7 @@ function PaymentContent() {
   const [ticketResult, setTicketResult] = useState<PaymentTicketResponse | null>(null);
   const [timeLeft, setTimeLeft] = useState(600);
   const paymentCompletedRef = useRef(false);
+  const isMountedRef = useRef(false);
   const [isProcessing, setIsProcessing] = useState(false);
 
   useEffect(() => {
@@ -47,18 +48,22 @@ function PaymentContent() {
   }, []);
   
   useEffect(() => {
+    isMountedRef.current = true;
     return () => {
-      if (!paymentCompletedRef.current && concertId && scheduleId && seatNumber) {
-        apiFetch(`/concerts/seats/occupy`, {
-          method: "DELETE",
-          body: JSON.stringify({
-            concertId: Number(concertId),
-            scheduleId: Number(scheduleId),
-            seatNumber,
-          }),
-        }).catch(() => {
-        });
-      }
+      isMountedRef.current = false;
+      setTimeout(() => {
+        if (!isMountedRef.current && !paymentCompletedRef.current && concertId && scheduleId && seatNumber) {
+          apiFetch(`/concerts/seats/occupy`, {
+            method: "DELETE",
+            body: JSON.stringify({
+              concertId: Number(concertId),
+              scheduleId: Number(scheduleId),
+              seatNumber,
+            }),
+          }).catch(() => {
+          });
+        }
+      }, 50);
     };
   }, [concertId, scheduleId, seatNumber]);
 
