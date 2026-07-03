@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { Suspense, useState, useEffect, useRef } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { apiFetch, decodeToken } from "@/lib/api";
 import { Loader2 } from "lucide-react";
@@ -15,7 +15,7 @@ interface PaymentTicketResponse {
   isValid: boolean;
 }
 
-export default function PaymentPage() {
+function PaymentContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
 
@@ -195,5 +195,13 @@ export default function PaymentPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function PaymentPage() {
+  return (
+    <Suspense fallback={<p className="text-center text-gray-400 py-20">불러오는 중...</p>}>
+      <PaymentContent />
+    </Suspense>
   );
 }

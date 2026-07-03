@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useEffect, useRef, type ChangeEvent } from "react";
+import { Suspense, useState, useEffect, useRef, type ChangeEvent } from "react";
 import Link from "next/link";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { Search, ChevronLeft, ChevronRight, RotateCcw } from "lucide-react";
 import { apiFetch } from "@/lib/api";
+import { getLocalConcertPoster } from "@/lib/concertDetailImages";
 
 interface ConcertListItem {
   concertId: number;
@@ -16,7 +17,7 @@ interface ConcertListItem {
   status: string;
 }
 
-export default function Home() {
+function HomeContent() {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -166,7 +167,11 @@ export default function Home() {
                 >
                   <div className="h-56 bg-gradient-to-br from-blue-200 to-indigo-300 flex items-center justify-center text-white font-bold relative overflow-hidden">
                     {concert.imageUrl ? (
-                      <img src={concert.imageUrl} alt={concert.concertName} className="w-full h-full object-cover" />
+                      <img
+                        src={getLocalConcertPoster(concert.imageUrl)}
+                        alt={concert.concertName}
+                        className="w-full h-full object-cover"
+                      />
                     ) : (
                       "포스터"
                     )}
@@ -251,7 +256,11 @@ export default function Home() {
                 >
                   <div className="h-48 bg-gradient-to-br from-blue-200 to-indigo-300 flex items-center justify-center text-white font-bold relative overflow-hidden">
                     {concert.imageUrl ? (
-                      <img src={concert.imageUrl} alt={concert.concertName} className="w-full h-full object-cover" />
+                      <img
+                        src={getLocalConcertPoster(concert.imageUrl)}
+                        alt={concert.concertName}
+                        className="w-full h-full object-cover"
+                      />
                     ) : (
                       "포스터"
                     )}
@@ -310,5 +319,13 @@ export default function Home() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function Home() {
+  return (
+    <Suspense fallback={<p className="text-center text-gray-400 py-20">불러오는 중...</p>}>
+      <HomeContent />
+    </Suspense>
   );
 }

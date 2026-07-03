@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, use } from "react";
+import { Suspense, useState, useEffect, use } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { apiFetch } from "@/lib/api";
 
@@ -27,7 +27,7 @@ const DEFAULT_STYLE = { seat: "bg-gray-200 hover:bg-gray-300 text-gray-700", dot
 const GRADE_ORDER = ["VIP", "R", "S", "A"];
 const SELECTION_TIME_LIMIT = 300; // 5분
 
-export default function SeatSelectPage({
+function SeatSelectContent({
   params,
 }: {
   params: Promise<{ id: string }>;
@@ -350,5 +350,17 @@ export default function SeatSelectPage({
         </div>
       </div>
     </div>
+  );
+}
+
+export default function SeatSelectPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  return (
+    <Suspense fallback={<p className="text-center text-gray-400 py-20">불러오는 중...</p>}>
+      <SeatSelectContent params={params} />
+    </Suspense>
   );
 }

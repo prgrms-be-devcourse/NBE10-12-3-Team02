@@ -89,7 +89,7 @@ export default function SignupPage() {
       <form onSubmit={handleSignup} className="w-96 p-10 bg-white rounded-2xl shadow-xl">
         <div className="text-center">
           <Link href="/" className="flex justify-center">
-            <img src="/images/logo.png" alt="티케팅고" className="h-32 w-auto" />
+            <img src="/images/logo.svg" alt="티케팅고" className="h-24 w-24" />
           </Link>
           <p className="my-4 text-2xl font-bold text-gray-800">회원가입</p>
         </div>

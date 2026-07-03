@@ -3,6 +3,7 @@
 import { useState, useEffect, use } from "react";
 import { useRouter } from "next/navigation";
 import { apiFetch, decodeToken } from "@/lib/api";
+import { getConcertDetailImages, getLocalConcertPoster } from "@/lib/concertDetailImages";
 
 interface ConcertDetail {
   concertId: number;
@@ -84,6 +85,9 @@ export default function ConcertDetailPage({
     );
   }
 
+  const posterUrl = getLocalConcertPoster(concert.urlPoster);
+  const detailImages = getConcertDetailImages(concert.urlPoster);
+
   return (
     <div className="min-h-screen bg-gray-50 p-10">
       <div className="max-w-4xl mx-auto">
@@ -91,9 +95,9 @@ export default function ConcertDetailPage({
           <div className="flex flex-col md:flex-row">
             <div className="md:w-1/3 flex flex-col">
               <div className="self-start bg-gradient-to-br from-blue-200 to-indigo-300 flex items-center justify-center text-white font-bold text-xl overflow-hidden">
-                {concert.urlPoster ? (
+                {posterUrl ? (
                   <img
-                    src={concert.urlPoster}
+                    src={posterUrl}
                     alt={concert.concertName}
                     className="w-full h-auto object-cover"
                   />
@@ -181,8 +185,8 @@ export default function ConcertDetailPage({
           <div className="p-8">
             <h2 className="text-xl font-bold text-gray-800 mb-6">상세 설명</h2>
 
-            {concert.detailUrlList?.length > 0 ? (
-              concert.detailUrlList.map((url) => (
+            {detailImages.length > 0 ? (
+              detailImages.map((url) => (
                 <div key={url} className="w-full max-w-3xl mx-auto mb-4">
                   <img src={url} alt="공연 상세 설명" className="w-full h-auto rounded-xl border border-gray-200" />
                 </div>

@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { apiFetch, decodeToken, setAccessToken } from "@/lib/api";
+import { getLocalConcertPoster } from "@/lib/concertDetailImages";
 import { Loader2 } from "lucide-react";
 
 interface TicketInfo {
@@ -294,7 +295,11 @@ export default function MyPage() {
             <div key={ticket.ticketId} className="flex shadow-md rounded-2xl overflow-hidden">
               <div className="flex-shrink-0 w-36 bg-gradient-to-br from-blue-200 to-indigo-300 flex items-center justify-center text-white font-bold text-sm overflow-hidden">
                 {ticket.urlPoster ? (
-                  <img src={ticket.urlPoster} alt={ticket.concertName} className="w-full h-full object-cover" />
+                  <img
+                    src={getLocalConcertPoster(ticket.urlPoster)}
+                    alt={ticket.concertName}
+                    className="w-full h-full object-cover"
+                  />
                 ) : (
                   "포스터"
                 )}

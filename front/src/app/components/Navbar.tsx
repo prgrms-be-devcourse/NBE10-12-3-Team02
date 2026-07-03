@@ -36,7 +36,7 @@ export default function Navbar() {
     <nav className="sticky top-0 z-50 bg-white border-b border-gray-100 shadow-sm">
       <div className="max-w-5xl mx-auto px-6 h-16 flex items-center justify-between">
         <Link href="/" className="flex items-center">
-          <img src="/images/logo-horizontal.png" alt="티케팅고" className="h-7 w-auto" />
+          <img src="/images/logo-horizontal.svg" alt="티케팅고" className="h-9 w-auto max-w-[190px]" />
         </Link>
         <div className="flex items-center gap-6 text-sm font-semibold text-gray-600">
           <Link href="/mypage" className="flex items-center gap-1 hover:text-blue-600 transition">
