@@ -5,7 +5,7 @@ import com.back.global.exception.ErrorCode;
 import com.back.global.exception.ServiceException;
 import com.back.global.security.jwt.payload.AccessTokenPayload;
 import com.back.global.security.jwt.payload.RefreshTokenPayload;
-import com.back.domain.auth.util.Ut;
+import com.back.global.util.Ut;
 import io.jsonwebtoken.ExpiredJwtException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
