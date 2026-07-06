@@ -38,21 +38,7 @@ public class AuthService {
         if (!passwordEncoder.matches(password, user.getPassword()))
             throw new ServiceException(ErrorCode.AUTH_PASSWORD_MISMATCH);
 
-        String accessToken = jwtTokenProvider.createAccessToken(user);
-
-        String refreshTokenJti = UUID.randomUUID().toString();
-        String refreshToken = jwtTokenProvider.createRefreshToken(user, refreshTokenJti);
-
-        String refreshTokenHash = TokenHashUtil.sha256(refreshToken);
-
-        refreshTokenRepository.save(
-                user.getUserId(),
-                refreshTokenJti,
-                refreshTokenHash,
-                Duration.ofSeconds(refreshTokenExpireSeconds)
-        );
-
-        return new TokenResponse(accessToken, refreshToken);
+        return issueTokens(user);
     }
 
     public void logout(String refreshToken, String authorization) {
@@ -132,5 +118,23 @@ public class AuthService {
             }
         } catch (RuntimeException ignored) {
         }
+    }
+
+    public TokenResponse issueTokens(User user) {
+        String accessToken = jwtTokenProvider.createAccessToken(user);
+
+        String refreshTokenJti = UUID.randomUUID().toString();
+        String refreshToken = jwtTokenProvider.createRefreshToken(user, refreshTokenJti);
+
+        String refreshTokenHash = TokenHashUtil.sha256(refreshToken);
+
+        refreshTokenRepository.save(
+                user.getUserId(),
+                refreshTokenJti,
+                refreshTokenHash,
+                Duration.ofSeconds(refreshTokenExpireSeconds)
+        );
+
+        return new TokenResponse(accessToken, refreshToken);
     }
 }

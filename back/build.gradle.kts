@@ -45,6 +45,8 @@ dependencies {
     runtimeOnly("io.jsonwebtoken:jjwt-jackson:0.13.0")
     // Redis
     implementation("org.springframework.boot:spring-boot-starter-data-redis")
+    // OAuth2
+    implementation("org.springframework.boot:spring-boot-starter-oauth2-client")
     testImplementation("org.springframework.boot:spring-boot-starter-data-redis-test")
     testImplementation("com.github.codemonstur:embedded-redis:1.4.3")
     //WebSocket

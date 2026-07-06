@@ -3,6 +3,10 @@ package com.back.global.config;
 import com.back.global.exception.ErrorCode;
 import com.back.global.rsData.RsData;
 import com.back.global.security.filter.CustomAuthenticationFilter;
+import com.back.global.security.oauth2.service.CustomOAuth2UserService;
+import com.back.global.security.oauth2.repository.HttpCookieOAuth2AuthorizationRequestRepository;
+import com.back.global.security.oauth2.loginhandler.OAuth2LoginFailureHandler;
+import com.back.global.security.oauth2.loginhandler.OAuth2LoginSuccessHandler;
 import com.back.global.util.Ut;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
@@ -19,6 +23,10 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 @RequiredArgsConstructor
 public class SecurityConfig {
     private final CustomAuthenticationFilter customAuthenticationFilter;
+    private final CustomOAuth2UserService customOAuth2UserService;
+    private final OAuth2LoginSuccessHandler oAuth2LoginSuccessHandler;
+    private final OAuth2LoginFailureHandler oAuth2LoginFailureHandler;
+    private final HttpCookieOAuth2AuthorizationRequestRepository authorizationRequestRepository;
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) {
@@ -40,7 +48,8 @@ public class SecurityConfig {
                                         "/api/*/auth/login",
                                         "/api/*/auth/logout",
                                         "/api/*/auth/refresh",
-                                        "/api/*/users/signup"
+                                        "/api/*/users/signup",
+                                        "/api/*/auth/restore"
                                 ).permitAll()
                                 .requestMatchers("/api/*/**").authenticated()
                                 .anyRequest().permitAll()
@@ -91,6 +100,16 @@ public class SecurityConfig {
                                             );
                                         }
                                 )
+                )
+                .oauth2Login(oauth2 -> oauth2
+                        .authorizationEndpoint(authorization -> authorization
+                                .authorizationRequestRepository(authorizationRequestRepository)
+                        )
+                        .userInfoEndpoint(userInfo -> userInfo
+                                .userService(customOAuth2UserService)
+                        )
+                        .successHandler(oAuth2LoginSuccessHandler)
+                        .failureHandler(oAuth2LoginFailureHandler)
                 );
         return http.build();
     }
