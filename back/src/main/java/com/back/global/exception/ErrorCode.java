@@ -53,7 +53,11 @@ public enum ErrorCode {
     TICKET_NOT_FOUND_FOR_USER("404-6", "해당 유저의 티켓이 존재하지 않습니다."),
     TICKET_ALREADY_CANCELLED("400-3", "이미 취소된 티켓입니다."),
     // bucket4j
-    TOO_MANY_REQUESTS("429-1", "요청이 너무 많습니다.");
+    TOO_MANY_REQUESTS("429-1", "요청이 너무 많습니다."),
+
+    // QUEUE
+    QUEUE_TOKEN_NOT_FOUND("401-11", "대기열 접속 정보가 올바르지 않습니다."),
+    QUEUE_SESSION_EXPIRED("403-3", "대기열 접속 시간이 만료되었습니다.");
 
 
     private final String resultCode;

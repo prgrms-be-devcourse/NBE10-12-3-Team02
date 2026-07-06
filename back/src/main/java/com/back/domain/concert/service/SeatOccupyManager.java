@@ -50,7 +50,7 @@ public class SeatOccupyManager {
         concertService.validateConcertScheduleMatch(concertId, scheduleId);
         concertService.validateSeatAvailable(scheduleId, seatNumber);
 
-        String redisKey = generateKey(concertId, scheduleId, seatNumber);
+        String redisKey = generateSeatOccupyKey(concertId, scheduleId, seatNumber);
         String occupyToken = UUID.randomUUID().toString();
 
         Long result = redisTemplate.execute(
@@ -71,7 +71,7 @@ public class SeatOccupyManager {
     public void seatOccupyCancel(Long concertId, Long scheduleId, String seatNumber, Long userId) {
         concertService.validateConcertScheduleMatch(concertId, scheduleId);
 
-        String redisKey = generateKey(concertId, scheduleId, seatNumber);
+        String redisKey = generateSeatOccupyKey(concertId, scheduleId, seatNumber);
 
         String occupyUserId = (String) redisTemplate.opsForHash().get(redisKey, "userId");
         if (occupyUserId == null) {
@@ -90,7 +90,7 @@ public class SeatOccupyManager {
 
         List<Object> existsResults = redisTemplate.executePipelined((RedisCallback<Object>) connection -> {
             for (var seat : seats) {
-                String key = generateKey(concertId, scheduleId, seat.getSeatNumber());
+                String key = generateSeatOccupyKey(concertId, scheduleId, seat.getSeatNumber());
                 byte[] rawKey = key.getBytes(StandardCharsets.UTF_8);
                 connection.keyCommands().exists(rawKey);
             }
@@ -118,7 +118,7 @@ public class SeatOccupyManager {
         return SeatSelectionResponse.of(concertId, scheduleId, pricesMap, seatResponses);
     }
 
-    public static String generateKey(Long concertId, Long scheduleId, String seatNumber) {
-        return String.format("seat:occupy:%d:%d:%s", concertId, scheduleId, seatNumber);
+    public static String generateSeatOccupyKey(Long concertId, Long scheduleId, String seatNumber) {
+        return "seat:occupy:%d:%d:%s".formatted(concertId, scheduleId, seatNumber);
     }
 }

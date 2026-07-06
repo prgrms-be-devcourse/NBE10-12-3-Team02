@@ -22,9 +22,23 @@ public class RedisTestConfig {
         }
     }
 
+    private static boolean isPortActive(int port) {
+        try (java.net.Socket socket = new java.net.Socket("127.0.0.1", port)) {
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
     @Bean
     @Primary
     public RedisConnectionFactory redisConnectionFactory() {
+        if (isPortActive(6379)) {
+            redisPort = 6379;
+            LettuceConnectionFactory factory = new LettuceConnectionFactory("127.0.0.1", 6379);
+            factory.afterPropertiesSet();
+            return factory;
+        }
         try {
             if (redisServer == null) {
                 redisPort = findFreePort();

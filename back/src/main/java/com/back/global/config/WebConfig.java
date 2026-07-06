@@ -2,6 +2,7 @@ package com.back.global.config;
 
 import com.back.global.annotation.ApiV1;
 import com.back.global.ratelimit.RateLimitInterceptor;
+import com.back.global.security.interceptor.QueueInterceptor;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -23,6 +24,7 @@ public class WebConfig implements WebMvcConfigurer {
     private String[] allowedOrigins;
 
     private final RateLimitInterceptor rateLimitInterceptor;
+    private final QueueInterceptor queueInterceptor;
 
     @Override
     public void configurePathMatch(PathMatchConfigurer configurer) {
@@ -47,5 +49,12 @@ public class WebConfig implements WebMvcConfigurer {
     public void addInterceptors(InterceptorRegistry registry) {
         registry.addInterceptor(rateLimitInterceptor)
                 .addPathPatterns("/api/v1/schedules/*/seats/status");
+
+        registry.addInterceptor(queueInterceptor)
+                .addPathPatterns(
+                        "/api/v1/concerts/*/schedules/*/seats",
+                        "/api/v1/concerts/*/schedules/*/seats/occupy",
+                        "/api/v1/tickets/reserve/schedule/*"
+                );
     }
 }

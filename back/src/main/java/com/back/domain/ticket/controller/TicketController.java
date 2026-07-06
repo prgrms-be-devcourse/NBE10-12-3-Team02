@@ -23,13 +23,14 @@ public class TicketController {
     private final TicketService ticketService;
     private final RequestContext requestContext;
 
-    @PostMapping("/reserve")
+    @PostMapping("/reserve/schedule/{scheduleId}")
     @ResponseStatus(HttpStatus.CREATED)
     @Operation(summary = "결제 및 티켓 생성", description = "결제 및 티켓 생성 API")
     public RsData<PaymentTicketResponse> createTicket(
+            @PathVariable Long scheduleId,
             @RequestBody @Valid PaymentTicketRequest request
     ) {
-        PaymentTicketResponse response = ticketService.createTicket(requestContext.getActor().getId(), request);
+        PaymentTicketResponse response = ticketService.createTicket(requestContext.getActor().getId(), scheduleId, request);
         return new RsData<>(
                 "201-1",
                 "결제 및 티켓 생성 성공",

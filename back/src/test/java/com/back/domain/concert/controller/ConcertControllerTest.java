@@ -17,7 +17,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.data.redis.core.HashOperations;
+import org.springframework.data.redis.core.RedisCallback;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.data.redis.core.ZSetOperations;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -28,8 +30,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 import static com.back.domain.schedule.entity.SeatStatus.AVAILABLE;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
@@ -91,10 +92,17 @@ class ConcertControllerTest {
         ScheduleSeat seat2 = ScheduleSeat.create(schedule, "A", "B-2", 70000, AVAILABLE);
         scheduleSeatRepository.save(seat2);
 
-        when(redisTemplate.executePipelined(any(org.springframework.data.redis.core.RedisCallback.class)))
+        when(redisTemplate.executePipelined((RedisCallback<?>) any()))
                 .thenReturn(List.of(false, false));
 
+        ZSetOperations<String, String> zSetOperations = mock(ZSetOperations.class);
+        when(redisTemplate.opsForZSet()).thenReturn(zSetOperations);
+
+        when(zSetOperations.score(anyString(), anyString()))
+                .thenReturn((double) (System.currentTimeMillis() + 600000));
+
         mockMvc.perform(get("/api/v1/concerts/{concertId}/schedules/{scheduleId}/seats", concert.getConcertId(), schedule.getScheduleId())
+                        .header("X-Queue-Token", "test-queue-token")
                         .with(user(new SecurityUser(1L, "테스트유저")))
                         .contentType(MediaType.APPLICATION_JSON))
                 .andDo(print())
@@ -157,20 +165,25 @@ class ConcertControllerTest {
         when(redisTemplate.execute(
                 any(org.springframework.data.redis.core.script.RedisScript.class),
                 anyList(),
-                any(Object.class),
-                any(Object.class),
-                any(Object.class)
+                any(),
+                any(),
+                any()
         )).thenReturn(1L);
 
-        String requestBody = String.format("""
+        ZSetOperations<String, String> zSetOperations = mock(ZSetOperations.class);
+        when(redisTemplate.opsForZSet()).thenReturn(zSetOperations);
+
+        when(zSetOperations.score(anyString(), anyString()))
+                .thenReturn((double) (System.currentTimeMillis() + 600000));
+
+        String requestBody = """
                 {
-                  "concertId": %d,
-                  "scheduleId": %d,
                   "seatNumber": "A-1"
                 }
-                """, concert.getConcertId(), schedule.getScheduleId());
+                """;
 
-        mockMvc.perform(post("/api/v1/concerts/seats/occupy")
+        mockMvc.perform(post("/api/v1/concerts/{concertId}/schedules/{scheduleId}/seats/occupy", concert.getConcertId(), schedule.getScheduleId())
+                        .header("X-Queue-Token", "test-queue-token")
                         .with(user(new SecurityUser(1L, "테스트유저")))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(requestBody))
@@ -188,21 +201,19 @@ class ConcertControllerTest {
     void t5() throws Exception {
         Long userId = 1L;
         String seatNumber = "A-1";
-        String redisKey = SeatOccupyManager.generateKey(concert.getConcertId(), schedule.getScheduleId(), seatNumber);
+        String redisKey = SeatOccupyManager.generateSeatOccupyKey(concert.getConcertId(), schedule.getScheduleId(), seatNumber);
 
         HashOperations<String, Object, Object> hashOperations = mock(HashOperations.class);
         when(redisTemplate.opsForHash()).thenReturn(hashOperations);
         when(hashOperations.get(redisKey, "userId")).thenReturn(userId.toString());
 
-        String requestBody = String.format("""
+        String requestBody = """
                 {
-                  "concertId": %d,
-                  "scheduleId": %d,
-                  "seatNumber": "%s"
+                  "seatNumber": "A-1"
                 }
-                """, concert.getConcertId(), schedule.getScheduleId(), seatNumber);
+                """;
 
-        mockMvc.perform(delete("/api/v1/concerts/seats/occupy")
+        mockMvc.perform(delete("/api/v1/concerts/{concertId}/schedules/{scheduleId}/seats/occupy", concert.getConcertId(), schedule.getScheduleId())
                         .with(user(new SecurityUser(userId, "테스트유저")))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(requestBody))

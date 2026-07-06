@@ -61,14 +61,16 @@ public class ConcertController {
         );
     }
 
-    @PostMapping("/seats/occupy")
+    @PostMapping("/{concertId}/schedules/{scheduleId}/seats/occupy")
     @Operation(summary = "Redis 실시간 좌석 선점 요청", description = "Redis 실시간 좌석 선점 요청 API")
     public RsData<SeatOccupyResponse> seatOccupy(
+            @PathVariable Long concertId,
+            @PathVariable Long scheduleId,
             @RequestBody SeatOccupyRequest request
     ) {
         SeatOccupyResponse response = seatOccupyManager.seatOccupy(
-                request.concertId(),
-                request.scheduleId(),
+                concertId,
+                scheduleId,
                 request.seatNumber(),
                 requestContext.getActor().getId()
         );
@@ -80,14 +82,16 @@ public class ConcertController {
         );
     }
 
-    @DeleteMapping("/seats/occupy")
+    @DeleteMapping("/{concertId}/schedules/{scheduleId}/seats/occupy")
     @Operation(summary = "Redis 실시간 좌석 선점 취소", description = "Redis 실시간 좌석 선점 취소 API")
     public RsData<Void> seatOccupyCancel(
+            @PathVariable Long concertId,
+            @PathVariable Long scheduleId,
             @RequestBody SeatOccupyRequest request
     ) {
         seatOccupyManager.seatOccupyCancel(
-                request.concertId(),
-                request.scheduleId(),
+                concertId,
+                scheduleId,
                 request.seatNumber(),
                 requestContext.getActor().getId()
         );

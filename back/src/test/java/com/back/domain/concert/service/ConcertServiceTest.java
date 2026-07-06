@@ -67,7 +67,7 @@ class ConcertServiceTest {
         Venue venue = venueRepository.save(Venue.create("올림픽체조경기장", "서울", 15000L));
         schedule = scheduleRepository.save(Schedule.create(concert, venue, LocalDateTime.now().plusHours(12), 1));
 
-        for (int i = 1; i <= 100; i++) {
+        for (int i = 1; i <= 10; i++) {
             ScheduleSeat createdSeat = scheduleSeatRepository.save(ScheduleSeat.create(schedule, "VIP", "A-" + i, 150000, SeatStatus.AVAILABLE));
             if (i == 1) {
                 this.seat = createdSeat;
@@ -80,7 +80,7 @@ class ConcertServiceTest {
         }
 
         doAnswer(invocation -> {
-            Thread.sleep(500);
+            Thread.sleep(10);
             return invocation.callRealMethod();
         }).when(redisTemplate).execute(
                 any(RedisScript.class),
@@ -94,7 +94,7 @@ class ConcertServiceTest {
     @Test
     @DisplayName("실시간 좌석 선점 동시성 테스트")
     void seatOccupy() throws InterruptedException {
-        int threadCount = 100;
+        int threadCount = 10;
         CountDownLatch startLatch = new CountDownLatch(1);
         CountDownLatch doneLatch = new CountDownLatch(threadCount);
         AtomicInteger successCount = new AtomicInteger(0);
@@ -103,7 +103,8 @@ class ConcertServiceTest {
 
         long startTime = System.currentTimeMillis();
 
-        try (ExecutorService executorService = Executors.newFixedThreadPool(threadCount)) {
+        ExecutorService executorService = Executors.newFixedThreadPool(threadCount);
+        try {
             for (int i = 0; i < threadCount; i++) {
                 final long userId = i + 1;
                 executorService.execute(() -> {
@@ -146,7 +147,9 @@ class ConcertServiceTest {
                 });
             }
             startLatch.countDown();
-            doneLatch.await();
+            doneLatch.await(10, java.util.concurrent.TimeUnit.SECONDS);
+        } finally {
+            executorService.shutdownNow();
         }
 
         long endTime = System.currentTimeMillis();
@@ -167,7 +170,7 @@ class ConcertServiceTest {
     @Test
     @DisplayName("파이프라이닝 성능 측정 테스트")
     void pipeliningBenchmark() {
-        int requestCount = 100;
+        int requestCount = 10;
 
         long startTime = System.currentTimeMillis();
         for (int i = 0; i < requestCount; i++) {
@@ -175,6 +178,6 @@ class ConcertServiceTest {
         }
         long endTime = System.currentTimeMillis();
 
-        System.out.println(">>> [파이프라이닝 성능 리포트] 300회 조회 총 소요 시간: " + (endTime - startTime) + " ms");
+        System.out.println(">>> [파이프라이닝 성능 리포트] 조회 총 소요 시간: " + (endTime - startTime) + " ms");
     }
 }

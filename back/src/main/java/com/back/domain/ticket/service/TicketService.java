@@ -33,26 +33,26 @@ public class TicketService {
     private final StringRedisTemplate redisTemplate;
 
     @Transactional
-    public PaymentTicketResponse createTicket(Long userId, PaymentTicketRequest request) {
+    public PaymentTicketResponse createTicket(Long userId, Long scheduleId, PaymentTicketRequest request) {
         User user = userRepository.findByUserIdAndDeletedAtIsNull(userId)
                 .orElseThrow(() -> new ServiceException(ErrorCode.USER_NOT_FOUND));
 
         Schedule schedule = scheduleRepository
-                .findByScheduleIdAndConcert_ConcertId(request.scheduleId(), request.concertId())
+                .findByScheduleIdAndConcert_ConcertId(scheduleId, request.concertId())
                 .orElseThrow(() -> new ServiceException(ErrorCode.INVALID_CONCERT_SCHEDULE));
 
         ScheduleSeat scheduleSeat = scheduleSeatRepository
-                .findWithLockByScheduleIdAndSeatNumber(request.scheduleId(), request.seatNumber())
+                .findWithLockByScheduleIdAndSeatNumber(scheduleId, request.seatNumber())
                 .orElseThrow(() -> new ServiceException(ErrorCode.SEAT_NOT_FOUND));
 
         if (scheduleSeat.getSeatStatus() == SeatStatus.SOLD_OUT) {
             throw new ServiceException(ErrorCode.SEAT_ALREADY_SOLD);
         }
 
-        validateSeatHold(userId, request);
+        validateSeatHold(userId, scheduleId, request);
 
         scheduleSeat.updateSeatStatus(SeatStatus.SOLD_OUT);
-        removeSeatHold(request.concertId(), request.scheduleId(), request.seatNumber());
+        removeSeatHold(request.concertId(), scheduleId, request.seatNumber());
 
         Ticket ticket = Ticket.create(
                 user,
@@ -90,8 +90,8 @@ public class TicketService {
         return UUID.randomUUID().toString();
     }
 
-    private void validateSeatHold(Long userId, PaymentTicketRequest request) {
-        String redisKey = SeatOccupyManager.generateKey(request.concertId(), request.scheduleId(), request.seatNumber());
+    private void validateSeatHold(Long userId, Long scheduleId, PaymentTicketRequest request) {
+        String redisKey = SeatOccupyManager.generateSeatOccupyKey(request.concertId(), scheduleId, request.seatNumber());
 
         List<Object> values = redisTemplate.opsForHash().multiGet(redisKey, List.of("userId", "occupyToken"));
         if (values == null || values.size() < 2 || values.get(0) == null || values.get(1) == null) {
@@ -110,7 +110,7 @@ public class TicketService {
     }
 
     private void removeSeatHold(Long concertId, Long scheduleId, String seatNumber) {
-        String redisKey = SeatOccupyManager.generateKey(concertId, scheduleId, seatNumber);
+        String redisKey = SeatOccupyManager.generateSeatOccupyKey(concertId, scheduleId, seatNumber);
         redisTemplate.delete(redisKey);
     }
 }
