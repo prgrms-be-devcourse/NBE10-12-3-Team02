@@ -13,6 +13,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @ApiV1
 @RestController
 @RequestMapping("/tickets")
@@ -26,11 +28,11 @@ public class TicketController {
     @PostMapping("/reserve/schedule/{scheduleId}")
     @ResponseStatus(HttpStatus.CREATED)
     @Operation(summary = "결제 및 티켓 생성", description = "결제 및 티켓 생성 API")
-    public RsData<PaymentTicketResponse> createTicket(
+    public RsData<List<PaymentTicketResponse>> createTicket(
             @PathVariable Long scheduleId,
             @RequestBody @Valid PaymentTicketRequest request
     ) {
-        PaymentTicketResponse response = ticketService.createTicket(requestContext.getActor().getId(), scheduleId, request);
+        List<PaymentTicketResponse> response = ticketService.createTicket(requestContext.getActor().getId(), scheduleId, request);
         return new RsData<>(
                 "201-1",
                 "결제 및 티켓 생성 성공",

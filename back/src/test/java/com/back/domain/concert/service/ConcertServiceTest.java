@@ -173,8 +173,9 @@ class ConcertServiceTest {
         int requestCount = 10;
 
         long startTime = System.currentTimeMillis();
+        Long userId = 1L;
         for (int i = 0; i < requestCount; i++) {
-            seatOccupyManager.getSeatSelection(concert.getConcertId(), schedule.getScheduleId());
+            seatOccupyManager.getSeatSelection(concert.getConcertId(), schedule.getScheduleId(), userId);
         }
         long endTime = System.currentTimeMillis();
 

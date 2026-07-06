@@ -20,4 +20,6 @@ public interface TicketRepository extends JpaRepository<Ticket, Long> {
         WHERE t.user = :user
     """)
     List<Ticket> findAllByUserWithConcert(@Param("user") User user);
+
+    long countByUser_UserIdAndSchedule_ScheduleIdAndIsValidTrue(Long userId, Long scheduleId);
 }

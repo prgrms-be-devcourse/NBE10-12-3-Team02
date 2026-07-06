@@ -52,7 +52,11 @@ public class ConcertController {
             @PathVariable Long concertId,
             @PathVariable Long scheduleId) {
 
-        SeatSelectionResponse response = seatOccupyManager.getSeatSelection(concertId, scheduleId);
+        SeatSelectionResponse response = seatOccupyManager.getSeatSelection(
+                concertId,
+                scheduleId,
+                requestContext.getActor().getId()
+        );
 
         return new RsData<>(
                 "200-1",

@@ -100,7 +100,11 @@ class TicketControllerTest {
         ));
         Venue venue = venueRepository.save(Venue.create("공연장", "서울", 15000L));
         schedule = scheduleRepository.save(Schedule.create(concert, venue, LocalDateTime.now().plusHours(12), 1));
+
         seat = scheduleSeatRepository.save(ScheduleSeat.create(schedule, "VIP", "A-1", 150000, AVAILABLE));
+        scheduleSeatRepository.save(ScheduleSeat.create(schedule, "VIP", "A-2", 150000, AVAILABLE));
+        scheduleSeatRepository.save(ScheduleSeat.create(schedule, "VIP", "A-3", 150000, AVAILABLE));
+        scheduleSeatRepository.save(ScheduleSeat.create(schedule, "VIP", "A-4", 150000, AVAILABLE));
 
         @SuppressWarnings("unchecked")
         HashOperations<String, Object, Object> hashOperations = mock(HashOperations.class);
@@ -109,28 +113,53 @@ class TicketControllerTest {
         when(hashOperations.multiGet(any(), anyList()))
                 .thenReturn(List.of(user.getUserId().toString(), "test-token"));
 
+        @SuppressWarnings("unchecked")
+        ZSetOperations<String, String> zSetOperations = mock(ZSetOperations.class);
+        when(redisTemplate.opsForZSet()).thenReturn(zSetOperations);
+        when(zSetOperations.score(anyString(), anyString()))
+                .thenReturn((double) (System.currentTimeMillis() + 600000));
+
         when(redisTemplate.executePipelined(any(org.springframework.data.redis.core.RedisCallback.class)))
-                .thenReturn(List.of(false));
+                .thenReturn(List.of(
+                        List.of(
+                                user.getUserId().toString().getBytes(java.nio.charset.StandardCharsets.UTF_8),
+                                "test-token".getBytes(java.nio.charset.StandardCharsets.UTF_8)
+                        )
+                ));
     }
 
     @Test
-    @DisplayName("티켓 생성 성공")
+    @DisplayName("티켓 2매 생성 성공")
     void createTicket() throws Exception {
-        ZSetOperations<String, String> zSetOperations = mock(ZSetOperations.class);
-        when(redisTemplate.opsForZSet()).thenReturn(zSetOperations);
-
-        when(zSetOperations.score(anyString(), anyString()))
-                .thenReturn((double) (System.currentTimeMillis() + 600000));
+        when(redisTemplate.executePipelined(any(org.springframework.data.redis.core.RedisCallback.class)))
+                .thenReturn(List.of(
+                        List.of(
+                                user.getUserId().toString().getBytes(java.nio.charset.StandardCharsets.UTF_8),
+                                "token-1".getBytes(java.nio.charset.StandardCharsets.UTF_8)
+                        ),
+                        List.of(
+                                user.getUserId().toString().getBytes(java.nio.charset.StandardCharsets.UTF_8),
+                                "token-2".getBytes(java.nio.charset.StandardCharsets.UTF_8)
+                        )
+                ));
 
         String requestBody = """
                 {
                   "concertId": %d,
-                  "seatNumber": "A-1",
-                  "occupyToken": "test-token"
+                  "seatHolds": [
+                    {
+                      "seatNumber": "A-1",
+                      "occupyToken": "token-1"
+                    },
+                    {
+                      "seatNumber": "A-2",
+                      "occupyToken": "token-2"
+                    }
+                  ]
                 }
                 """.formatted(concert.getConcertId());
 
-        mockMvc.perform(post("/api/v1/tickets/reserve/schedule/{schellingId}", schedule.getScheduleId())
+        mockMvc.perform(post("/api/v1/tickets/reserve/schedule/{scheduleId}", schedule.getScheduleId())
                         .header("X-Queue-Token", "test-queue-token")
                         .with(user(securityUser))
                         .contentType(MediaType.APPLICATION_JSON)
@@ -139,15 +168,47 @@ class TicketControllerTest {
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.resultCode").value("201-1"))
                 .andExpect(jsonPath("$.msg").value("결제 및 티켓 생성 성공"))
-                .andExpect(jsonPath("$.data.ticketNumber").isString())
-                .andExpect(jsonPath("$.data.urlPoster").value("poster.jpg"))
-                .andExpect(jsonPath("$.data.concertName").value("싸이 콘서트"))
-                .andExpect(jsonPath("$.data.seatNumber").value("A-1"))
-                .andExpect(jsonPath("$.data.seatStatus").value("SOLD_OUT"))
-                .andExpect(jsonPath("$.data.isValid").value(true));
+                .andExpect(jsonPath("$.data").isArray())
+                .andExpect(jsonPath("$.data.length()").value(2))
+
+                .andExpect(jsonPath("$.data[0].ticketNumber").isString())
+                .andExpect(jsonPath("$.data[0].urlPoster").value("poster.jpg"))
+                .andExpect(jsonPath("$.data[0].concertName").value("싸이 콘서트"))
+                .andExpect(jsonPath("$.data[0].seatNumber").value("A-1"))
+
+                .andExpect(jsonPath("$.data[1].ticketNumber").isString())
+                .andExpect(jsonPath("$.data[1].urlPoster").value("poster.jpg"))
+                .andExpect(jsonPath("$.data[1].concertName").value("싸이 콘서트"))
+                .andExpect(jsonPath("$.data[1].seatNumber").value("A-2"));
 
         assertThat(seat.getSeatStatus()).isEqualTo(SOLD_OUT);
-        assertThat(ticketRepository.count()).isEqualTo(1);
+        assertThat(ticketRepository.count()).isEqualTo(2);
+    }
+
+    @Test
+    @DisplayName("티켓 4매 생성 실패")
+    void createFourTickets() throws Exception {
+        String requestBody = """
+                {
+                  "concertId": %d,
+                  "seatHolds": [
+                    { "seatNumber": "A-1", "occupyToken": "token-1" },
+                    { "seatNumber": "A-2", "occupyToken": "token-2" },
+                    { "seatNumber": "A-3", "occupyToken": "token-3" },
+                    { "seatNumber": "A-4", "occupyToken": "token-4" }
+                  ]
+                }
+                """.formatted(concert.getConcertId());
+
+        mockMvc.perform(post("/api/v1/tickets/reserve/schedule/{scheduleId}", schedule.getScheduleId())
+                        .header("X-Queue-Token", "test-queue-token")
+                        .with(user(securityUser))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(requestBody))
+                .andDo(print())
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.resultCode").value("400-2"))
+                .andExpect(jsonPath("$.msg").value("회차당 최대 3매까지 예매 가능합니다."));
     }
 
     @Test
