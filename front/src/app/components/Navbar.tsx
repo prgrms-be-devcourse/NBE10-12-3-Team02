@@ -15,9 +15,7 @@ export default function Navbar() {
       const decoded = decodeToken();
       setUserName(decoded?.name ?? null);
     };
-
     restoreSession().then(syncAuth);
-
     window.addEventListener("auth-changed", syncAuth);
     return () => window.removeEventListener("auth-changed", syncAuth);
   }, []);
@@ -43,7 +41,7 @@ export default function Navbar() {
     <nav className="sticky top-0 z-50 bg-white border-b border-gray-100 shadow-sm">
       <div className="max-w-5xl mx-auto px-6 h-16 flex items-center justify-between">
         <Link href="/" onClick={handleLogoClick} className="flex items-center">
-          <img src="/images/logo-horizontal.svg" alt="티케팅고" className="h-8 w-auto object-contain block" />
+          <img src="/images/logo-horizontal.svg" alt="티케팅고" className="h-12 w-auto object-contain block" />
         </Link>
         <div className="flex items-center gap-6 text-sm font-semibold text-gray-600">
           <Link href="/mypage" className="flex items-center gap-1 hover:text-blue-600 transition">

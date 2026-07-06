@@ -1,11 +1,10 @@
 "use client";
 
-import { Suspense, useState, useEffect, useRef, type ChangeEvent } from "react";
+import { useState, useEffect, useRef, type ChangeEvent } from "react";
 import Link from "next/link";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
-import { Search, ChevronLeft, ChevronRight, RotateCcw } from "lucide-react";
+import { Search, ChevronLeft, ChevronRight } from "lucide-react";
 import { apiFetch } from "@/lib/api";
-import { getLocalConcertPoster } from "@/lib/concertDetailImages";
 
 interface ConcertListItem {
   concertId: number;
@@ -17,7 +16,7 @@ interface ConcertListItem {
   status: string;
 }
 
-function HomeContent() {
+export default function Home() {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -111,13 +110,6 @@ function HomeContent() {
     goToPage(1);
   };
 
-  const handleClearFilters = () => {
-    setKeyword("");
-    setSort("closingSoon");
-    setDate("");
-    goToPage(1);
-  };
-
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white">
@@ -167,11 +159,7 @@ function HomeContent() {
                 >
                   <div className="h-56 bg-gradient-to-br from-blue-200 to-indigo-300 flex items-center justify-center text-white font-bold relative overflow-hidden">
                     {concert.imageUrl ? (
-                      <img
-                        src={getLocalConcertPoster(concert.imageUrl)}
-                        alt={concert.concertName}
-                        className="w-full h-full object-cover"
-                      />
+                      <img src={concert.imageUrl} alt={concert.concertName} className="w-full h-full object-cover" />
                     ) : (
                       "포스터"
                     )}
@@ -228,15 +216,6 @@ function HomeContent() {
             <option value="closingSoon">마감 임박순</option>
             <option value="latest">최신순</option>
           </select>
-
-          <button
-            type="button"
-            onClick={handleClearFilters}
-            title="필터 초기화"
-            className="p-3 rounded-lg border border-gray-200 bg-white text-gray-500 hover:bg-gray-50 hover:text-gray-700 transition"
-          >
-            <RotateCcw size={18} />
-          </button>
         </div>
 
         {loading ? (
@@ -256,11 +235,7 @@ function HomeContent() {
                 >
                   <div className="h-48 bg-gradient-to-br from-blue-200 to-indigo-300 flex items-center justify-center text-white font-bold relative overflow-hidden">
                     {concert.imageUrl ? (
-                      <img
-                        src={getLocalConcertPoster(concert.imageUrl)}
-                        alt={concert.concertName}
-                        className="w-full h-full object-cover"
-                      />
+                      <img src={concert.imageUrl} alt={concert.concertName} className="w-full h-full object-cover" />
                     ) : (
                       "포스터"
                     )}
@@ -319,13 +294,5 @@ function HomeContent() {
         )}
       </div>
     </div>
-  );
-}
-
-export default function Home() {
-  return (
-    <Suspense fallback={<p className="text-center text-gray-400 py-20">불러오는 중...</p>}>
-      <HomeContent />
-    </Suspense>
   );
 }
