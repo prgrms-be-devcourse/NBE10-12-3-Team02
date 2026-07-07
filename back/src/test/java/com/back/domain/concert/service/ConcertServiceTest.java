@@ -67,7 +67,7 @@ class ConcertServiceTest {
         Venue venue = venueRepository.save(Venue.create("올림픽체조경기장", "서울", 15000L));
         schedule = scheduleRepository.save(Schedule.create(concert, venue, LocalDateTime.now().plusHours(12), 1));
 
-        for (int i = 1; i <= 10; i++) {
+        for (int i = 1; i <= 100; i++) {
             ScheduleSeat createdSeat = scheduleSeatRepository.save(ScheduleSeat.create(schedule, "VIP", "A-" + i, 150000, SeatStatus.AVAILABLE));
             if (i == 1) {
                 this.seat = createdSeat;
@@ -168,9 +168,9 @@ class ConcertServiceTest {
     }
 
     @Test
-    @DisplayName("파이프라이닝 성능 측정 테스트")
+    @DisplayName("조회 총 소요 시간 측정 테스트")
     void pipeliningBenchmark() {
-        int requestCount = 10;
+        int requestCount = 100;
 
         long startTime = System.currentTimeMillis();
         Long userId = 1L;
@@ -179,6 +179,6 @@ class ConcertServiceTest {
         }
         long endTime = System.currentTimeMillis();
 
-        System.out.println(">>> [파이프라이닝 성능 리포트] 조회 총 소요 시간: " + (endTime - startTime) + " ms");
+        System.out.println(">>> 조회 총 소요 시간: " + (endTime - startTime) + " ms");
     }
 }

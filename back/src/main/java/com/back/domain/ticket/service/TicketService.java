@@ -152,5 +152,8 @@ public class TicketService {
     private void removeSeatHold(Long concertId, Long scheduleId, String seatNumber) {
         String redisKey = SeatOccupyManager.generateSeatOccupyKey(concertId, scheduleId, seatNumber);
         redisTemplate.delete(redisKey);
+
+        String indexKey = SeatOccupyManager.generateSeatOccupyIndexKey(concertId, scheduleId);
+        redisTemplate.opsForZSet().remove(indexKey, seatNumber);
     }
 }

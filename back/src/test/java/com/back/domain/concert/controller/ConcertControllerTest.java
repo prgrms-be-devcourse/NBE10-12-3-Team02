@@ -17,7 +17,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.data.redis.core.HashOperations;
-import org.springframework.data.redis.core.RedisCallback;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.ZSetOperations;
 import org.springframework.http.MediaType;
@@ -92,14 +91,15 @@ class ConcertControllerTest {
         ScheduleSeat seat2 = ScheduleSeat.create(schedule, "A", "B-2", 70000, AVAILABLE);
         scheduleSeatRepository.save(seat2);
 
-        when(redisTemplate.executePipelined((RedisCallback<?>) any()))
-                .thenReturn(List.of(false, false));
-
+        @SuppressWarnings("unchecked")
         ZSetOperations<String, String> zSetOperations = mock(ZSetOperations.class);
         when(redisTemplate.opsForZSet()).thenReturn(zSetOperations);
 
         when(zSetOperations.score(anyString(), anyString()))
                 .thenReturn((double) (System.currentTimeMillis() + 600000));
+
+        when(zSetOperations.rangeByScore(anyString(), anyDouble(), anyDouble()))
+                .thenReturn(java.util.Collections.emptySet());
 
         mockMvc.perform(get("/api/v1/concerts/{concertId}/schedules/{scheduleId}/seats", concert.getConcertId(), schedule.getScheduleId())
                         .header("X-Queue-Token", "test-queue-token")
@@ -203,9 +203,14 @@ class ConcertControllerTest {
         String seatNumber = "A-1";
         String redisKey = SeatOccupyManager.generateSeatOccupyKey(concert.getConcertId(), schedule.getScheduleId(), seatNumber);
 
+        @SuppressWarnings("unchecked")
         HashOperations<String, Object, Object> hashOperations = mock(HashOperations.class);
         when(redisTemplate.opsForHash()).thenReturn(hashOperations);
         when(hashOperations.get(redisKey, "userId")).thenReturn(userId.toString());
+
+        @SuppressWarnings("unchecked")
+        ZSetOperations<String, String> zSetOperations = mock(ZSetOperations.class);
+        when(redisTemplate.opsForZSet()).thenReturn(zSetOperations);
 
         String requestBody = """
                 {
