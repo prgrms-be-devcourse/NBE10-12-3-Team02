@@ -61,6 +61,8 @@ function SeatSelectContent({ params }: { params: Promise<{ id: string }> }) {
     if (timeLeft === null) return;
 
     if (timeLeft <= 0) {
+      // 카운트다운 타이머가 0이 됐을 때 선택 상태를 정리하는 로직이라 effect 안에서 setState가 맞다.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setSelectedSeats([]);
       setTimeLeft(null);
       alert("좌석 선택 시간이 만료되어 선택이 취소되었습니다.");
@@ -82,6 +84,8 @@ function SeatSelectContent({ params }: { params: Promise<{ id: string }> }) {
 
   useEffect(() => {
     if (!scheduleId) {
+      // 주소창에 회차 정보가 없을 때 에러 화면으로 전환하는 로직이라 effect 안에서 setState가 맞다.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setError("회차 정보가 없습니다.");
       setLoading(false);
       return;

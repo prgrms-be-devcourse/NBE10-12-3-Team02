@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Eye, EyeOff } from "lucide-react";
@@ -34,7 +34,7 @@ const SOCIAL_PROVIDERS = [
   },
 ] as const;
 
-export default function LoginPage() {
+function LoginContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [loginId, setLoginId] = useState("");
@@ -79,6 +79,8 @@ export default function LoginPage() {
   // 소셜 로그인 버튼을 누르면, 우리 서버가 만들어둔 주소로 브라우저 전체를 이동시킨다.
   // (fetch가 아니라 페이지 이동! 카카오/네이버/구글 로그인 화면을 보여줘야 하기 때문)
   const handleSocialLogin = (provider: string) => {
+    // window.location.href 대입은 브라우저 페이지 이동이지 리액트 상태 변경이 아니다.
+    // eslint-disable-next-line react-hooks/immutability
     window.location.href = `${API_BASE_URL}/oauth2/authorization/${provider}`;
   };
 
@@ -149,5 +151,13 @@ export default function LoginPage() {
         </p>
       </form>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<div>로딩 중...</div>}>
+      <LoginContent />
+    </Suspense>
   );
 }
