@@ -5,6 +5,7 @@ import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -16,11 +17,14 @@ import java.util.Optional;
 @Component
 @RequiredArgsConstructor
 public class RequestContext {
-    private final HttpServletRequest req;
-    private final HttpServletResponse resp;
+    private final ObjectProvider<HttpServletRequest> reqProvider;
+    private final ObjectProvider<HttpServletResponse> respProvider;
 
     @Value("${custom.jwt.refreshToken.expirationSeconds}")
     private int refreshTokenExpireSeconds;
+
+    private HttpServletRequest req() { return reqProvider.getObject(); }
+    private HttpServletResponse resp() { return respProvider.getObject(); }
 
     public SecurityUser getActor() {
         return (SecurityUser) Optional.ofNullable(
@@ -34,7 +38,7 @@ public class RequestContext {
 
     public String getHeader(String name, String defaultValue) {
         return Optional
-                .ofNullable(req.getHeader(name))
+                .ofNullable(req().getHeader(name))
                 .filter(headerValue -> !headerValue.isBlank())
                 .orElse(defaultValue);
     }
@@ -43,14 +47,14 @@ public class RequestContext {
         if (value == null) value = "";
 
         if (value.isBlank()) {
-            req.removeAttribute(name);
+            req().removeAttribute(name);
         } else {
-            resp.setHeader(name, value);
+            resp().setHeader(name, value);
         }
     }
 
     public String getCookieValue(String name, String defaultValue) {
-        return Arrays.stream(Optional.ofNullable(req.getCookies()).orElse(new Cookie[0]))
+        return Arrays.stream(Optional.ofNullable(req().getCookies()).orElse(new Cookie[0]))
                 .filter(cookie -> name.equals(cookie.getName()))
                 .map(Cookie::getValue)
                 .filter(value -> value != null && !value.isBlank())
@@ -70,7 +74,7 @@ public class RequestContext {
         if (value.isBlank()) cookie.setMaxAge(0);
         else cookie.setMaxAge(maxAge);
 
-        resp.addCookie(cookie);
+        resp().addCookie(cookie);
     }
 
     public void setCookie(String name, String value, String path) {
@@ -88,6 +92,6 @@ public class RequestContext {
             return forwardedFor.split(",")[0].trim();
         }
 
-        return req.getRemoteAddr();
+        return req().getRemoteAddr();
     }
 }

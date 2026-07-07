@@ -1,3 +1,4 @@
+# cache-bust: 1
 # ---- Build Stage ----
 FROM eclipse-temurin:25-jdk AS build
 
