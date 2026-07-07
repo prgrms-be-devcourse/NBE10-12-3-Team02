@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Eye, EyeOff } from "lucide-react";
 import { apiFetch } from "@/lib/api";
+import PasswordStrengthMeter from "@/app/components/PasswordStrengthMeter";
 
 export default function SignupPage() {
   const router = useRouter();
@@ -135,7 +136,7 @@ export default function SignupPage() {
           </button>
         </div>
 
-        <div className="relative mb-3">
+        <div className="relative mb-1">
           <input
             type={showPassword ? "text" : "password"}
             placeholder="비밀번호"
@@ -151,6 +152,8 @@ export default function SignupPage() {
             {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
           </button>
         </div>
+
+        <PasswordStrengthMeter password={password} />
 
         <input
           type={showPassword ? "text" : "password"}

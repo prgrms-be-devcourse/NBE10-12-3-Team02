@@ -24,6 +24,10 @@ interface ScheduleItem {
   remainingSeats: number;
 }
 
+const GRADE_ORDER = ["VIP", "R", "S", "A"];
+
+const stripVenuePrefix = (name: string) => name.replace(/^\(.*?\)\s*/, "").trim();
+
 export default function ConcertDetailPage({
   params,
 }: {
@@ -87,6 +91,8 @@ export default function ConcertDetailPage({
 
   const posterUrl = getLocalConcertPoster(concert.urlPoster);
   const detailImages = getConcertDetailImages(concert.urlPoster);
+  const mapQuery = encodeURIComponent(`${stripVenuePrefix(concert.venueName)} ${concert.location}`);
+  const mapUrl = `https://map.kakao.com/link/search/${mapQuery}`;
 
   return (
     <div className="min-h-screen bg-gray-50 p-10">
@@ -111,23 +117,43 @@ export default function ConcertDetailPage({
             </div>
 
             <div className="p-8 flex-1">
-              <h1 className="text-2xl font-bold text-gray-800 mb-2">{concert.concertName}</h1>
-              <p className="text-gray-500 mb-1">📍 {concert.venueName}</p>
-              <p className="text-gray-400 text-sm mb-4">{concert.location}</p>
-              <p className="text-gray-600 mb-6">{concert.description}</p>
+              <h1 className="text-2xl font-bold text-gray-800 mb-4">{concert.concertName}</h1>
 
-              <div className="border-t pt-4 mb-6">
+              <div className="mb-4">
+                <h2 className="font-bold text-gray-700 mb-2">공연 장소</h2>
+                
+                  <a href={mapUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="block group"
+                > 
+                  <p className="text-gray-600 text-sm group-hover:text-blue-600 transition">
+                    📍 {concert.venueName}
+                    <span className="ml-1 text-xs text-blue-500 underline">지도 보기</span>
+                  </p>
+                  <p className="text-gray-400 text-sm mt-1">{concert.location}</p>
+                </a>
+              </div>
+
+              <div className="mb-6">
+                <h2 className="font-bold text-gray-700 mb-2">공연 소개</h2>
+                <p className="text-gray-600 text-sm leading-6">{concert.description}</p>
+              </div>
+
+              <div className="mb-6">
                 <h2 className="font-bold text-gray-700 mb-2">좌석 등급별 가격</h2>
                 <div className="space-y-1 text-sm text-gray-600">
-                  {Object.entries(concert.prices).map(([grade, price]) => (
-                    <p key={grade}>
-                      {grade}석 — {price.toLocaleString()}원
-                    </p>
-                  ))}
+                  {Object.entries(concert.prices)
+                    .sort(([a], [b]) => GRADE_ORDER.indexOf(a) - GRADE_ORDER.indexOf(b))
+                    .map(([grade, price]) => (
+                      <p key={grade}>
+                        {grade}석 — {price.toLocaleString()}원
+                      </p>
+                    ))}
                 </div>
               </div>
 
-              <div className="border-t pt-4 mb-6">
+              <div className="mb-6">
                 <h2 className="font-bold text-gray-700 mb-3">회차 선택</h2>
                 {schedules.length === 0 ? (
                   <p className="text-sm text-gray-400">등록된 회차가 없습니다.</p>

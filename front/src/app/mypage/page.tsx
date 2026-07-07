@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { apiFetch, decodeToken, restoreSession, setAccessToken } from "@/lib/api";
 import { getLocalConcertPoster } from "@/lib/concertDetailImages";
 import { Loader2 } from "lucide-react";
+import PasswordStrengthMeter from "@/app/components/PasswordStrengthMeter";
 
 interface TicketInfo {
   ticketId: number;
@@ -26,6 +27,8 @@ interface MyPageData {
   ticketList: TicketInfo[];
 }
 
+type StatusFilter = "all" | "valid" | "canceled";
+
 export default function MyPage() {
   const router = useRouter();
   const hasCheckedAuth = useRef(false);
@@ -36,6 +39,7 @@ export default function MyPage() {
   const [cancelTargetId, setCancelTargetId] = useState<number | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const ticketsPerPage = 5;
 
   const [isEditing, setIsEditing] = useState(false);
@@ -187,11 +191,21 @@ export default function MyPage() {
   const isSocialLogin = data.loginType !== "NORMAL";
 
   const sortedTickets = [...data.ticketList].sort((a, b) => b.ticketId - a.ticketId);
-  const totalPages = Math.ceil(sortedTickets.length / ticketsPerPage);
-  const pagedTickets = sortedTickets.slice(
+  const filteredTickets = sortedTickets.filter((t) => {
+    if (statusFilter === "valid") return t.isValid;
+    if (statusFilter === "canceled") return !t.isValid;
+    return true;
+  });
+  const totalPages = Math.ceil(filteredTickets.length / ticketsPerPage);
+  const pagedTickets = filteredTickets.slice(
     (currentPage - 1) * ticketsPerPage,
     currentPage * ticketsPerPage
   );
+
+  const handleFilterChange = (filter: StatusFilter) => {
+    setStatusFilter(filter);
+    setCurrentPage(1);
+  };
 
   return (
     <div className="min-h-screen bg-gray-50 p-10">
@@ -255,6 +269,7 @@ export default function MyPage() {
                       placeholder="8자 이상"
                       className="w-full p-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
                     />
+                    <PasswordStrengthMeter password={editPassword} />
                   </div>
                   {editPassword !== "" && (
                     <div>
@@ -297,64 +312,90 @@ export default function MyPage() {
 
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-bold text-gray-700">내 티켓</h2>
-          <span className="text-sm text-gray-400">{data.ticketList.length}개의 티켓</span>
+          <span className="text-sm text-gray-400">{filteredTickets.length}개의 티켓</span>
         </div>
 
-        <div className="space-y-6">
-          {pagedTickets.map((ticket) => (
-            <div key={ticket.ticketId} className="flex shadow-md rounded-2xl overflow-hidden">
-              <div className="flex-shrink-0 w-36 bg-gradient-to-br from-blue-200 to-indigo-300 flex items-center justify-center text-white font-bold text-sm overflow-hidden">
-                {ticket.urlPoster ? (
-                  <img
-                    src={getLocalConcertPoster(ticket.urlPoster)}
-                    alt={ticket.concertName}
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  "포스터"
-                )}
-              </div>
-
-              <div className="border-l-2 border-dashed border-gray-200 my-4" />
-
-              <div className="flex-1 bg-white p-6">
-                <div className="flex justify-between items-start mb-3">
-                  <h3 className="font-bold text-gray-800 text-lg">{ticket.concertName}</h3>
-                  <div className="flex items-center gap-2">
-                    {ticket.isValid && (
-                      <button
-                        onClick={() => setCancelTargetId(ticket.ticketId)}
-                        className="text-xs text-gray-400 hover:text-red-500 border border-gray-200 hover:border-red-300 px-3 py-1 rounded-lg transition"
-                      >
-                        예매 취소
-                      </button>
-                    )}
-                    <span className={`px-2 py-1 text-xs rounded-full font-semibold ${
-                      !ticket.isValid ? "bg-gray-100 text-gray-400" : "bg-green-100 text-green-700"
-                    }`}>
-                      {!ticket.isValid ? "취소됨" : "예매완료"}
-                    </span>
-                  </div>
-                </div>
-
-                <div className="space-y-1 text-sm text-gray-500">
-                  <p>
-                    <span className="inline-block w-20 text-gray-400">예매번호</span>
-                    <span className="text-gray-600 text-xs">{ticket.ticketNumber}</span>
-                  </p>
-                  <p>
-                    <span className="inline-block w-20 text-gray-400">공연기간</span>
-                    {ticket.startDate} ~ {ticket.endDate}
-                  </p>
-                  <p>
-                    <span className="inline-block w-20 text-gray-400">결제금액</span>
-                    <span className="text-blue-600 font-bold">{ticket.ticketPrice.toLocaleString()}원</span>
-                  </p>
-                </div>
-              </div>
-            </div>
+        <div className="flex gap-2 mb-4">
+          {(
+            [
+              { key: "all", label: "전체" },
+              { key: "valid", label: "예매완료" },
+              { key: "canceled", label: "취소됨" },
+            ] as const
+          ).map((f) => (
+            <button
+              key={f.key}
+              onClick={() => handleFilterChange(f.key)}
+              className={`px-3 py-1.5 rounded-lg text-sm font-semibold border transition ${
+                statusFilter === f.key
+                  ? "bg-blue-600 text-white border-blue-600"
+                  : "bg-white text-gray-600 border-gray-200 hover:border-blue-400"
+              }`}
+            >
+              {f.label}
+            </button>
           ))}
         </div>
+
+        {filteredTickets.length === 0 ? (
+          <p className="text-sm text-gray-400 text-center py-10">해당 조건의 티켓이 없습니다.</p>
+        ) : (
+          <div className="space-y-6">
+            {pagedTickets.map((ticket) => (
+              <div key={ticket.ticketId} className="flex shadow-md rounded-2xl overflow-hidden">
+                <div className="flex-shrink-0 w-36 bg-gradient-to-br from-blue-200 to-indigo-300 flex items-center justify-center text-white font-bold text-sm overflow-hidden">
+                  {ticket.urlPoster ? (
+                    <img
+                      src={getLocalConcertPoster(ticket.urlPoster)}
+                      alt={ticket.concertName}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    "포스터"
+                  )}
+                </div>
+
+                <div className="border-l-2 border-dashed border-gray-200 my-4" />
+
+                <div className="flex-1 bg-white p-6">
+                  <div className="flex justify-between items-start mb-3">
+                    <h3 className="font-bold text-gray-800 text-lg">{ticket.concertName}</h3>
+                    <div className="flex items-center gap-2">
+                      {ticket.isValid && (
+                        <button
+                          onClick={() => setCancelTargetId(ticket.ticketId)}
+                          className="text-xs text-gray-400 hover:text-red-500 border border-gray-200 hover:border-red-300 px-3 py-1 rounded-lg transition"
+                        >
+                          예매 취소
+                        </button>
+                      )}
+                      <span className={`px-2 py-1 text-xs rounded-full font-semibold ${
+                        !ticket.isValid ? "bg-gray-100 text-gray-400" : "bg-green-100 text-green-700"
+                      }`}>
+                        {!ticket.isValid ? "취소됨" : "예매완료"}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="space-y-1 text-sm text-gray-500">
+                    <p>
+                      <span className="inline-block w-20 text-gray-400">예매번호</span>
+                      <span className="text-gray-600 text-xs">{ticket.ticketNumber}</span>
+                    </p>
+                    <p>
+                      <span className="inline-block w-20 text-gray-400">공연기간</span>
+                      {ticket.startDate} ~ {ticket.endDate}
+                    </p>
+                    <p>
+                      <span className="inline-block w-20 text-gray-400">결제금액</span>
+                      <span className="text-blue-600 font-bold">{ticket.ticketPrice.toLocaleString()}원</span>
+                    </p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
 
         {totalPages > 1 && (
           <div className="flex items-center justify-center gap-2 mt-8">
