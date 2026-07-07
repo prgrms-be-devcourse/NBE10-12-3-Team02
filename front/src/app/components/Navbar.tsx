@@ -2,12 +2,10 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { User } from "lucide-react";
 import { apiFetch, decodeToken, setAccessToken, restoreSession } from "@/lib/api";
 
 export default function Navbar() {
-  const router = useRouter();
   const [userName, setUserName] = useState<string | null>(null);
 
   useEffect(() => {
@@ -28,12 +26,16 @@ export default function Navbar() {
   };
 
   const handleLogout = async () => {
+    if (!confirm("로그아웃 하시겠습니까?")) return;
+
     try {
       await apiFetch("/auth/logout", { method: "POST" });
     } catch {
     } finally {
       setAccessToken(null);
-      router.push("/");
+      // router.push만 하면 화면에 남아있는 상태(변수, 메모리)가 안 씻겨나갈 수 있어서
+      // 아예 브라우저를 새로고침시켜서 완전히 초기 상태로 되돌린다.
+      window.location.href = "/";
     }
   };
 

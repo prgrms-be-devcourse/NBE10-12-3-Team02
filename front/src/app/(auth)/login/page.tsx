@@ -1,17 +1,54 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Eye, EyeOff } from "lucide-react";
 import { apiFetch } from "@/lib/api";
 
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
+
+// 서버가 로그인 실패 시 붙여서 보내주는 에러 코드를, 사람이 읽을 문구로 바꿔주는 표
+const OAUTH_ERROR_MESSAGES: Record<string, string> = {
+  oauth2_user_id_missing: "소셜 로그인 정보를 가져오지 못했습니다.",
+  oauth2_user_id_invalid: "소셜 로그인 정보가 올바르지 않습니다.",
+  oauth2_user_not_found: "가입된 회원 정보를 찾을 수 없습니다.",
+  oauth2_token_issue_failed: "로그인 처리 중 오류가 발생했습니다.",
+};
+
+const SOCIAL_PROVIDERS = [
+  {
+    key: "kakao",
+    label: "카카오로 시작하기",
+    className: "bg-[#FEE500] hover:bg-[#fada0a] text-[#191919]",
+  },
+  {
+    key: "naver",
+    label: "네이버로 시작하기",
+    className: "bg-[#03C75A] hover:bg-[#02b350] text-white",
+  },
+  {
+    key: "google",
+    label: "Google로 시작하기",
+    className: "bg-white hover:bg-gray-50 text-gray-700 border border-gray-200",
+  },
+] as const;
+
 export default function LoginPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [loginId, setLoginId] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // 소셜 로그인이 실패해서 서버가 /login?error=... 로 돌려보낸 경우, 그 이유를 안내한다.
+  useEffect(() => {
+    const errorCode = searchParams.get("error");
+    if (errorCode) {
+      alert(OAUTH_ERROR_MESSAGES[errorCode] ?? "소셜 로그인 중 오류가 발생했습니다.");
+    }
+  }, [searchParams]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -37,6 +74,12 @@ export default function LoginPage() {
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  // 소셜 로그인 버튼을 누르면, 우리 서버가 만들어둔 주소로 브라우저 전체를 이동시킨다.
+  // (fetch가 아니라 페이지 이동! 카카오/네이버/구글 로그인 화면을 보여줘야 하기 때문)
+  const handleSocialLogin = (provider: string) => {
+    window.location.href = `${API_BASE_URL}/oauth2/authorization/${provider}`;
   };
 
   return (
@@ -78,6 +121,25 @@ export default function LoginPage() {
         >
           {isSubmitting ? "로그인 중..." : "로그인"}
         </button>
+
+        <div className="flex items-center gap-3 my-6">
+          <div className="flex-1 h-px bg-gray-200" />
+          <span className="text-xs text-gray-400">또는</span>
+          <div className="flex-1 h-px bg-gray-200" />
+        </div>
+
+        <div className="space-y-2">
+          {SOCIAL_PROVIDERS.map((provider) => (
+            <button
+              key={provider.key}
+              type="button"
+              onClick={() => handleSocialLogin(provider.key)}
+              className={`w-full p-3 rounded-lg font-semibold transition ${provider.className}`}
+            >
+              {provider.label}
+            </button>
+          ))}
+        </div>
 
         <p className="text-center text-sm text-gray-500 mt-6">
           아직 회원이 아니신가요?{" "}

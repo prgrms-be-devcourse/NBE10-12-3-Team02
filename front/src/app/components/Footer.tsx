@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { Ticket } from "lucide-react";
 
 export default function Footer() {
   return (
@@ -8,9 +7,8 @@ export default function Footer() {
         <div className="flex flex-col md:flex-row justify-between gap-8">
           {/* 로고 + 소개 */}
           <div>
-            <Link href="/" className="flex items-center gap-2 font-bold text-lg text-blue-600 mb-3">
-              <Ticket size={20} />
-              티케팅고
+            <Link href="/" className="flex items-center mb-3">
+              <img src="/images/logo-horizontal.svg" alt="티케팅고" className="h-8 w-auto object-contain block" />
             </Link>
             <p className="text-sm text-gray-400 leading-relaxed">
               콘서트부터 페스티벌까지,<br />

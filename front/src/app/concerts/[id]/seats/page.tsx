@@ -41,6 +41,7 @@ const DEFAULT_STYLE = {
 };
 const GRADE_ORDER = ["VIP", "R", "S", "A"];
 const SELECTION_TIME_LIMIT = 300; // 5분
+const MAX_SEATS_PER_BOOKING = 3; // 1인당 최대 구매 가능 매수
 
 function SeatSelectContent({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -54,6 +55,7 @@ function SeatSelectContent({ params }: { params: Promise<{ id: string }> }) {
   const [selectedSeats, setSelectedSeats] = useState<string[]>([]);
   const [isReserving, setIsReserving] = useState(false);
   const [timeLeft, setTimeLeft] = useState<number | null>(null);
+  const [userName, setUserName] = useState<string | null>(null);
 
   useEffect(() => {
     if (timeLeft === null) return;
@@ -91,11 +93,13 @@ function SeatSelectContent({ params }: { params: Promise<{ id: string }> }) {
     const initAndFetchSeats = async () => {
       await restoreSession();
 
-      if (!decodeToken()) {
+      const decoded = decodeToken();
+      if (!decoded) {
         alert("로그인이 필요합니다.");
         router.push("/login");
         return;
       }
+      setUserName(decoded.name);
 
       const fetchSeats = async () => {
         try {
@@ -161,12 +165,19 @@ function SeatSelectContent({ params }: { params: Promise<{ id: string }> }) {
     if (status !== "AVAILABLE") return;
 
     if (selectedSeats.includes(seatNumber)) {
-      setSelectedSeats([]);
-      setTimeLeft(null);
-    } else {
-      setSelectedSeats([seatNumber]);
-      setTimeLeft(SELECTION_TIME_LIMIT);
+      const next = selectedSeats.filter((s) => s !== seatNumber);
+      setSelectedSeats(next);
+      if (next.length === 0) setTimeLeft(null);
+      return;
     }
+
+    if (selectedSeats.length >= MAX_SEATS_PER_BOOKING) {
+      alert(`좌석은 1인당 최대 ${MAX_SEATS_PER_BOOKING}매까지 선택할 수 있습니다.`);
+      return;
+    }
+
+    setSelectedSeats((prev) => [...prev, seatNumber]);
+    setTimeLeft((prev) => prev ?? SELECTION_TIME_LIMIT);
   };
 
   const totalPrice = selectedSeats.reduce((sum, seatNumber) => {
@@ -176,35 +187,42 @@ function SeatSelectContent({ params }: { params: Promise<{ id: string }> }) {
   }, 0);
 
   const handleProceedToPayment = async () => {
-    const seatNumber = selectedSeats[0];
+    if (selectedSeats.length === 0 || !scheduleId) return;
+
     setIsReserving(true);
+    const occupied: { seatNumber: string; occupyToken: string; price: number }[] = [];
+
     try {
-      const res = await apiFetch<{
-        occupyToken: string;
-        expireInSeconds: number;
-      }>(`/concerts/seats/occupy`, {
-        method: "POST",
-        body: JSON.stringify({
-          concertId: Number(id),
-          scheduleId: Number(scheduleId),
-          seatNumber,
-        }),
-      });
+      for (const seatNumber of selectedSeats) {
+        const res = await apiFetch<{
+          occupyToken: string;
+          expireInSeconds: number;
+        }>(`/concerts/${id}/schedules/${scheduleId}/seats/occupy`, {
+          method: "POST",
+          body: JSON.stringify({ seatNumber }),
+        });
+        const grade = seatGradeMap.get(seatNumber);
+        const price = grade ? (seatData?.prices[grade] ?? 0) : 0;
+        occupied.push({ seatNumber, occupyToken: res.data.occupyToken, price });
+      }
 
-      const grade = seatGradeMap.get(seatNumber);
-      const price = grade ? (seatData?.prices[grade] ?? 0) : 0;
-
+      const seatsParam = encodeURIComponent(JSON.stringify(occupied));
       const params = new URLSearchParams({
         concertId: id,
-        scheduleId: scheduleId ?? "",
-        seatNumber,
-        occupyToken: res.data.occupyToken,
-        price: String(price),
+        scheduleId,
+        seats: seatsParam,
       });
       router.push(`/payment?${params.toString()}`);
     } catch (e) {
+      await Promise.all(
+        occupied.map(({ seatNumber }) =>
+          apiFetch(`/concerts/${id}/schedules/${scheduleId}/seats/occupy`, {
+            method: "DELETE",
+            body: JSON.stringify({ seatNumber }),
+          }).catch(() => {}),
+        ),
+      );
       alert(e instanceof Error ? e.message : "좌석 선점에 실패했습니다.");
-    } finally {
       setIsReserving(false);
     }
   };
@@ -261,8 +279,11 @@ function SeatSelectContent({ params }: { params: Promise<{ id: string }> }) {
   return (
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-[1600px] mx-auto bg-white rounded-2xl shadow-sm p-8">
-        <div className="mb-6">
+        <div className="mb-6 flex items-center justify-between">
           <h1 className="text-lg font-bold text-gray-800">좌석 선택</h1>
+          {userName && (
+            <span className="text-sm text-gray-400">{userName}님, 좌석을 선택해주세요</span>
+          )}
         </div>
 
         <div className="flex flex-col lg:flex-row gap-8">
@@ -321,7 +342,7 @@ function SeatSelectContent({ params }: { params: Promise<{ id: string }> }) {
             <div>
               <div className="flex items-center justify-between mb-3">
                 <h2 className="font-bold text-gray-700">
-                  선택 좌석 {selectedSeats.length}
+                  선택 좌석 {selectedSeats.length} / {MAX_SEATS_PER_BOOKING}
                 </h2>
                 <div className="flex items-center gap-3">
                   {timeLeft !== null && (
@@ -344,7 +365,9 @@ function SeatSelectContent({ params }: { params: Promise<{ id: string }> }) {
               </div>
 
               {selectedSeats.length === 0 ? (
-                <p className="text-gray-400 text-sm">좌석을 선택해주세요.</p>
+                <p className="text-gray-400 text-sm">
+                  좌석을 선택해주세요. (최대 {MAX_SEATS_PER_BOOKING}매)
+                </p>
               ) : (
                 <div className="space-y-2">
                   {selectedSeats.map((seatNumber) => {

@@ -132,14 +132,14 @@ public class TicketService {
         for (int i = 0; i < seatHolds.size(); i++) {
             SeatHoldInfo hold = seatHolds.get(i);
             @SuppressWarnings("unchecked")
-            List<byte[]> values = (List<byte[]>) pipelinedResults.get(i);
+            List<String> values = (List<String>) pipelinedResults.get(i);
 
             if (values == null || values.size() < 2 || values.get(0) == null || values.get(1) == null) {
                 throw new ServiceException(ErrorCode.SEAT_HOLD_EXPIRED);
             }
 
-            String holdUserId = new String(values.get(0), java.nio.charset.StandardCharsets.UTF_8);
-            String holdOccupyToken = new String(values.get(1), java.nio.charset.StandardCharsets.UTF_8);
+            String holdUserId = values.get(0);
+            String holdOccupyToken = values.get(1);
             if (!userId.toString().equals(holdUserId)) {
                 throw new ServiceException(ErrorCode.SEAT_HELD_BY_OTHER_USER);
             }

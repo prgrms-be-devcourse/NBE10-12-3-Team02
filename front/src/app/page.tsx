@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, type ChangeEvent } from "react";
 import Link from "next/link";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { Search, ChevronLeft, ChevronRight } from "lucide-react";
-import { apiFetch } from "@/lib/api";
+import { apiFetch, setAccessToken } from "@/lib/api";
 
 interface ConcertListItem {
   concertId: number;
@@ -42,6 +42,21 @@ export default function Home() {
     const page = Number(searchParams.get("page"));
     setCurrentPage(page > 0 ? page : 1);
   }, [searchParams]);
+
+  // 소셜 로그인 성공 시 서버가 "/#accessToken=..." 형태로 우리를 돌려보낸다.
+  // 주소창의 # 뒤에 실려온 토큰을 꺼내서 저장하고, 주소를 원래 모습으로 되돌린다.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const hash = window.location.hash; // 예: "#accessToken=eyJhbGciOi..."
+    if (!hash.startsWith("#accessToken=")) return;
+
+    const token = decodeURIComponent(hash.slice("#accessToken=".length));
+    setAccessToken(token);
+
+    // 주소창에서 토큰 흔적을 지운다 (새로고침해도 다시 로그인되도록 두면 안 되니까)
+    window.history.replaceState(null, "", window.location.pathname + window.location.search);
+  }, []);
 
   const visibleCount = 3;
   const itemsPerPage = 12;

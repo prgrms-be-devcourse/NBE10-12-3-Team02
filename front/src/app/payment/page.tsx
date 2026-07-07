@@ -15,19 +15,35 @@ interface PaymentTicketResponse {
   isValid: boolean;
 }
 
+interface OccupiedSeat {
+  seatNumber: string;
+  occupyToken: string;
+  price: number;
+}
+
+function parseSeats(raw: string | null): OccupiedSeat[] {
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(decodeURIComponent(raw));
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
 function PaymentContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
 
   const concertId = searchParams.get("concertId");
   const scheduleId = searchParams.get("scheduleId");
-  const seatNumber = searchParams.get("seatNumber");
-  const occupyToken = searchParams.get("occupyToken");
-  const price = Number(searchParams.get("price") ?? 0);
+  const seats = parseSeats(searchParams.get("seats"));
+
+  const totalPrice = seats.reduce((sum, s) => sum + s.price, 0);
 
   const [agreed, setAgreed] = useState(false);
   const [showModal, setShowModal] = useState(false);
-  const [ticketResult, setTicketResult] = useState<PaymentTicketResponse | null>(null);
+  const [ticketResults, setTicketResults] = useState<PaymentTicketResponse[]>([]);
   const [timeLeft, setTimeLeft] = useState(600);
   const paymentCompletedRef = useRef(false);
   const isMountedRef = useRef(false);
@@ -46,26 +62,24 @@ function PaymentContent() {
 
     return () => clearInterval(timer);
   }, []);
-  
+
   useEffect(() => {
     isMountedRef.current = true;
     return () => {
       isMountedRef.current = false;
       setTimeout(() => {
-        if (!isMountedRef.current && !paymentCompletedRef.current && concertId && scheduleId && seatNumber) {
-          apiFetch(`/concerts/seats/occupy`, {
-            method: "DELETE",
-            body: JSON.stringify({
-              concertId: Number(concertId),
-              scheduleId: Number(scheduleId),
-              seatNumber,
-            }),
-          }).catch(() => {
+        if (!isMountedRef.current && !paymentCompletedRef.current && concertId && scheduleId) {
+          seats.forEach(({ seatNumber }) => {
+            apiFetch(`/concerts/${concertId}/schedules/${scheduleId}/seats/occupy`, {
+              method: "DELETE",
+              body: JSON.stringify({ seatNumber }),
+            }).catch(() => {});
           });
         }
       }, 50);
     };
-  }, [concertId, scheduleId, seatNumber]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [concertId, scheduleId]);
 
   const formatTime = (seconds: number) => {
     const min = Math.floor(seconds / 60);
@@ -78,7 +92,7 @@ function PaymentContent() {
       alert("약관에 동의해주세요.");
       return;
     }
-    if (!concertId || !scheduleId || !seatNumber || !occupyToken) {
+    if (!concertId || !scheduleId || seats.length === 0) {
       alert("예매 정보가 올바르지 않습니다. 좌석 선택부터 다시 진행해주세요.");
       return;
     }
@@ -92,17 +106,23 @@ function PaymentContent() {
     setIsProcessing(true);
     try {
       await new Promise((resolve) => setTimeout(resolve, 2000));
-      const res = await apiFetch<PaymentTicketResponse>("/tickets/reserve", {
-        method: "POST",
-        body: JSON.stringify({
-          concertId: Number(concertId),
-          scheduleId: Number(scheduleId),
-          seatNumber,
-          occupyToken,
-        }),
-      });
+
+      const res = await apiFetch<PaymentTicketResponse[]>(
+        `/tickets/reserve/schedule/${scheduleId}`,
+        {
+          method: "POST",
+          body: JSON.stringify({
+            concertId: Number(concertId),
+            seatHolds: seats.map(({ seatNumber, occupyToken }) => ({
+              seatNumber,
+              occupyToken,
+            })),
+          }),
+        },
+      );
+
       paymentCompletedRef.current = true;
-      setTicketResult(res.data);
+      setTicketResults(res.data);
       setShowModal(true);
     } catch (e) {
       alert(e instanceof Error ? e.message : "결제 중 오류가 발생했습니다.");
@@ -120,15 +140,17 @@ function PaymentContent() {
         </div>
 
         <div className="bg-white rounded-2xl shadow-sm p-8 mb-6">
-          <h2 className="font-bold text-gray-700 mb-4">예매 정보</h2>
-          <div className="space-y-2 text-gray-600">
-            <p>
-              <span className="inline-block w-24 text-gray-400">좌석</span>
-              {seatNumber ?? "-"}
-            </p>
-            <p>
+          <h2 className="font-bold text-gray-700 mb-4">예매 정보 ({seats.length}매)</h2>
+          <div className="space-y-3 text-gray-600">
+            {seats.map((s) => (
+              <div key={s.seatNumber} className="flex justify-between text-sm border-b border-gray-100 pb-2">
+                <span>좌석 {s.seatNumber}</span>
+                <span className="font-semibold text-gray-700">{s.price.toLocaleString()}원</span>
+              </div>
+            ))}
+            <p className="pt-2">
               <span className="inline-block w-24 text-gray-400">결제 금액</span>
-              <span className="text-blue-600 font-bold">{price.toLocaleString()}원</span>
+              <span className="text-blue-600 font-bold">{totalPrice.toLocaleString()}원</span>
             </p>
           </div>
         </div>
@@ -166,29 +188,33 @@ function PaymentContent() {
         </div>
       )}
 
-      {showModal && ticketResult && (
+      {showModal && ticketResults.length > 0 && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl p-8 max-w-md w-full">
+          <div className="bg-white rounded-2xl p-8 max-w-md w-full max-h-[85vh] overflow-y-auto">
             <h2 className="text-xl font-bold text-center text-gray-800 mb-6">
-              🎉 결제가 완료되었습니다!
+              🎉 결제가 완료되었습니다! ({ticketResults.length}매)
             </h2>
-            <div className="space-y-2 text-gray-600 mb-6">
-              <div className="flex items-start gap-2">
-                <span className="w-20 flex-shrink-0 text-gray-400">티켓 번호</span>
-                <span className="break-all">{ticketResult.ticketNumber}</span>
-              </div>
-              <div className="flex items-start gap-2">
-                <span className="w-20 flex-shrink-0 text-gray-400">콘서트</span>
-                <span className="break-words">{ticketResult.concertName}</span>
-              </div>
-              <div className="flex items-start gap-2">
-                <span className="w-20 flex-shrink-0 text-gray-400">좌석</span>
-                <span>{ticketResult.seatNumber}</span>
-              </div>
-              <div className="flex items-start gap-2">
-                <span className="w-20 flex-shrink-0 text-gray-400">공연 일시</span>
-                <span>{ticketResult.scheduleDate?.slice(0, 16).replace("T", " ")}</span>
-              </div>
+            <div className="space-y-4 mb-6">
+              {ticketResults.map((ticket) => (
+                <div key={ticket.ticketNumber} className="space-y-2 text-gray-600 border-b border-gray-100 pb-4 last:border-none">
+                  <div className="flex items-start gap-2">
+                    <span className="w-20 flex-shrink-0 text-gray-400">티켓 번호</span>
+                    <span className="break-all text-sm">{ticket.ticketNumber}</span>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <span className="w-20 flex-shrink-0 text-gray-400">콘서트</span>
+                    <span className="break-words text-sm">{ticket.concertName}</span>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <span className="w-20 flex-shrink-0 text-gray-400">좌석</span>
+                    <span className="text-sm">{ticket.seatNumber}</span>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <span className="w-20 flex-shrink-0 text-gray-400">공연 일시</span>
+                    <span className="text-sm">{ticket.scheduleDate?.slice(0, 16).replace("T", " ")}</span>
+                  </div>
+                </div>
+              ))}
             </div>
             <button
               onClick={() => router.push("/mypage")}
