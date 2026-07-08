@@ -110,7 +110,7 @@ class TicketControllerTest {
         HashOperations<String, Object, Object> hashOperations = mock(HashOperations.class);
         when(redisTemplate.opsForHash()).thenReturn(hashOperations);
 
-        when(hashOperations.multiGet(any(), anyList()))
+        when(hashOperations.multiGet(anyString(), anyList()))
                 .thenReturn(List.of(user.getUserId().toString(), "test-token"));
 
         @SuppressWarnings("unchecked")
@@ -118,30 +118,21 @@ class TicketControllerTest {
         when(redisTemplate.opsForZSet()).thenReturn(zSetOperations);
         when(zSetOperations.score(anyString(), anyString()))
                 .thenReturn((double) (System.currentTimeMillis() + 600000));
-
-        when(redisTemplate.executePipelined(any(org.springframework.data.redis.core.RedisCallback.class)))
-                .thenReturn(List.of(
-                        List.of(
-                                user.getUserId().toString().getBytes(java.nio.charset.StandardCharsets.UTF_8),
-                                "test-token".getBytes(java.nio.charset.StandardCharsets.UTF_8)
-                        )
-                ));
     }
 
     @Test
     @DisplayName("티켓 2매 생성 성공")
     void createTicket() throws Exception {
-        when(redisTemplate.executePipelined(any(org.springframework.data.redis.core.RedisCallback.class)))
-                .thenReturn(List.of(
-                        List.of(
-                                user.getUserId().toString().getBytes(java.nio.charset.StandardCharsets.UTF_8),
-                                "token-1".getBytes(java.nio.charset.StandardCharsets.UTF_8)
-                        ),
-                        List.of(
-                                user.getUserId().toString().getBytes(java.nio.charset.StandardCharsets.UTF_8),
-                                "token-2".getBytes(java.nio.charset.StandardCharsets.UTF_8)
-                        )
-                ));
+        when(redisTemplate.opsForHash().multiGet(anyString(), anyList()))
+                .thenAnswer(invocation -> {
+                    String key = invocation.getArgument(0);
+                    if (key.endsWith("A-1")) {
+                        return List.of(user.getUserId().toString(), "token-1");
+                    } else if (key.endsWith("A-2")) {
+                        return List.of(user.getUserId().toString(), "token-2");
+                    }
+                    return List.of(user.getUserId().toString(), "test-token");
+                });
 
         String requestBody = """
                 {

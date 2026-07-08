@@ -5,6 +5,7 @@ import com.back.domain.concert.dto.SeatSelectionResponse;
 import com.back.domain.concert.dto.SeatSelectionResponse.SeatDetailResponse;
 import com.back.domain.schedule.entity.ScheduleSeat;
 import com.back.domain.schedule.entity.SeatStatus;
+import com.back.domain.ticket.repository.TicketRepository;
 import com.back.global.exception.ErrorCode;
 import com.back.global.exception.ServiceException;
 import lombok.RequiredArgsConstructor;
@@ -22,6 +23,7 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class SeatOccupyManager {
     private final ConcertService concertService;
+    private final TicketRepository ticketRepository;
     private final StringRedisTemplate redisTemplate;
 
     private static final long OCCUPY_TTL_SECONDS = 600;
@@ -91,6 +93,10 @@ public class SeatOccupyManager {
 
     public SeatSelectionResponse getSeatSelection(Long concertId, Long scheduleId, Long userId) {
         concertService.validateConcertScheduleMatch(concertId, scheduleId);
+        long currentTicketCount = ticketRepository.countByUser_UserIdAndSchedule_ScheduleIdAndIsValidTrue(userId, scheduleId);
+        if (currentTicketCount >= 3) {
+            throw new ServiceException(ErrorCode.EXCEED_TICKET_LIMIT);
+        }
         List<ScheduleSeat> seats = concertService.getScheduleSeats(scheduleId);
 
         String indexKey = generateSeatOccupyIndexKey(concertId, scheduleId);

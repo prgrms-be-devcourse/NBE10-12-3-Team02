@@ -17,7 +17,6 @@ import com.back.domain.user.repository.UserRepository;
 import com.back.global.exception.ErrorCode;
 import com.back.global.exception.ServiceException;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.redis.core.RedisCallback;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -117,29 +116,17 @@ public class TicketService {
     }
 
     private void validateSeatHold(Long userId, Long concertId, Long scheduleId, List<SeatHoldInfo> seatHolds) {
-        List<Object> pipelinedResults = redisTemplate.executePipelined((RedisCallback<Object>) connection -> {
-            for (SeatHoldInfo hold : seatHolds) {
-                String redisKey = SeatOccupyManager.generateSeatOccupyKey(concertId, scheduleId, hold.seatNumber());
-                byte[] rawKey = redisKey.getBytes(java.nio.charset.StandardCharsets.UTF_8);
-                connection.hashCommands().hMGet(rawKey,
-                        "userId".getBytes(java.nio.charset.StandardCharsets.UTF_8),
-                        "occupyToken".getBytes(java.nio.charset.StandardCharsets.UTF_8)
-                );
-            }
-            return null;
-        });
+        for (SeatHoldInfo hold : seatHolds) {
+            String redisKey = SeatOccupyManager.generateSeatOccupyKey(concertId, scheduleId, hold.seatNumber());
 
-        for (int i = 0; i < seatHolds.size(); i++) {
-            SeatHoldInfo hold = seatHolds.get(i);
-            @SuppressWarnings("unchecked")
-            List<String> values = (List<String>) pipelinedResults.get(i);
+            List<Object> values = redisTemplate.opsForHash().multiGet(redisKey, List.of("userId", "occupyToken"));
 
-            if (values == null || values.size() < 2 || values.get(0) == null || values.get(1) == null) {
+            if (values.get(0) == null || values.get(1) == null) {
                 throw new ServiceException(ErrorCode.SEAT_HOLD_EXPIRED);
             }
 
-            String holdUserId = values.get(0);
-            String holdOccupyToken = values.get(1);
+            String holdUserId = (String) values.get(0);
+            String holdOccupyToken = (String) values.get(1);
             if (!userId.toString().equals(holdUserId)) {
                 throw new ServiceException(ErrorCode.SEAT_HELD_BY_OTHER_USER);
             }
