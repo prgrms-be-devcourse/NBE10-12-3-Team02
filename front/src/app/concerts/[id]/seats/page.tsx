@@ -68,6 +68,10 @@ function SeatSelectContent({ params }: { params: Promise<{ id: string }> }) {
   const [queueError, setQueueError] = useState("");
   const [isCancelingQueue, setIsCancelingQueue] = useState(false);
   const queueClientRef = useRef<Client | null>(null);
+  // 대기열 취소 API를 중복으로 부르지 않기 위한 표시.
+  const leftQueueRef = useRef(false);
+  // 결제 페이지로 정상 진행하는 경우에는(뒤로가기/이탈이 아니므로) 대기열을 취소하면 안 된다.
+  const proceedingToPaymentRef = useRef(false);
 
   // 인원수 선택 팝업 (좌석 페이지 진입 시 먼저 뜬다)
   const [showHeadcountModal, setShowHeadcountModal] = useState(true);
@@ -168,12 +172,24 @@ function SeatSelectContent({ params }: { params: Promise<{ id: string }> }) {
       active = false;
       queueClientRef.current?.deactivate();
       queueClientRef.current = null;
+
+      // "대기열 취소" 버튼을 눌러서 나가는 경우, 결제 페이지로 정상 진행하는 경우가 아니라면
+      // (뒤로가기, 다른 페이지로 이동 등) 이 페이지를 벗어나는 것 자체를 대기열 취소로 간주한다.
+      if (!leftQueueRef.current && !proceedingToPaymentRef.current) {
+        leftQueueRef.current = true;
+        apiFetch(`/waiting/concerts/${id}/schedules/${scheduleId}/waiting-queue`, {
+          method: "DELETE",
+        }).catch(() => {
+          // 이미 취소됐거나 없는 대기열이면 조용히 넘어간다.
+        });
+      }
     };
   }, [id, scheduleId, router]);
 
   const handleCancelQueue = async () => {
     if (!scheduleId) return;
     setIsCancelingQueue(true);
+    leftQueueRef.current = true;
     try {
       await apiFetch(`/waiting/concerts/${id}/schedules/${scheduleId}/waiting-queue`, {
         method: "DELETE",
@@ -368,6 +384,7 @@ function SeatSelectContent({ params }: { params: Promise<{ id: string }> }) {
         // 결제 확정 API도 대기열 토큰을 요구하므로 그대로 결제 페이지에 넘겨준다.
         queueToken: entryToken,
       });
+      proceedingToPaymentRef.current = true;
       router.push(`/payment?${params.toString()}`);
     } catch (e) {
       await Promise.all(
@@ -375,7 +392,7 @@ function SeatSelectContent({ params }: { params: Promise<{ id: string }> }) {
           apiFetch(`/concerts/${id}/schedules/${scheduleId}/seats/occupy`, {
             method: "DELETE",
             body: JSON.stringify({ seatNumber }),
-          }).catch(() => {}),
+          }).catch(() => { }),
         ),
       );
       showError(e instanceof Error ? e.message : "좌석 선점에 실패했습니다.");

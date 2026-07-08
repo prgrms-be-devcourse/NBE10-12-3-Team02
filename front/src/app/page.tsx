@@ -55,8 +55,7 @@ function HomeContent() {
   const [posterAspectRatio, setPosterAspectRatio] = useState(3 / 4);
 
   const [keyword, setKeyword] = useState("");
-  const [sort, setSort] = useState("closingSoon");
-  const [date, setDate] = useState("");
+  const [sort, setSort] = useState("latest");
 
   const [currentPage, setCurrentPage] = useState(() => {
     const page = Number(searchParams.get("page"));
@@ -106,7 +105,6 @@ function HomeContent() {
         const params = new URLSearchParams();
         if (keyword.trim() !== "") params.append("keyword", keyword);
         params.append("sort", sort);
-        if (date !== "") params.append("date", date);
 
         const res = await apiFetch<ConcertListItem[]>(`/concerts?${params.toString()}`);
         setConcerts(res.data);
@@ -118,13 +116,14 @@ function HomeContent() {
     };
 
     fetchConcerts();
-  }, [keyword, sort, date]);
+  }, [keyword, sort]);
 
   useEffect(() => {
     const fetchTopConcerts = async () => {
       try {
         const res = await apiFetch<ConcertListItem[]>(`/concerts?sort=closingSoon`);
-        const top5 = res.data.slice(0, 5);
+        // 이미 마감된 콘서트는 배너에서 제외하고, 그다음으로 마감이 임박한 콘서트로 채운다.
+        const top5 = res.data.filter((c) => c.status !== "CLOSED").slice(0, 5);
 
         // 목록 조회 API엔 "공연 소개"/"장소 주소"가 없어서, 콘서트 5개에 한해서만
         // 상세 조회 API를 추가로 호출해 필요한 정보를 채워 넣는다.
@@ -189,11 +188,6 @@ function HomeContent() {
 
   const handleSortChange = (e: ChangeEvent<HTMLSelectElement>) => {
     setSort(e.target.value);
-    goToPage(1);
-  };
-
-  const handleDateChange = (e: ChangeEvent<HTMLInputElement>) => {
-    setDate(e.target.value);
     goToPage(1);
   };
 
@@ -269,7 +263,7 @@ function HomeContent() {
                     {/* 오른쪽: 제목/장소/소개/버튼 */}
                     <div className="relative flex-1 min-w-0 text-white p-10 flex flex-col justify-center">
                       {concert.status === "CLOSED" && (
-                        <span className="self-start mb-3 bg-white/15 text-white text-xs px-2 py-1 rounded-full">
+                        <span className="self-start mb-3 bg-red-500 text-white text-xs px-2 py-1 rounded-full font-semibold">
                           마감
                         </span>
                       )}
@@ -340,13 +334,6 @@ function HomeContent() {
             />
           </div>
 
-          <input
-            type="date"
-            value={date}
-            onChange={handleDateChange}
-            className="p-3 border border-gray-200 rounded-lg bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-400"
-          />
-
           <select
             value={sort}
             onChange={handleSortChange}
@@ -379,7 +366,7 @@ function HomeContent() {
                       "포스터"
                     )}
                     {concert.status === "CLOSED" && (
-                      <span className="absolute top-2 left-2 bg-gray-600 text-white text-xs px-2 py-1 rounded-full">
+                      <span className="absolute top-2 left-2 bg-red-500 text-white text-xs px-2 py-1 rounded-full font-semibold">
                         마감
                       </span>
                     )}
