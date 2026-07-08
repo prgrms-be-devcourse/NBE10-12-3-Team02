@@ -1,11 +1,15 @@
 package com.back.global.security.interceptor;
 
+import com.back.domain.waiting.service.WaitingQueueManager;
 import com.back.global.exception.ErrorCode;
 import com.back.global.exception.ServiceException;
+import com.back.global.requestcontext.RequestContext;
+import com.back.global.security.SecurityUser;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.HandlerInterceptor;
 import org.springframework.web.servlet.HandlerMapping;
@@ -16,6 +20,7 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class QueueInterceptor implements HandlerInterceptor {
     private final StringRedisTemplate redisTemplate;
+    private final RequestContext requestContext;
 
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
@@ -41,9 +46,16 @@ public class QueueInterceptor implements HandlerInterceptor {
         if (score == null || score < System.currentTimeMillis()) {
             throw new ServiceException(ErrorCode.QUEUE_SESSION_EXPIRED);
         }
+        Long userId = requestContext.getActor().getId();
+
+        String storedToken = redisTemplate.opsForValue()
+                .get(WaitingQueueManager.generateActiveTokenKey(scheduleId, userId));
+        if (!token.equals(storedToken)) {
+            throw new ServiceException(ErrorCode.QUEUE_SESSION_EXPIRED);
+        }
         return true;
     }
-
+    //TODO 추후 RedisKey 관리 책임을 갖는 클래스로 분리 필요
     public static String generateQueueActiveKey(Long scheduleId) {
         return "queue:active:schedule:%d".formatted(scheduleId);
     }

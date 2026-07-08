@@ -34,7 +34,7 @@ public class QueueEntryEventHandler {
                 QueueEventResponse.of(QueueEventType.ENTRY_ALLOWED, event);
 
         messagingTemplate.convertAndSendToUser(
-                event.scheduleId().toString(),
+                event.userId().toString(),
                 "/queue/schedules/%s/entry".formatted(event.scheduleId()),
                 response
         );

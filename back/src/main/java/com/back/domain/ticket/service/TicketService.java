@@ -11,12 +11,16 @@ import com.back.domain.ticket.dto.PaymentTicketRequest;
 import com.back.domain.ticket.dto.PaymentTicketResponse;
 import com.back.domain.ticket.dto.SeatHoldInfo;
 import com.back.domain.ticket.entity.Ticket;
+import com.back.domain.ticket.event.PaymentCompletedEvent;
+import com.back.domain.ticket.event.TicketCancelledEvent;
 import com.back.domain.ticket.repository.TicketRepository;
 import com.back.domain.user.entity.User;
 import com.back.domain.user.repository.UserRepository;
+import com.back.domain.waiting.service.WaitingQueueService;
 import com.back.global.exception.ErrorCode;
 import com.back.global.exception.ServiceException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -36,7 +40,7 @@ public class TicketService {
     private final ScheduleRepository scheduleRepository;
     private final ScheduleSeatRepository scheduleSeatRepository;
     private final StringRedisTemplate redisTemplate;
-    private final ConcertService concertService;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Transactional
     public List<PaymentTicketResponse> createTicket(Long userId, Long scheduleId, PaymentTicketRequest request) {
@@ -87,6 +91,14 @@ public class TicketService {
                 .toList();
         ticketRepository.saveAll(tickets);
 
+        eventPublisher.publishEvent(
+                new PaymentCompletedEvent(
+                        request.concertId(),
+                        scheduleId,
+                        userId
+                )
+        );
+
         return IntStream.range(0, tickets.size())
                 .mapToObj(i -> PaymentTicketResponse.from(scheduleSeats.get(i), schedule, tickets.get(i)))
                 .toList();
@@ -109,6 +121,10 @@ public class TicketService {
                 ticket.getSchedule().getScheduleId(),
                 ticket.getScheduleSeat().getSeatNumber()
         );
+        eventPublisher.publishEvent(new TicketCancelledEvent(
+                ticket.getSchedule().getConcert().getConcertId(),
+                ticket.getSchedule().getScheduleId()
+        ));
     }
 
     public String createTicketNumber() {

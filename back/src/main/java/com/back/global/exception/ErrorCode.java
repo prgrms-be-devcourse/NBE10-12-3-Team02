@@ -58,7 +58,12 @@ public enum ErrorCode {
 
     // QUEUE
     QUEUE_TOKEN_NOT_FOUND("401-11", "대기열 접속 정보가 올바르지 않습니다."),
-    QUEUE_SESSION_EXPIRED("403-3", "대기열 접속 시간이 만료되었습니다.");
+    QUEUE_SESSION_EXPIRED("403-3", "대기열 접속 시간이 만료되었습니다."),
+
+    // WAITING
+    WAITING_QUEUE_NOT_FOUND("404-8","대기열에 등록되지 않은 사용자입니다."),
+    WAITING_QUEUE_REGISTER_FAILED("500-2", "대기열 등록 처리 중 오류가 발생했습니다.");
+
 
 
     private final String resultCode;
