@@ -43,3 +43,6 @@ db_dev.lock.db
 
 # Spring application config
 src/main/resources/application-secret.yaml
+
+# SSL
+src/main/resources/local-ssl.p12

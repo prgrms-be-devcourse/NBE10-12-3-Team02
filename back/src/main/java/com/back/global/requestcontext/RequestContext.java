@@ -20,6 +20,12 @@ public class RequestContext {
     private final ObjectProvider<HttpServletRequest> reqProvider;
     private final ObjectProvider<HttpServletResponse> respProvider;
 
+    @Value("${custom.cookie.secure:false}")
+    private boolean cookieSecure;
+
+    @Value("${custom.cookie.same-site:Lax}")
+    private String cookieSameSite;
+
     @Value("${custom.jwt.refreshToken.expirationSeconds}")
     private int refreshTokenExpireSeconds;
 
@@ -68,8 +74,8 @@ public class RequestContext {
         Cookie cookie = new Cookie(name, value);
         cookie.setPath(path);
         cookie.setHttpOnly(true);
-        cookie.setSecure(false); // localhost 테스트
-        cookie.setAttribute("SameSite", "Lax");
+        cookie.setSecure(cookieSecure);
+        cookie.setAttribute("SameSite", cookieSameSite);
 
         if (value.isBlank()) cookie.setMaxAge(0);
         else cookie.setMaxAge(maxAge);
