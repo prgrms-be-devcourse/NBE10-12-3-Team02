@@ -84,10 +84,8 @@ public class AuthController {
         String refreshToken = requestContext.getCookieValue("refreshToken", "");
 
         try {
-            TokenResponse tokenResponse = authService.refresh(refreshToken);
-
-            requestContext.setCookie("refreshToken", tokenResponse.refreshToken(), "/api/v1/auth");
-            requestContext.setHeader("Authorization", "Bearer " + tokenResponse.accessToken());
+            String accessToken = authService.restore(refreshToken);
+            requestContext.setHeader("Authorization", "Bearer " + accessToken);
 
             return new RsData<>("200-2", "로그인 상태가 복구되었습니다.", new AuthRestoreResponse(true));
         } catch (ServiceException e) {

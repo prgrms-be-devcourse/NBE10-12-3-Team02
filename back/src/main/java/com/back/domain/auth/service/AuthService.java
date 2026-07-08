@@ -64,7 +64,7 @@ public class AuthService {
         String newRefreshToken = jwtTokenProvider.createRefreshToken(user, newJti);
         String newRefreshTokenHash = TokenHashUtil.sha256(newRefreshToken);
 
-        RefreshTokenRotateResult rotateResult = refreshTokenRepository.rotate(
+        RefreshTokenValidationResult rotateResult = refreshTokenRepository.rotate(
                 payload.userId(),
                 payload.jti(),
                 requestRefreshTokenHash,
@@ -73,22 +73,45 @@ public class AuthService {
                 Duration.ofSeconds(refreshTokenExpireSeconds)
         );
 
-        handleRotateFailure(rotateResult, payload.userId());
+        handleValidationFailure(rotateResult, payload.userId());
 
         return new TokenResponse(newAccessToken, newRefreshToken);
     }
 
-    private void handleRotateFailure(RefreshTokenRotateResult rotateResult, Long userId) {
-        if (rotateResult == RefreshTokenRotateResult.SUCCESS) {
+    public String restore(String refreshToken) {
+        RefreshTokenPayload payload = jwtTokenProvider.parseRefreshToken(refreshToken);
+
+        if (payload == null) {
+            throw new ServiceException(ErrorCode.AUTH_INVALID_REFRESH_TOKEN);
+        }
+
+        String requestRefreshTokenHash = TokenHashUtil.sha256(refreshToken);
+
+        RefreshTokenValidationResult result = refreshTokenRepository.verify(
+                payload.userId(),
+                payload.jti(),
+                requestRefreshTokenHash
+        );
+
+        handleValidationFailure(result, payload.userId());
+
+        User user = userRepository.findByUserIdAndDeletedAtIsNull(payload.userId())
+                .orElseThrow(() -> new ServiceException(ErrorCode.USER_NOT_FOUND));
+
+        return jwtTokenProvider.createAccessToken(user);
+    }
+
+    private void handleValidationFailure(RefreshTokenValidationResult validationResult, Long userId) {
+        if (validationResult == RefreshTokenValidationResult.SUCCESS) {
             return;
         }
 
-        if (rotateResult == RefreshTokenRotateResult.MISMATCH) {
+        if (validationResult == RefreshTokenValidationResult.MISMATCH) {
             refreshTokenRepository.deleteAllByUserId(userId);
             throw new ServiceException(ErrorCode.AUTH_REFRESH_TOKEN_MISMATCH);
         }
 
-        if (rotateResult == RefreshTokenRotateResult.NOT_FOUND) {
+        if (validationResult == RefreshTokenValidationResult.NOT_FOUND) {
             throw new ServiceException(ErrorCode.AUTH_INVALID_REFRESH_TOKEN);
         }
 

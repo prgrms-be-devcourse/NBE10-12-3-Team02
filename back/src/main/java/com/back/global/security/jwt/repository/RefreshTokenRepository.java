@@ -4,7 +4,7 @@ import com.back.global.exception.ErrorCode;
 import com.back.global.exception.ServiceException;
 import com.back.global.security.jwt.RefreshTokenKeyType;
 import com.back.global.security.jwt.RefreshTokenLuaScripts;
-import com.back.global.security.jwt.RefreshTokenRotateResult;
+import com.back.global.security.jwt.RefreshTokenValidationResult;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -25,7 +25,7 @@ public class RefreshTokenRepository {
     @Value("${custom.redis.refresh-token.index-prefix}")
     private String indexPrefix;
 
-    public RefreshTokenRotateResult rotate(
+    public RefreshTokenValidationResult rotate(
             Long userId,
             String oldJti,
             String requestRefreshTokenHash,
@@ -52,9 +52,9 @@ public class RefreshTokenRepository {
         }
 
         return switch (Math.toIntExact(result)) {
-            case 1 -> RefreshTokenRotateResult.SUCCESS;
-            case -1 -> RefreshTokenRotateResult.MISMATCH;
-            case 0 -> RefreshTokenRotateResult.NOT_FOUND;
+            case 1 -> RefreshTokenValidationResult.SUCCESS;
+            case -1 -> RefreshTokenValidationResult.MISMATCH;
+            case 0 -> RefreshTokenValidationResult.NOT_FOUND;
             default -> throw new ServiceException(ErrorCode.AUTH_REFRESH_TOKEN_ROTATION_FAILED);
         };
     }
@@ -66,6 +66,22 @@ public class RefreshTokenRepository {
         redisTemplate.opsForValue().set(key, refreshTokenHash, ttl);
         redisTemplate.opsForSet().add(indexKey, jti);
         redisTemplate.expire(indexKey, ttl);
+    }
+
+    public RefreshTokenValidationResult verify(Long userId, String jti, String requestRefreshTokenHash) {
+        String key = generateKey(RefreshTokenKeyType.TOKEN, userId, jti);
+
+        String savedRefreshTokenHash = redisTemplate.opsForValue().get(key);
+
+        if (savedRefreshTokenHash == null) {
+            return RefreshTokenValidationResult.NOT_FOUND;
+        }
+
+        if (!savedRefreshTokenHash.equals(requestRefreshTokenHash)) {
+            return RefreshTokenValidationResult.MISMATCH;
+        }
+
+        return RefreshTokenValidationResult.SUCCESS;
     }
 
     public void delete(Long userId, String jti) {

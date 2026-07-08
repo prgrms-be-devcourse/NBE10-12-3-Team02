@@ -26,6 +26,8 @@ spring:
       port: 6379
   security:
     oauth2:
+      front-callback-url: "http://localhost:3000"
+      front-login-url: "http://localhost:3000/login"
       client:
         registration:
           kakao:

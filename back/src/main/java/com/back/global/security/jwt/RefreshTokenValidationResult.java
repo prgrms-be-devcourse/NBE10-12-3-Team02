@@ -1,6 +1,6 @@
 package com.back.global.security.jwt;
 
-public enum RefreshTokenRotateResult {
+public enum RefreshTokenValidationResult {
     SUCCESS,
     NOT_FOUND,
     MISMATCH
