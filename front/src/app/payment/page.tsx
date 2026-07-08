@@ -39,6 +39,7 @@ function PaymentContent() {
   const concertId = searchParams.get("concertId");
   const scheduleId = searchParams.get("scheduleId");
   const seats = parseSeats(searchParams.get("seats"));
+  const queueToken = searchParams.get("queueToken");
 
   const totalPrice = seats.reduce((sum, s) => sum + s.price, 0);
 
@@ -121,6 +122,7 @@ function PaymentContent() {
         `/tickets/reserve/schedule/${scheduleId}`,
         {
           method: "POST",
+          headers: queueToken ? { "X-Queue-Token": queueToken } : undefined,
           body: JSON.stringify({
             concertId: Number(concertId),
             seatHolds: seats.map(({ seatNumber, occupyToken }) => ({

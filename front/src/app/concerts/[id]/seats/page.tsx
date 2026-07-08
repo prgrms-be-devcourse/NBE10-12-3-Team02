@@ -2,9 +2,11 @@
 
 import { apiFetch, ApiError, decodeToken, restoreSession } from "@/lib/api";
 import { showAlert, showError } from "@/lib/alert";
+import { connectQueueSocket } from "@/lib/queueSocket";
+import type { Client } from "@stomp/stompjs";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Minus, Plus } from "lucide-react";
-import { Suspense, use, useEffect, useState } from "react";
+import { Suspense, use, useEffect, useRef, useState } from "react";
 
 interface SeatDetail {
   seatNumber: string;
@@ -59,6 +61,14 @@ function SeatSelectContent({ params }: { params: Promise<{ id: string }> }) {
   const [timeLeft, setTimeLeft] = useState<number | null>(null);
   const [userName, setUserName] = useState<string | null>(null);
 
+  // 대기열 관련 상태. entryToken이 생기기 전까지는 좌석 조회/선점/결제가 전부 막혀있다.
+  const [queueRank, setQueueRank] = useState<number | null>(null);
+  const [queueTotal, setQueueTotal] = useState<number | null>(null);
+  const [entryToken, setEntryToken] = useState<string | null>(null);
+  const [queueError, setQueueError] = useState("");
+  const [isCancelingQueue, setIsCancelingQueue] = useState(false);
+  const queueClientRef = useRef<Client | null>(null);
+
   // 인원수 선택 팝업 (좌석 페이지 진입 시 먼저 뜬다)
   const [showHeadcountModal, setShowHeadcountModal] = useState(true);
   const [adultCount, setAdultCount] = useState(1);
@@ -106,10 +116,8 @@ function SeatSelectContent({ params }: { params: Promise<{ id: string }> }) {
     }
 
     let active = true;
-    let intervalId: NodeJS.Timeout;
-    let stopPolling = false;
 
-    const initAndFetchSeats = async () => {
+    const initQueue = async () => {
       await restoreSession();
 
       const decoded = decodeToken();
@@ -118,50 +126,126 @@ function SeatSelectContent({ params }: { params: Promise<{ id: string }> }) {
         router.replace("/login");
         return;
       }
-      setUserName(decoded.name);
+      if (active) setUserName(decoded.name);
 
-      const fetchSeats = async () => {
-        try {
-          const res = await apiFetch<SeatSelectionData>(
-            `/concerts/${id}/schedules/${scheduleId}/seats`,
-          );
-          if (active) {
-            setSeatData(res.data);
-            setError("");
-          }
-        } catch (e) {
-          // 이 회차에서 이미 3매를 구매한 경우: 계속 재요청해봐야 결과가 안 바뀌니
-          // 폴링을 멈추고, 안내 후 콘서트 상세 페이지로 돌려보낸다.
-          if (e instanceof ApiError && e.resultCode === "400-2") {
-            stopPolling = true;
-            if (intervalId) clearInterval(intervalId);
-            if (active) {
-              await showAlert(e.message);
-              router.replace(`/concerts/${id}`);
-            }
-            return;
-          }
-
-          if (active) {
-            setError(
-              e instanceof Error
-                ? e.message
-                : "좌석 정보를 불러오지 못했습니다.",
+      // WebSocket을 먼저 연결하고, 구독까지 끝난 뒤(onConnected)에 대기열 등록 API를 부른다.
+      // 순서가 바뀌면, 등록하자마자 서버가 바로 입장을 허가해도 그 알림을 놓칠 수 있다.
+      const client = connectQueueSocket({
+        scheduleId,
+        onConnected: async () => {
+          try {
+            const res = await apiFetch<{ rank: number }>(
+              `/waiting/concerts/${id}/schedules/${scheduleId}/waiting-queue`,
+              { method: "POST" },
             );
+            if (active) setQueueRank(res.data.rank);
+          } catch (e) {
+            if (active) {
+              setQueueError(
+                e instanceof Error ? e.message : "대기열 등록에 실패했습니다.",
+              );
+            }
           }
-        } finally {
-          if (active) setLoading(false);
+        },
+        onRankUpdated: (event) => {
+          if (!active) return;
+          setQueueRank(event.currentRank);
+          setQueueTotal(event.totalWaitingCount);
+        },
+        onEntryAllowed: (event) => {
+          if (active) setEntryToken(event.entryToken);
+        },
+        onError: () => {
+          if (active) setQueueError("대기열 연결 중 문제가 발생했습니다.");
+        },
+      });
+      queueClientRef.current = client;
+    };
+
+    initQueue();
+
+    return () => {
+      active = false;
+      queueClientRef.current?.deactivate();
+      queueClientRef.current = null;
+    };
+  }, [id, scheduleId, router]);
+
+  const handleCancelQueue = async () => {
+    if (!scheduleId) return;
+    setIsCancelingQueue(true);
+    try {
+      await apiFetch(`/waiting/concerts/${id}/schedules/${scheduleId}/waiting-queue`, {
+        method: "DELETE",
+      });
+    } catch {
+      // 이미 만료됐거나 없는 대기열이어도, 어차피 나가려던 참이니 조용히 넘어간다.
+    } finally {
+      queueClientRef.current?.deactivate();
+      router.replace(`/concerts/${id}`);
+    }
+  };
+
+  useEffect(() => {
+    // 대기열 입장 허가(entryToken)를 받기 전까지는 좌석 조회 자체가 막혀있으니 아직 시작하지 않는다.
+    if (!scheduleId || !entryToken) return;
+
+    let active = true;
+    let intervalId: NodeJS.Timeout;
+    let stopPolling = false;
+
+    const fetchSeats = async () => {
+      try {
+        const res = await apiFetch<SeatSelectionData>(
+          `/concerts/${id}/schedules/${scheduleId}/seats`,
+          { headers: { "X-Queue-Token": entryToken } },
+        );
+        if (active) {
+          setSeatData(res.data);
+          setError("");
         }
-      };
+      } catch (e) {
+        // 이 회차에서 이미 3매를 구매한 경우: 계속 재요청해봐야 결과가 안 바뀌니
+        // 폴링을 멈추고, 안내 후 콘서트 상세 페이지로 돌려보낸다.
+        if (e instanceof ApiError && e.resultCode === "400-2") {
+          stopPolling = true;
+          if (intervalId) clearInterval(intervalId);
+          if (active) {
+            await showAlert(e.message);
+            router.replace(`/concerts/${id}`);
+          }
+          return;
+        }
 
-      await fetchSeats();
+        // 대기열 토큰 문제(누락/만료)도 재요청해봐야 똑같이 실패하니, 폴링을 멈추고
+        // 대기열 화면으로 되돌려서 처음부터 다시 등록하게 한다.
+        if (e instanceof ApiError && (e.resultCode === "401-11" || e.resultCode === "403-3")) {
+          stopPolling = true;
+          if (intervalId) clearInterval(intervalId);
+          if (active) {
+            setEntryToken(null);
+            setQueueError(e.message);
+          }
+          return;
+        }
 
-      if (active && !stopPolling) {
-        intervalId = setInterval(fetchSeats, 1000);
+        if (active) {
+          setError(
+            e instanceof Error
+              ? e.message
+              : "좌석 정보를 불러오지 못했습니다.",
+          );
+        }
+      } finally {
+        if (active) setLoading(false);
       }
     };
 
-    initAndFetchSeats();
+    fetchSeats().then(() => {
+      if (active && !stopPolling) {
+        intervalId = setInterval(fetchSeats, 1000);
+      }
+    });
 
     return () => {
       active = false;
@@ -169,7 +253,7 @@ function SeatSelectContent({ params }: { params: Promise<{ id: string }> }) {
         clearInterval(intervalId);
       }
     };
-  }, [id, scheduleId]);
+  }, [id, scheduleId, entryToken, router]);
 
   const seatStatusMap = new Map(
     seatData?.seats.map((s) => [s.seatNumber, s.seatStatus]) ?? [],
@@ -256,7 +340,7 @@ function SeatSelectContent({ params }: { params: Promise<{ id: string }> }) {
   }, 0);
 
   const handleProceedToPayment = async () => {
-    if (selectedSeats.length === 0 || !scheduleId) return;
+    if (selectedSeats.length === 0 || !scheduleId || !entryToken) return;
 
     setIsReserving(true);
     const occupied: { seatNumber: string; occupyToken: string; price: number }[] = [];
@@ -268,6 +352,7 @@ function SeatSelectContent({ params }: { params: Promise<{ id: string }> }) {
           expireInSeconds: number;
         }>(`/concerts/${id}/schedules/${scheduleId}/seats/occupy`, {
           method: "POST",
+          headers: { "X-Queue-Token": entryToken },
           body: JSON.stringify({ seatNumber }),
         });
         const grade = seatGradeMap.get(seatNumber);
@@ -280,6 +365,8 @@ function SeatSelectContent({ params }: { params: Promise<{ id: string }> }) {
         concertId: id,
         scheduleId,
         seats: seatsParam,
+        // 결제 확정 API도 대기열 토큰을 요구하므로 그대로 결제 페이지에 넘겨준다.
+        queueToken: entryToken,
       });
       router.push(`/payment?${params.toString()}`);
     } catch (e) {
@@ -295,6 +382,40 @@ function SeatSelectContent({ params }: { params: Promise<{ id: string }> }) {
       setIsReserving(false);
     }
   };
+
+  // 대기열 입장 허가(entryToken)를 아직 못 받았으면, 좌석 화면 대신 대기 화면을 보여준다.
+  if (!entryToken) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+        <div className="bg-white rounded-2xl shadow-sm p-10 max-w-sm w-full text-center">
+          {queueError ? (
+            <p className="text-red-400 text-sm">{queueError}</p>
+          ) : (
+            <>
+              <h2 className="text-xl font-bold text-gray-800 mb-2">대기 중입니다</h2>
+              <p className="text-gray-400 text-sm mb-6">
+                접속자가 많아 순서대로 입장을 안내하고 있어요. 잠시만 기다려주세요.
+              </p>
+              <div className="text-4xl font-bold text-blue-600 mb-1">
+                {queueRank ?? "-"}
+                <span className="text-lg text-gray-400 font-normal">번째</span>
+              </div>
+              {queueTotal !== null && (
+                <p className="text-xs text-gray-400 mb-6">전체 대기 {queueTotal}명</p>
+              )}
+            </>
+          )}
+          <button
+            onClick={handleCancelQueue}
+            disabled={isCancelingQueue}
+            className="w-full mt-4 p-3 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-bold transition disabled:opacity-50"
+          >
+            {isCancelingQueue ? "취소 중..." : "대기열 취소"}
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   if (loading) {
     return (
