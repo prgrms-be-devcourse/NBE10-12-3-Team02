@@ -12,7 +12,10 @@ public record TicketInfo(
         @JsonProperty("isValid") boolean isValid,
         int ticketPrice,
         String createdAt,
-        String ticketNumber
+        String ticketNumber,
+        String seatNumber,
+        String gradeName,
+        int round
 ) {
     public static TicketInfo from(Ticket ticket) {
         return new TicketInfo(
@@ -24,7 +27,10 @@ public record TicketInfo(
                 ticket.isValid(),
                 ticket.getTicketPrice(),
                 ticket.getCreateDate().toLocalDate().toString(),
-                ticket.getTicketNumber()
+                ticket.getTicketNumber(),
+                ticket.getScheduleSeat().getSeatNumber(),
+                ticket.getScheduleSeat().getGradeName(),
+                ticket.getSchedule().getRound()
         );
     }
 }

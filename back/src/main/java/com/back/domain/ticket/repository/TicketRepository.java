@@ -17,6 +17,7 @@ public interface TicketRepository extends JpaRepository<Ticket, Long> {
         SELECT t FROM Ticket t
         JOIN FETCH t.schedule s
         JOIN FETCH s.concert
+        JOIN FETCH t.scheduleSeat
         WHERE t.user = :user
     """)
     List<Ticket> findAllByUserWithConcert(@Param("user") User user);
