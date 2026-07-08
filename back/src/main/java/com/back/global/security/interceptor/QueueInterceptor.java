@@ -38,13 +38,13 @@ public class QueueInterceptor implements HandlerInterceptor {
         if (token == null || token.isBlank()) {
             throw new ServiceException(ErrorCode.QUEUE_TOKEN_NOT_FOUND);
         }
+        Long userId = requestContext.getActor().getId();
 
         String activeQueueKey = WaitingQueueManager.generateQueueActiveKey(scheduleId);
-        Double score = redisTemplate.opsForZSet().score(activeQueueKey, token);
+        Double score = redisTemplate.opsForZSet().score(activeQueueKey, userId.toString());
         if (score == null || score < System.currentTimeMillis()) {
             throw new ServiceException(ErrorCode.QUEUE_SESSION_EXPIRED);
         }
-        Long userId = requestContext.getActor().getId();
 
         String storedToken = redisTemplate.opsForValue()
                 .get(WaitingQueueManager.generateActiveTokenKey(scheduleId, userId));

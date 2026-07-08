@@ -123,7 +123,8 @@ public class TicketService {
         );
         eventPublisher.publishEvent(new TicketCancelledEvent(
                 ticket.getSchedule().getConcert().getConcertId(),
-                ticket.getSchedule().getScheduleId()
+                ticket.getSchedule().getScheduleId(),
+                userId
         ));
     }
 
