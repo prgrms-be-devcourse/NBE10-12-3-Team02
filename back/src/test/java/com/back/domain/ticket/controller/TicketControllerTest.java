@@ -22,6 +22,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.data.redis.core.HashOperations;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.data.redis.core.ValueOperations;
 import org.springframework.data.redis.core.ZSetOperations;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
@@ -91,6 +92,9 @@ class TicketControllerTest {
     void setUp() {
         user = saveUser();
         securityUser = new SecurityUser(user.getUserId(), user.getName());
+        ValueOperations<String, String> valueOperations = mock(ValueOperations.class);
+        when(redisTemplate.opsForValue()).thenReturn(valueOperations);
+        when(valueOperations.get(anyString())).thenReturn("test-queue-token");
         concert = concertRepository.save(Concert.create(
                 "싸이 콘서트",
                 "설명",

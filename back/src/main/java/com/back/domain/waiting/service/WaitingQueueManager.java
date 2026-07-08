@@ -3,7 +3,6 @@ package com.back.domain.waiting.service;
 import com.back.domain.waiting.dto.ActiveEntry;
 import com.back.global.exception.ErrorCode;
 import com.back.global.exception.ServiceException;
-import com.back.global.security.interceptor.QueueInterceptor;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.script.DefaultRedisScript;
@@ -128,7 +127,7 @@ public class WaitingQueueManager {
 
     public long countActiveUsers(Long scheduleId) {
         removeExpiredActiveUsers(scheduleId);
-        String activeKey = QueueInterceptor.generateQueueActiveKey(scheduleId);
+        String activeKey = generateQueueActiveKey(scheduleId);
         Long size = redisTemplate.opsForZSet()
                 .zCard(activeKey);
 
@@ -136,7 +135,7 @@ public class WaitingQueueManager {
     }
 
     public long removeExpiredActiveUsers(Long scheduleId) {
-        String activeKey = QueueInterceptor.generateQueueActiveKey(scheduleId);
+        String activeKey = generateQueueActiveKey(scheduleId);
         Long removed = redisTemplate.opsForZSet()
                 .removeRangeByScore(activeKey, 0, System.currentTimeMillis());
         return removed == null ? 0L : removed;
@@ -151,7 +150,7 @@ public class WaitingQueueManager {
         long expiredAt = System.currentTimeMillis() + ttl.toMillis();
 
         redisTemplate.opsForZSet().add(
-                QueueInterceptor.generateQueueActiveKey(scheduleId),
+                generateQueueActiveKey(scheduleId),
                 entryToken,
                 expiredAt
         );
@@ -185,7 +184,7 @@ public class WaitingQueueManager {
 
         redisTemplate.opsForZSet()
                 .remove(
-                        QueueInterceptor.generateQueueActiveKey(scheduleId),
+                        generateQueueActiveKey(scheduleId),
                         entryToken
                 );
 
@@ -194,5 +193,9 @@ public class WaitingQueueManager {
     public long getRemainingCount(Long scheduleId) {
         Long count = redisTemplate.opsForZSet().zCard(generateWaitKey(scheduleId));
         return count == null ? 0L : count;
+    }
+
+    public static String generateQueueActiveKey(Long scheduleId) {
+        return "queue:active:schedule:%d".formatted(scheduleId);
     }
 }
