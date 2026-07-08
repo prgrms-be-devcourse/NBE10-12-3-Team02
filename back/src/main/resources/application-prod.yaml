@@ -23,8 +23,8 @@ spring:
       password: ${REDIS_PASSWORD}
   security:
     oauth2:
-      front-callback-url: "https://nbe10-12-2-team02-production.up.railway.app"
-      front-login-url: "https://nbe10-12-2-team02-production.up.railway.app/login"
+      front-callback-url: "https://nbe-10-12-2-team02-fv1h.vercel.app"
+      front-login-url: "https://nbe-10-12-2-team02-fv1h.vercel.app/login"
       client:
         registration:
           kakao:

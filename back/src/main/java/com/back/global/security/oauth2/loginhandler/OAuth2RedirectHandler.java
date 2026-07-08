@@ -9,7 +9,6 @@ import org.springframework.web.util.UriComponentsBuilder;
 import java.io.IOException;
 
 @Component
-@RequiredArgsConstructor
 public class OAuth2RedirectHandler {
 
     @Value("${spring.security.oauth2.front-callback-url}")
