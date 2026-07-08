@@ -67,7 +67,17 @@ public class WaitingQueueService {
         validateUser(userId);
         concertService.validateConcertScheduleMatch(concertId, scheduleId);
 
-        waitingQueueManager.cancelWaiting(scheduleId, userId);
+        boolean removedFromWaiting = waitingQueueManager.cancelWaiting(scheduleId, userId);
+        boolean removedFromActive = !removedFromWaiting
+                && waitingQueueManager.cancelActiveUser(scheduleId, userId);
+
+        if (!removedFromWaiting && !removedFromActive) {
+            throw new ServiceException(ErrorCode.WAITING_QUEUE_NOT_FOUND);
+        }
+
+        if (removedFromActive) {
+            allowEntry(concertId, scheduleId);
+        }
     }
 
     public void allowEntry(Long concertId, Long scheduleId) {

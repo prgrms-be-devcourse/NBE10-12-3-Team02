@@ -54,15 +54,21 @@ public class WaitingQueueManager {
         return rank + 1;
     }
 
-    public void cancelWaiting(Long scheduleId, Long userId) {
+    public boolean cancelWaiting(Long scheduleId, Long userId) {
         String waitKey = generateWaitKey(scheduleId);
         String user = userId.toString();
 
-        Long removedRank = redisTemplate.opsForZSet().remove(waitKey, user);
+        Long removed = redisTemplate.opsForZSet().remove(waitKey, user);
+        return removed != null && removed > 0;
+    }
 
-        if (removedRank == null || removedRank == 0L) {
-            throw new ServiceException(ErrorCode.WAITING_QUEUE_NOT_FOUND);
-        }
+    public boolean cancelActiveUser(Long scheduleId, Long userId) {
+        String activeKey = generateQueueActiveKey(scheduleId);
+        String user = userId.toString();
+
+        Long removed = redisTemplate.opsForZSet().remove(activeKey, user);
+        redisTemplate.delete(generateActiveTokenKey(scheduleId, userId));
+        return removed != null && removed > 0;
     }
 
     private String generateWaitKey(Long scheduleId) {
