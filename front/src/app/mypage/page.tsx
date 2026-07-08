@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { apiFetch, decodeToken, restoreSession, setAccessToken } from "@/lib/api";
+import { showAlert, showSuccess, showError } from "@/lib/alert";
 import { getLocalConcertPoster } from "@/lib/concertDetailImages";
 import { Loader2 } from "lucide-react";
 import PasswordStrengthMeter from "@/app/components/PasswordStrengthMeter";
@@ -57,7 +58,7 @@ export default function MyPage() {
       await restoreSession();
 
       if (!decodeToken()) {
-        alert("로그인이 필요합니다.");
+        await showAlert("로그인이 필요합니다.");
         router.push("/login");
         return;
       }
@@ -66,7 +67,7 @@ export default function MyPage() {
         const res = await apiFetch<MyPageData>(`/users/me`);
         setData(res.data);
       } catch (e) {
-        alert(e instanceof Error ? e.message : "마이페이지 조회에 실패했습니다.");
+        showError(e instanceof Error ? e.message : "마이페이지 조회에 실패했습니다.");
       } finally {
         setLoading(false);
       }
@@ -79,10 +80,10 @@ export default function MyPage() {
     try {
       await apiFetch(`/users/withdraw`, { method: "PATCH" });
       setAccessToken(null);
-      alert("회원 탈퇴가 완료되었습니다.");
+      await showSuccess("회원 탈퇴가 완료되었습니다.");
       router.push("/");
     } catch (e) {
-      alert(e instanceof Error ? e.message : "탈퇴 처리 중 오류가 발생했습니다.");
+      showError(e instanceof Error ? e.message : "탈퇴 처리 중 오류가 발생했습니다.");
     } finally {
       setShowWithdrawModal(false);
     }
@@ -104,8 +105,9 @@ export default function MyPage() {
             }
           : prev
       );
+      await showSuccess("예매가 취소되었습니다.");
     } catch (e) {
-      alert(e instanceof Error ? e.message : "취소 처리 중 오류가 발생했습니다.");
+      showError(e instanceof Error ? e.message : "취소 처리 중 오류가 발생했습니다.");
     } finally {
       setCancelTargetId(null);
       setIsProcessing(false);
@@ -129,24 +131,24 @@ export default function MyPage() {
 
   const handleSaveProfile = async () => {
     if (editName.trim() === "") {
-      alert("이름을 입력해주세요.");
+      showAlert("이름을 입력해주세요.");
       return;
     }
     if (editName.includes(" ")) {
-      alert("이름에 공백을 포함할 수 없습니다.");
+      showAlert("이름에 공백을 포함할 수 없습니다.");
       return;
     }
     if (editEmail.trim() === "") {
-      alert("이메일을 입력해주세요.");
+      showAlert("이메일을 입력해주세요.");
       return;
     }
     if (editPassword !== "") {
       if (editPassword.length < 8) {
-        alert("비밀번호는 8자 이상이어야 합니다.");
+        showAlert("비밀번호는 8자 이상이어야 합니다.");
         return;
       }
       if (editPassword !== editPasswordCheck) {
-        alert("새 비밀번호가 일치하지 않습니다.");
+        showAlert("새 비밀번호가 일치하지 않습니다.");
         return;
       }
     }
@@ -170,9 +172,9 @@ export default function MyPage() {
       setIsEditing(false);
       setEditPassword("");
       setEditPasswordCheck("");
-      alert("정보가 수정되었습니다.");
+      showSuccess("정보가 수정되었습니다.");
     } catch (e) {
-      alert(e instanceof Error ? e.message : "정보 수정 중 오류가 발생했습니다.");
+      showError(e instanceof Error ? e.message : "정보 수정 중 오류가 발생했습니다.");
     } finally {
       setIsSavingProfile(false);
     }

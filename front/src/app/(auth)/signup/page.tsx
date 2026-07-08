@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Eye, EyeOff } from "lucide-react";
 import { apiFetch } from "@/lib/api";
+import { showAlert, showSuccess, showError } from "@/lib/alert";
 import PasswordStrengthMeter from "@/app/components/PasswordStrengthMeter";
 
 export default function SignupPage() {
@@ -26,16 +27,16 @@ export default function SignupPage() {
 
   const handleCheckId = async () => {
     if (loginId.trim() === "") {
-      alert("아이디를 입력해주세요.");
+      showAlert("아이디를 입력해주세요.");
       return;
     }
     setIsChecking(true);
     try {
       await apiFetch(`/users/check-id?id=${encodeURIComponent(loginId)}`);
-      alert("사용 가능한 아이디입니다.");
+      showSuccess("사용 가능한 아이디입니다.");
       setIsIdChecked(true);
     } catch (e) {
-      alert(e instanceof Error ? e.message : "중복확인에 실패했습니다.");
+      showError(e instanceof Error ? e.message : "중복확인에 실패했습니다.");
       setIsIdChecked(false);
     } finally {
       setIsChecking(false);
@@ -46,31 +47,31 @@ export default function SignupPage() {
     e.preventDefault();
 
     if (name.trim() === "") {
-      alert("이름을 입력해주세요.");
+      showAlert("이름을 입력해주세요.");
       return;
     }
     if (email.trim() === "") {
-      alert("이메일을 입력해주세요.");
+      showAlert("이메일을 입력해주세요.");
       return;
     }
     if (loginId.trim() === "") {
-      alert("아이디를 입력해주세요.");
+      showAlert("아이디를 입력해주세요.");
       return;
     }
     if (password.trim() === "") {
-      alert("비밀번호를 입력해주세요.");
+      showAlert("비밀번호를 입력해주세요.");
       return;
     }
     if (password.length < 8) {
-      alert("비밀번호는 8자 이상이어야 합니다.");
+      showAlert("비밀번호는 8자 이상이어야 합니다.");
       return;
     }
     if (password !== passwordCheck) {
-      alert("비밀번호가 일치하지 않습니다.");
+      showAlert("비밀번호가 일치하지 않습니다.");
       return;
     }
     if (!isIdChecked) {
-      alert("아이디 중복확인을 먼저 진행해주세요.");
+      showAlert("아이디 중복확인을 먼저 진행해주세요.");
       return;
     }
 
@@ -80,10 +81,10 @@ export default function SignupPage() {
         method: "POST",
         body: JSON.stringify({ id: loginId, email, password, name }),
       });
-      alert("회원가입이 완료되었습니다. 로그인해주세요.");
+      await showSuccess("회원가입이 완료되었습니다. 로그인해주세요.");
       router.push("/login");
     } catch (err) {
-      alert(err instanceof Error ? err.message : "회원가입 중 오류가 발생했습니다.");
+      showError(err instanceof Error ? err.message : "회원가입 중 오류가 발생했습니다.");
     } finally {
       setIsSubmitting(false);
     }

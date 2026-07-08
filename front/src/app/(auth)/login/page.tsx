@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Eye, EyeOff } from "lucide-react";
 import { apiFetch } from "@/lib/api";
+import { showAlert, showError } from "@/lib/alert";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
 
@@ -46,7 +47,7 @@ function LoginContent() {
   useEffect(() => {
     const errorCode = searchParams.get("error");
     if (errorCode) {
-      alert(OAUTH_ERROR_MESSAGES[errorCode] ?? "소셜 로그인 중 오류가 발생했습니다.");
+      showAlert(OAUTH_ERROR_MESSAGES[errorCode] ?? "소셜 로그인 중 오류가 발생했습니다.");
     }
   }, [searchParams]);
 
@@ -54,11 +55,11 @@ function LoginContent() {
     e.preventDefault();
 
     if (loginId.trim() === "") {
-      alert("아이디를 입력해주세요.");
+      showAlert("아이디를 입력해주세요.");
       return;
     }
     if (password.trim() === "") {
-      alert("비밀번호를 입력해주세요.");
+      showAlert("비밀번호를 입력해주세요.");
       return;
     }
 
@@ -70,7 +71,7 @@ function LoginContent() {
       });
       router.push("/");
     } catch (err) {
-      alert(err instanceof Error ? err.message : "로그인 중 오류가 발생했습니다.");
+      showError(err instanceof Error ? err.message : "로그인 중 오류가 발생했습니다.");
     } finally {
       setIsSubmitting(false);
     }

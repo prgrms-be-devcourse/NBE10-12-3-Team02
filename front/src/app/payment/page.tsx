@@ -3,6 +3,7 @@
 import { Suspense, useState, useEffect, useRef } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { apiFetch, decodeToken } from "@/lib/api";
+import { showAlert, showError } from "@/lib/alert";
 import { Loader2 } from "lucide-react";
 
 interface PaymentTicketResponse {
@@ -48,6 +49,20 @@ function PaymentContent() {
   const paymentCompletedRef = useRef(false);
   const isMountedRef = useRef(false);
   const [isProcessing, setIsProcessing] = useState(false);
+  const releasedRef = useRef(false);
+
+  // 선점해뒀던 좌석들을 전부 풀어준다. 결제 실패/이탈 등 여러 상황에서 재사용한다.
+  const releaseSeats = () => {
+    if (releasedRef.current || paymentCompletedRef.current) return;
+    if (!concertId || !scheduleId) return;
+    releasedRef.current = true;
+    seats.forEach(({ seatNumber }) => {
+      apiFetch(`/concerts/${concertId}/schedules/${scheduleId}/seats/occupy`, {
+        method: "DELETE",
+        body: JSON.stringify({ seatNumber }),
+      }).catch(() => {});
+    });
+  };
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -68,13 +83,8 @@ function PaymentContent() {
     return () => {
       isMountedRef.current = false;
       setTimeout(() => {
-        if (!isMountedRef.current && !paymentCompletedRef.current && concertId && scheduleId) {
-          seats.forEach(({ seatNumber }) => {
-            apiFetch(`/concerts/${concertId}/schedules/${scheduleId}/seats/occupy`, {
-              method: "DELETE",
-              body: JSON.stringify({ seatNumber }),
-            }).catch(() => {});
-          });
+        if (!isMountedRef.current) {
+          releaseSeats();
         }
       }, 50);
     };
@@ -89,17 +99,17 @@ function PaymentContent() {
 
   const handlePayment = async () => {
     if (!agreed) {
-      alert("약관에 동의해주세요.");
+      showAlert("약관에 동의해주세요.");
       return;
     }
     if (!concertId || !scheduleId || seats.length === 0) {
-      alert("예매 정보가 올바르지 않습니다. 좌석 선택부터 다시 진행해주세요.");
+      showAlert("예매 정보가 올바르지 않습니다. 좌석 선택부터 다시 진행해주세요.");
       return;
     }
 
     if (!decodeToken()) {
-      alert("로그인이 필요합니다.");
-      router.push("/login");
+      await showAlert("로그인이 필요합니다.");
+      router.replace("/login");
       return;
     }
 
@@ -125,7 +135,12 @@ function PaymentContent() {
       setTicketResults(res.data);
       setShowModal(true);
     } catch (e) {
-      alert(e instanceof Error ? e.message : "결제 중 오류가 발생했습니다.");
+      await showError(e instanceof Error ? e.message : "결제 중 오류가 발생했습니다.");
+      // 결제(예매)가 실패했으니, 선점해뒀던 좌석을 바로 풀어주고 좌석 선택 페이지로 돌려보낸다.
+      releaseSeats();
+      if (concertId) {
+        router.replace(`/concerts/${concertId}/seats?scheduleId=${scheduleId}`);
+      }
     } finally {
       setIsProcessing(false);
     }
@@ -217,7 +232,7 @@ function PaymentContent() {
               ))}
             </div>
             <button
-              onClick={() => router.push("/mypage")}
+              onClick={() => router.replace("/mypage")}
               className="w-full p-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold transition"
             >
               마이페이지로 이동

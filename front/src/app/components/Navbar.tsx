@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { User } from "lucide-react";
 import { apiFetch, decodeToken, setAccessToken, restoreSession } from "@/lib/api";
+import { showConfirm } from "@/lib/alert";
 
 export default function Navbar() {
   const [userName, setUserName] = useState<string | null>(null);
@@ -26,7 +27,8 @@ export default function Navbar() {
   };
 
   const handleLogout = async () => {
-    if (!confirm("로그아웃 하시겠습니까?")) return;
+    const confirmed = await showConfirm("로그아웃 하시겠습니까?", { danger: true });
+    if (!confirmed) return;
 
     try {
       await apiFetch("/auth/logout", { method: "POST" });

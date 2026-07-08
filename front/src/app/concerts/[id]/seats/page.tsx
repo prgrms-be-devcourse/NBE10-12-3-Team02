@@ -1,7 +1,9 @@
 "use client";
 
-import { apiFetch, decodeToken, restoreSession } from "@/lib/api";
+import { apiFetch, ApiError, decodeToken, restoreSession } from "@/lib/api";
+import { showAlert, showError } from "@/lib/alert";
 import { useRouter, useSearchParams } from "next/navigation";
+import { Minus, Plus } from "lucide-react";
 import { Suspense, use, useEffect, useState } from "react";
 
 interface SeatDetail {
@@ -39,9 +41,10 @@ const DEFAULT_STYLE = {
   seat: "bg-gray-200 hover:bg-gray-300 text-gray-700",
   dot: "bg-gray-300",
 };
+const DIMMED_STYLE = "bg-gray-100 text-gray-300 cursor-not-allowed opacity-50";
 const GRADE_ORDER = ["VIP", "R", "S", "A"];
 const SELECTION_TIME_LIMIT = 300; // 5분
-const MAX_SEATS_PER_BOOKING = 3; // 1인당 최대 구매 가능 매수
+const MAX_HEADCOUNT = 3; // 1인당 최대 구매 가능 매수
 
 function SeatSelectContent({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -52,10 +55,20 @@ function SeatSelectContent({ params }: { params: Promise<{ id: string }> }) {
   const [seatData, setSeatData] = useState<SeatSelectionData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [selectedSeats, setSelectedSeats] = useState<string[]>([]);
   const [isReserving, setIsReserving] = useState(false);
   const [timeLeft, setTimeLeft] = useState<number | null>(null);
   const [userName, setUserName] = useState<string | null>(null);
+
+  // 인원수 선택 팝업 (좌석 페이지 진입 시 먼저 뜬다)
+  const [showHeadcountModal, setShowHeadcountModal] = useState(true);
+  const [adultCount, setAdultCount] = useState(1);
+  const [teenCount, setTeenCount] = useState(0);
+  const requiredSeatCount = adultCount + teenCount;
+
+  // 2인 이상이면 "짝"(나란히 붙은 좌석 2개)을 먼저 채우고, 3인이면 그 뒤에 자유석 1개를 더 받는다.
+  const [pairSeats, setPairSeats] = useState<[string, string] | null>(null);
+  const [freeSeats, setFreeSeats] = useState<string[]>([]);
+  const selectedSeats = [...(pairSeats ?? []), ...freeSeats];
 
   useEffect(() => {
     if (timeLeft === null) return;
@@ -63,9 +76,10 @@ function SeatSelectContent({ params }: { params: Promise<{ id: string }> }) {
     if (timeLeft <= 0) {
       // 카운트다운 타이머가 0이 됐을 때 선택 상태를 정리하는 로직이라 effect 안에서 setState가 맞다.
       // eslint-disable-next-line react-hooks/set-state-in-effect
-      setSelectedSeats([]);
+      setPairSeats(null);
+      setFreeSeats([]);
       setTimeLeft(null);
-      alert("좌석 선택 시간이 만료되어 선택이 취소되었습니다.");
+      showAlert("좌석 선택 시간이 만료되어 선택이 취소되었습니다.");
       return;
     }
 
@@ -93,14 +107,15 @@ function SeatSelectContent({ params }: { params: Promise<{ id: string }> }) {
 
     let active = true;
     let intervalId: NodeJS.Timeout;
+    let stopPolling = false;
 
     const initAndFetchSeats = async () => {
       await restoreSession();
 
       const decoded = decodeToken();
       if (!decoded) {
-        alert("로그인이 필요합니다.");
-        router.push("/login");
+        await showAlert("로그인이 필요합니다.");
+        router.replace("/login");
         return;
       }
       setUserName(decoded.name);
@@ -115,6 +130,18 @@ function SeatSelectContent({ params }: { params: Promise<{ id: string }> }) {
             setError("");
           }
         } catch (e) {
+          // 이 회차에서 이미 3매를 구매한 경우: 계속 재요청해봐야 결과가 안 바뀌니
+          // 폴링을 멈추고, 안내 후 콘서트 상세 페이지로 돌려보낸다.
+          if (e instanceof ApiError && e.resultCode === "400-2") {
+            stopPolling = true;
+            if (intervalId) clearInterval(intervalId);
+            if (active) {
+              await showAlert(e.message);
+              router.replace(`/concerts/${id}`);
+            }
+            return;
+          }
+
           if (active) {
             setError(
               e instanceof Error
@@ -129,7 +156,7 @@ function SeatSelectContent({ params }: { params: Promise<{ id: string }> }) {
 
       await fetchSeats();
 
-      if (active) {
+      if (active && !stopPolling) {
         intervalId = setInterval(fetchSeats, 1000);
       }
     };
@@ -164,23 +191,61 @@ function SeatSelectContent({ params }: { params: Promise<{ id: string }> }) {
           parseInt(b.seatNumber.split("-")[1]),
       );
 
+  // 같은 블록(가운데 통로 기준 왼쪽/오른쪽) 안에서만 "오른쪽 옆자리"를 찾는다.
+  // 통로를 건너가야 하거나, 블록의 마지막 좌석이면 null을 돌려준다.
+  const getRightNeighborSeat = (seatNumber: string): string | null => {
+    const row = seatNumber.split("-")[0];
+    const rowSeats = seatsByRow(row);
+    const index = rowSeats.findIndex((s) => s.seatNumber === seatNumber);
+    if (index === -1) return null;
+
+    const mid = Math.ceil(rowSeats.length / 2);
+    const isLeftBlock = index < mid;
+    const isLastInBlock = isLeftBlock ? index === mid - 1 : index === rowSeats.length - 1;
+    if (isLastInBlock) return null;
+
+    return rowSeats[index + 1]?.seatNumber ?? null;
+  };
+
+  const isSeatPairable = (seatNumber: string): boolean => {
+    if (seatStatusMap.get(seatNumber) !== "AVAILABLE") return false;
+    const neighbor = getRightNeighborSeat(seatNumber);
+    return !!neighbor && seatStatusMap.get(neighbor) === "AVAILABLE";
+  };
+
+  const needsPair = requiredSeatCount >= 2;
+  const totalSelected = (pairSeats ? 2 : 0) + freeSeats.length;
+  const isSelectionFull = totalSelected >= requiredSeatCount;
+
   const handleSeatClick = (seatNumber: string) => {
-    const status = seatStatusMap.get(seatNumber);
-    if (status !== "AVAILABLE") return;
-
-    if (selectedSeats.includes(seatNumber)) {
-      const next = selectedSeats.filter((s) => s !== seatNumber);
-      setSelectedSeats(next);
-      if (next.length === 0) setTimeLeft(null);
+    // 이미 짝(페어)의 일부라면, 짝 전체를 같이 취소한다.
+    if (pairSeats?.includes(seatNumber)) {
+      setPairSeats(null);
+      if (freeSeats.length === 0) setTimeLeft(null);
+      return;
+    }
+    // 이미 자유석으로 선택된 좌석이라면, 그 한 자리만 취소한다.
+    if (freeSeats.includes(seatNumber)) {
+      const next = freeSeats.filter((s) => s !== seatNumber);
+      setFreeSeats(next);
+      if (next.length === 0 && !pairSeats) setTimeLeft(null);
       return;
     }
 
-    if (selectedSeats.length >= MAX_SEATS_PER_BOOKING) {
-      alert(`좌석은 1인당 최대 ${MAX_SEATS_PER_BOOKING}매까지 선택할 수 있습니다.`);
+    if (seatStatusMap.get(seatNumber) !== "AVAILABLE") return;
+    if (isSelectionFull) return;
+
+    // 짝을 아직 못 채웠으면, 이 좌석 + 오른쪽 옆자리를 한 번에 선택한다.
+    if (needsPair && !pairSeats) {
+      const neighbor = getRightNeighborSeat(seatNumber);
+      if (!neighbor || seatStatusMap.get(neighbor) !== "AVAILABLE") return;
+      setPairSeats([seatNumber, neighbor]);
+      setTimeLeft((prev) => prev ?? SELECTION_TIME_LIMIT);
       return;
     }
 
-    setSelectedSeats((prev) => [...prev, seatNumber]);
+    // 짝을 다 채웠거나(혹은 1명이라 짝이 필요 없거나), 자유석 자리 — 아무 빈 좌석이나 선택.
+    setFreeSeats((prev) => [...prev, seatNumber]);
     setTimeLeft((prev) => prev ?? SELECTION_TIME_LIMIT);
   };
 
@@ -226,7 +291,7 @@ function SeatSelectContent({ params }: { params: Promise<{ id: string }> }) {
           }).catch(() => {}),
         ),
       );
-      alert(e instanceof Error ? e.message : "좌석 선점에 실패했습니다.");
+      showError(e instanceof Error ? e.message : "좌석 선점에 실패했습니다.");
       setIsReserving(false);
     }
   };
@@ -252,18 +317,31 @@ function SeatSelectContent({ params }: { params: Promise<{ id: string }> }) {
   );
 
   const renderSeat = (seat: SeatDetail) => {
-    const isSelected = selectedSeats.includes(seat.seatNumber);
-    const isTaken = seat.seatStatus !== "AVAILABLE";
+    const isPaired = pairSeats?.includes(seat.seatNumber) ?? false;
+    const isFree = freeSeats.includes(seat.seatNumber);
+    const isSelected = isPaired || isFree;
     const col = seat.seatNumber.split("-")[1];
     const style = GRADE_STYLES[seat.gradeName] ?? DEFAULT_STYLE;
 
     let seatClass = "";
+    let disabled = false;
+
     if (seat.seatStatus === "SOLD_OUT") {
       seatClass = "bg-gray-400 text-gray-400 cursor-not-allowed";
+      disabled = true;
     } else if (seat.seatStatus === "HOLD") {
       seatClass = "bg-red-400 text-red-400 cursor-not-allowed";
+      disabled = true;
     } else if (isSelected) {
       seatClass = "bg-purple-500 hover:bg-purple-600 text-white cursor-pointer";
+    } else if (isSelectionFull) {
+      // 이미 필요한 인원수만큼 다 골랐으면, 나머지 빈 좌석은 더 못 고르게 흐리게 표시.
+      seatClass = DIMMED_STYLE;
+      disabled = true;
+    } else if (needsPair && !pairSeats && !isSeatPairable(seat.seatNumber)) {
+      // 짝을 아직 못 채웠는데, 이 좌석은 오른쪽에 붙일 자리가 없어서 짝을 만들 수 없음.
+      seatClass = DIMMED_STYLE;
+      disabled = true;
     } else {
       seatClass = `${style.seat} cursor-pointer`;
     }
@@ -272,7 +350,7 @@ function SeatSelectContent({ params }: { params: Promise<{ id: string }> }) {
       <button
         key={seat.seatNumber}
         onClick={() => handleSeatClick(seat.seatNumber)}
-        disabled={isTaken}
+        disabled={disabled}
         className={`w-[18px] h-[18px] rounded-full flex items-center justify-center text-[7px] font-semibold transition ${seatClass}`}
       >
         {col}
@@ -282,7 +360,13 @@ function SeatSelectContent({ params }: { params: Promise<{ id: string }> }) {
 
   return (
     <div className="min-h-screen bg-gray-50 p-6">
-      <div className="max-w-[1600px] mx-auto bg-white rounded-2xl shadow-sm p-8">
+      <div
+        className={
+          showHeadcountModal
+            ? "max-w-[1600px] mx-auto bg-white rounded-2xl shadow-sm p-8 blur-sm pointer-events-none select-none"
+            : "max-w-[1600px] mx-auto bg-white rounded-2xl shadow-sm p-8"
+        }
+      >
         <div className="mb-6 flex items-center justify-between">
           <h1 className="text-lg font-bold text-gray-800">좌석 선택</h1>
           {userName && (
@@ -346,7 +430,7 @@ function SeatSelectContent({ params }: { params: Promise<{ id: string }> }) {
             <div>
               <div className="flex items-center justify-between mb-3">
                 <h2 className="font-bold text-gray-700">
-                  선택 좌석 {selectedSeats.length} / {MAX_SEATS_PER_BOOKING}
+                  선택 좌석 {selectedSeats.length} / {requiredSeatCount}
                 </h2>
                 <div className="flex items-center gap-3">
                   {timeLeft !== null && (
@@ -357,7 +441,8 @@ function SeatSelectContent({ params }: { params: Promise<{ id: string }> }) {
                   {selectedSeats.length > 0 && (
                     <button
                       onClick={() => {
-                        setSelectedSeats([]);
+                        setPairSeats(null);
+                        setFreeSeats([]);
                         setTimeLeft(null);
                       }}
                       className="text-xs text-gray-400 hover:text-red-500"
@@ -370,7 +455,7 @@ function SeatSelectContent({ params }: { params: Promise<{ id: string }> }) {
 
               {selectedSeats.length === 0 ? (
                 <p className="text-gray-400 text-sm">
-                  좌석을 선택해주세요. (최대 {MAX_SEATS_PER_BOOKING}매)
+                  좌석을 선택해주세요. (총 {requiredSeatCount}매)
                 </p>
               ) : (
                 <div className="space-y-2">
@@ -442,6 +527,82 @@ function SeatSelectContent({ params }: { params: Promise<{ id: string }> }) {
           </div>
         </div>
       </div>
+
+      {/* 좌석 페이지 진입 시 먼저 뜨는 인원수 선택 팝업 */}
+      {showHeadcountModal && (
+        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl p-8 max-w-sm w-full">
+            <h2 className="text-xl font-bold text-center text-gray-800 mb-1">
+              인원수를 선택해주세요
+            </h2>
+            <p className="text-center text-gray-400 text-sm mb-6">
+              최대 {MAX_HEADCOUNT}명까지 예매할 수 있어요.
+            </p>
+
+            <div className="space-y-4 mb-6">
+              <div className="flex items-center justify-between">
+                <span className="font-semibold text-gray-700">성인</span>
+                <div className="flex items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setAdultCount((c) => Math.max(0, c - 1))}
+                    disabled={adultCount <= 0}
+                    className="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
+                  >
+                    <Minus size={16} />
+                  </button>
+                  <span className="w-5 text-center font-bold text-gray-800">{adultCount}</span>
+                  <button
+                    type="button"
+                    onClick={() => setAdultCount((c) => Math.min(MAX_HEADCOUNT, c + 1))}
+                    disabled={adultCount + teenCount >= MAX_HEADCOUNT}
+                    className="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
+                  >
+                    <Plus size={16} />
+                  </button>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between">
+                <span className="font-semibold text-gray-700">청소년</span>
+                <div className="flex items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setTeenCount((c) => Math.max(0, c - 1))}
+                    disabled={teenCount <= 0}
+                    className="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
+                  >
+                    <Minus size={16} />
+                  </button>
+                  <span className="w-5 text-center font-bold text-gray-800">{teenCount}</span>
+                  <button
+                    type="button"
+                    onClick={() => setTeenCount((c) => Math.min(MAX_HEADCOUNT, c + 1))}
+                    disabled={adultCount + teenCount >= MAX_HEADCOUNT}
+                    className="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
+                  >
+                    <Plus size={16} />
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex justify-between items-center border-t pt-4 mb-6">
+              <span className="text-gray-600 text-sm">총 인원</span>
+              <span className="text-lg font-bold text-blue-600">{requiredSeatCount}명</span>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setShowHeadcountModal(false)}
+              disabled={requiredSeatCount === 0}
+              className="w-full p-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold transition disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              선택 완료
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

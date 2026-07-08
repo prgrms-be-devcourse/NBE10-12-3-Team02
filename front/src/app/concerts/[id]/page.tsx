@@ -3,6 +3,7 @@
 import { useState, useEffect, use } from "react";
 import { useRouter } from "next/navigation";
 import { apiFetch, decodeToken } from "@/lib/api";
+import { showAlert } from "@/lib/alert";
 import { getConcertDetailImages, getLocalConcertPoster } from "@/lib/concertDetailImages";
 
 interface ConcertDetail {
@@ -64,10 +65,10 @@ export default function ConcertDetailPage({
       .catch(() => setSchedules([]));
   }, [id]);
 
-  const handleBookingClick = () => {
+  const handleBookingClick = async () => {
     if (!decodeToken()) {
-      alert("로그인이 필요합니다.");
-      router.push("/login");
+      await showAlert("로그인이 필요합니다.");
+      router.replace("/login");
       return;
     }
     router.push(`/concerts/${id}/seats?scheduleId=${selectedSchedule}`);
@@ -121,12 +122,12 @@ export default function ConcertDetailPage({
 
               <div className="mb-4">
                 <h2 className="font-bold text-gray-700 mb-2">공연 장소</h2>
-                
-                  <a href={mapUrl}
+
+                <a href={mapUrl}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="block group"
-                > 
+                >
                   <p className="text-gray-600 text-sm group-hover:text-blue-600 transition">
                     📍 {concert.venueName}
                     <span className="ml-1 text-xs text-blue-500 underline">지도 보기</span>
@@ -163,11 +164,10 @@ export default function ConcertDetailPage({
                       <button
                         key={schedule.scheduleId}
                         onClick={() => setSelectedSchedule(schedule.scheduleId)}
-                        className={`px-4 py-2 rounded-lg text-sm font-semibold border transition ${
-                          selectedSchedule === schedule.scheduleId
+                        className={`px-4 py-2 rounded-lg text-sm font-semibold border transition ${selectedSchedule === schedule.scheduleId
                             ? "bg-blue-600 text-white border-blue-600"
                             : "bg-white text-gray-600 border-gray-200 hover:border-blue-400"
-                        }`}
+                          }`}
                       >
                         {schedule.round}회차
                         <br />
@@ -176,9 +176,8 @@ export default function ConcertDetailPage({
                         </span>
                         <br />
                         <span
-                          className={`text-xs font-normal ${
-                            schedule.remainingSeats === 0 ? "text-red-500" : "text-gray-400"
-                          }`}
+                          className={`text-xs font-normal ${schedule.remainingSeats === 0 ? "text-red-500" : "text-gray-400"
+                            }`}
                         >
                           {schedule.remainingSeats === 0 ? "매진" : `잔여 ${schedule.remainingSeats}석`}
                         </span>
