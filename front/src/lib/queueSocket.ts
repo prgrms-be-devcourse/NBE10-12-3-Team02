@@ -2,9 +2,8 @@ import { Client, type IMessage } from "@stomp/stompjs";
 import SockJS from "sockjs-client";
 import { BASE_URL, getAccessToken } from "./api";
 
-export interface QueueRankUpdatedEvent {
+export interface QueueStatusEvent {
   scheduleId: number;
-  userId: number;
   currentRank: number;
   totalWaitingCount: number;
   updatedAt: string;
@@ -18,7 +17,7 @@ export interface EntryAllowedEvent {
 }
 
 interface QueueEventResponse<T> {
-  eventType: "ENTRY_ALLOWED" | "QUEUE_RANK_UPDATED" | "QUEUE_ERROR";
+  eventType: "ENTRY_ALLOWED" | "QUEUE_STATUS_UPDATED" | "QUEUE_ERROR";
   data: T;
 }
 
@@ -28,7 +27,7 @@ interface ConnectQueueSocketOptions {
   // 대기열 "등록" API는 반드시 이 콜백 안에서 호출해야, 등록하자마자 서버가 곧바로
   // 입장을 허가해도(EntryAllowedEvent) 그 메시지를 놓치지 않는다.
   onConnected: () => void;
-  onRankUpdated: (event: QueueRankUpdatedEvent) => void;
+  onStatusUpdated: (event: QueueStatusEvent) => void;
   onEntryAllowed: (event: EntryAllowedEvent) => void;
   onError?: (error: unknown) => void;
 }
@@ -38,7 +37,7 @@ interface ConnectQueueSocketOptions {
 export function connectQueueSocket({
   scheduleId,
   onConnected,
-  onRankUpdated,
+  onStatusUpdated,
   onEntryAllowed,
   onError,
 }: ConnectQueueSocketOptions): Client {
@@ -49,10 +48,10 @@ export function connectQueueSocket({
     },
     reconnectDelay: 3000,
     onConnect: () => {
-      client.subscribe(`/user/queue/schedules/${scheduleId}/status`, (message: IMessage) => {
+      client.subscribe(`/queue/schedules/${scheduleId}/status`, (message: IMessage) => {
         try {
-          const body: QueueEventResponse<QueueRankUpdatedEvent> = JSON.parse(message.body);
-          onRankUpdated(body.data);
+          const body: QueueEventResponse<QueueStatusEvent> = JSON.parse(message.body);
+          onStatusUpdated(body.data);
         } catch (e) {
           onError?.(e);
         }

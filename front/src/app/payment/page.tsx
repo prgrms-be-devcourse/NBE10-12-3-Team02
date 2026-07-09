@@ -2,7 +2,7 @@
 
 import { Suspense, useState, useEffect, useRef } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { apiFetch, decodeToken } from "@/lib/api";
+import { apiFetch, decodeToken, restoreSession } from "@/lib/api";
 import { showAlert, showError } from "@/lib/alert";
 import { Loader2 } from "lucide-react";
 
@@ -66,6 +66,7 @@ function PaymentContent() {
   };
 
   useEffect(() => {
+    restoreSession();
     const timer = setInterval(() => {
       setTimeLeft((prev) => {
         if (prev <= 1) {
@@ -108,6 +109,7 @@ function PaymentContent() {
       return;
     }
 
+    await restoreSession();
     if (!decodeToken()) {
       await showAlert("로그인이 필요합니다.");
       router.replace("/login");

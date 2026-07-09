@@ -13,6 +13,7 @@ import com.back.global.security.oauth2.loginhandler.OAuth2LoginFailureHandler;
 import com.back.global.security.oauth2.loginhandler.OAuth2LoginSuccessHandler;
 import com.back.global.security.oauth2.loginhandler.OAuth2RedirectHandler;
 import jakarta.servlet.http.HttpServletRequest;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.mock.web.MockHttpServletResponse;
@@ -20,6 +21,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.core.OAuth2AuthenticationException;
 import org.springframework.security.oauth2.core.user.DefaultOAuth2User;
 import org.springframework.security.oauth2.core.user.OAuth2User;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import java.util.List;
 import java.util.Map;
@@ -31,6 +33,12 @@ import static org.mockito.Mockito.*;
 class OAuth2LoginHandlerTest {
 
     private final OAuth2RedirectHandler redirectHandler = new OAuth2RedirectHandler();
+
+    @BeforeEach
+    void setUp() {
+        ReflectionTestUtils.setField(redirectHandler, "frontCallbackUrl", "http://localhost:3000");
+        ReflectionTestUtils.setField(redirectHandler, "frontLoginUrl", "http://localhost:3000/login");
+    }
 
     @Test
     @DisplayName("카카오 OAuth2 사용자 정보 파싱")

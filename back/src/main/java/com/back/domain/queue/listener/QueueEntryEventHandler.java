@@ -3,7 +3,7 @@ package com.back.domain.queue.listener;
 import com.back.domain.queue.constant.QueueEventType;
 import com.back.domain.queue.dto.QueueEventResponse;
 import com.back.domain.queue.event.EntryAllowedEvent;
-import com.back.domain.queue.event.QueueRankUpdatedEvent;
+import com.back.domain.queue.event.QueueStatusEvent;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.event.EventListener;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
@@ -17,12 +17,11 @@ public class QueueEntryEventHandler {
     private final SimpMessagingTemplate messagingTemplate;
 
     @EventListener
-    public void handleQueueRankUpdated(QueueRankUpdatedEvent event) {
-        QueueEventResponse<QueueRankUpdatedEvent> response =
-                QueueEventResponse.of(QueueEventType.QUEUE_RANK_UPDATED, event);
+    public void handleQueueStatusUpdated(QueueStatusEvent event) {
+        QueueEventResponse<QueueStatusEvent> response =
+                QueueEventResponse.of(QueueEventType.QUEUE_STATUS_UPDATED, event);
 
-        messagingTemplate.convertAndSendToUser(
-                event.userId().toString(),
+        messagingTemplate.convertAndSend(
                 "/queue/schedules/%s/status".formatted(event.scheduleId()),
                 response
         );

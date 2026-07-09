@@ -18,25 +18,37 @@ public class WaitingQueueScheduler {
     private final StringRedisTemplate stringRedisTemplate;
     private final ScheduleRepository scheduleRepository;
 
-    @Scheduled(fixedDelay = 30000)
+    @Scheduled(fixedDelay = 1000)
     @Transactional
     public void processExpiredActiveUsers() {
-        Set<String> keys = stringRedisTemplate.keys("queue:active:schedule:*");
-        if (keys == null || keys.isEmpty()) return;
-
-        for (String key : keys) {
-            Long scheduleId = Long.parseLong(key.replace("queue:active:schedule:", ""));
-
+        Set<String> activeScheduleIds = stringRedisTemplate.opsForSet().members("queue:active:schedules");
+        if (activeScheduleIds == null || activeScheduleIds.isEmpty()) return;
+        for (String idStr : activeScheduleIds) {
+            Long scheduleId = Long.parseLong(idStr);
             long expired = waitingQueueManager.removeExpiredActiveUsers(scheduleId);
+
             if (expired > 0) {
                 Schedule schedule = scheduleRepository.findById(scheduleId).orElse(null);
                 if (schedule == null) continue;
-
                 waitingQueueService.allowEntry(
                         schedule.getConcert().getConcertId(),
                         scheduleId
                 );
             }
+
+            if (isQueueEmpty(scheduleId)) {
+                stringRedisTemplate.opsForSet().remove("queue:active:schedules", idStr);
+            }
         }
+    }
+
+    private boolean isQueueEmpty(Long scheduleId) {
+        String waitKey = "queue:wait:schedule:" + scheduleId;
+        String activeKey = "queue:active:schedule:" + scheduleId;
+
+        Long waitCount = stringRedisTemplate.opsForZSet().zCard(waitKey);
+        Long activeCount = stringRedisTemplate.opsForZSet().zCard(activeKey);
+
+        return (waitCount == null || waitCount == 0) && (activeCount == null || activeCount == 0);
     }
 }

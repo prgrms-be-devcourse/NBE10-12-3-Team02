@@ -19,7 +19,7 @@ public class RefreshTokenLuaScripts {
                         return -1
                     end
                     
-                    redis.call('DEL', KEYS[1])
+                    redis.call('SET', KEYS[1], oldValue, 'EX', 5)
                     redis.call('SREM', KEYS[3], ARGV[4])
                     
                     redis.call('SET', KEYS[2], ARGV[2], 'EX', ARGV[3])

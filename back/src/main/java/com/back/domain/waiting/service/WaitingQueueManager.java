@@ -1,5 +1,6 @@
 package com.back.domain.waiting.service;
 
+import com.back.domain.waiting.dto.QueueStatusDto;
 import com.back.global.exception.ErrorCode;
 import com.back.global.exception.ServiceException;
 import lombok.RequiredArgsConstructor;
@@ -7,6 +8,7 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.data.redis.core.script.RedisScript;
 import org.springframework.stereotype.Component;
+import org.springframework.data.redis.core.ZSetOperations.TypedTuple;
 
 import java.time.Duration;
 import java.util.List;
@@ -26,6 +28,7 @@ public class WaitingQueueManager {
         String waitKey = generateWaitKey(scheduleId);
         String seqKey = generateSequenceKey(scheduleId);
         String user = userId.toString();
+        redisTemplate.opsForSet().add("queue:active:schedules", scheduleId.toString());
 
         Long rank = redisTemplate.execute(
                 REGISTER_WAITING_SCRIPT,
@@ -194,5 +197,51 @@ public class WaitingQueueManager {
         return entryToken;
     }
 
+    public QueueStatusDto getQueueStatus(Long scheduleId) {
+        String waitKey = generateWaitKey(scheduleId);
 
+        Long totalWaitingCount = redisTemplate.opsForZSet().zCard(waitKey);
+        if (totalWaitingCount == null || totalWaitingCount == 0) {
+            return new QueueStatusDto(0L, 0L);
+        }
+
+        Set<TypedTuple<String>> range = redisTemplate.opsForZSet().rangeWithScores(waitKey, 0, 0);
+        if (range == null || range.isEmpty()) {
+            return new QueueStatusDto(0L, totalWaitingCount);
+        }
+        Double firstScore = range.iterator().next().getScore();
+        long currentAllowedSequence = (firstScore != null) ? firstScore.longValue() - 1 : 0L;
+
+        return new QueueStatusDto(currentAllowedSequence, totalWaitingCount);
+    }
+
+    public Long getQueueSequence(Long scheduleId, Long userId) {
+        String waitKey = generateWaitKey(scheduleId);
+        Double score = redisTemplate.opsForZSet().score(waitKey, userId.toString());
+
+        return (score != null) ? score.longValue() : 0L;
+    }
+
+    private static final RedisScript<String> GET_ACTIVE_TOKEN_SCRIPT = new DefaultRedisScript<>(
+            """
+                    local score = redis.call('ZSCORE', KEYS[1], ARGV[1])
+                    if score and tonumber(score) > tonumber(ARGV[2]) then
+                        return redis.call('GET', KEYS[2])
+                    end
+                    return nil
+                    """,
+            String.class
+    );
+
+    public String getActiveToken(Long scheduleId, Long userId) {
+        String activeKey = generateQueueActiveKey(scheduleId);
+        String tokenKey = generateActiveTokenKey(scheduleId, userId);
+
+        return redisTemplate.execute(
+                GET_ACTIVE_TOKEN_SCRIPT,
+                List.of(activeKey, tokenKey),
+                userId.toString(),
+                String.valueOf(System.currentTimeMillis())
+        );
+    }
 }

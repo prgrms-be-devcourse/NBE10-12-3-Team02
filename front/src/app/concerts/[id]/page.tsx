@@ -2,7 +2,7 @@
 
 import { useState, useEffect, use } from "react";
 import { useRouter } from "next/navigation";
-import { apiFetch, decodeToken } from "@/lib/api";
+import { apiFetch, decodeToken, restoreSession } from "@/lib/api";
 import { showAlert } from "@/lib/alert";
 import { getConcertDetailImages, getLocalConcertPoster } from "@/lib/concertDetailImages";
 
@@ -66,6 +66,7 @@ export default function ConcertDetailPage({
   }, [id]);
 
   const handleBookingClick = async () => {
+    await restoreSession();
     if (!decodeToken()) {
       await showAlert("로그인이 필요합니다.");
       router.replace("/login");
@@ -114,7 +115,15 @@ export default function ConcertDetailPage({
                   </div>
                 )}
               </div>
-              <p className="text-sm text-gray-500 mt-3 px-3">예매 가능 시간: 관람일 전일 17시까지</p>
+              <div className="mt-4 mx-3 p-4 bg-blue-50/50 rounded-xl border border-blue-100 flex flex-col gap-2">
+                <div className="flex items-center gap-1.5 text-xs font-semibold text-blue-700">
+                  <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
+                  회차당 3매까지 예매 가능합니다.
+                </div>
+                <div className="flex items-center gap-1.5 text-xs font-medium text-gray-500 pl-3">
+                  예매 가능 시간: 관람일 전일 17시까지
+                </div>
+              </div>
             </div>
 
             <div className="p-8 flex-1">

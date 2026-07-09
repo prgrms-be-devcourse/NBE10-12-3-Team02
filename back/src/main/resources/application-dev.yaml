@@ -5,11 +5,7 @@ spring:
     password:
     driver-class-name: org.h2.Driver
 
-server:
-  port: 8443
-  ssl:
-    enabled: true
-    key-store: classpath:local-ssl.p12
-    key-store-password: local1234
-    key-store-type: PKCS12
-    key-alias: local-ssl
+custom:
+  cookie:
+    secure: false
+    same-site: Lax
