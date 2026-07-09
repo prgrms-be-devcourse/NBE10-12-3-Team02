@@ -5,7 +5,6 @@ import com.back.domain.user.entity.User;
 import com.back.domain.user.repository.UserRepository;
 import com.back.global.security.oauth2.info.GoogleOAuth2UserInfo;
 import com.back.global.security.oauth2.info.KakaoOAuth2UserInfo;
-import com.back.global.security.oauth2.info.NaverOAuth2UserInfo;
 import com.back.global.security.oauth2.info.OAuth2UserInfo;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -46,7 +45,6 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
 
         User user = switch (registrationId) {
             case "kakao" -> getOrCreateUser(oAuth2User.getAttributes(), LoginType.KAKAO, refreshToken);
-            case "naver" -> getOrCreateUser(oAuth2User.getAttributes(), LoginType.NAVER, refreshToken);
             case "google" -> getOrCreateUser(oAuth2User.getAttributes(), LoginType.GOOGLE, refreshToken);
             default -> throw new OAuth2AuthenticationException("oauth2_provider_not_supported");
         };
@@ -69,7 +67,6 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
     ) {
         return switch (loginType) {
             case KAKAO -> new KakaoOAuth2UserInfo(attributes);
-            case NAVER -> new NaverOAuth2UserInfo(attributes);
             case GOOGLE -> new GoogleOAuth2UserInfo(attributes);
             default -> throw new OAuth2AuthenticationException("oauth2_provider_not_supported");
         };

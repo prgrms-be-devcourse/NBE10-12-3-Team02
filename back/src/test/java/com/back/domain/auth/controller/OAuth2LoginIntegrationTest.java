@@ -64,17 +64,8 @@ class OAuth2LoginIntegrationTest {
     }
 
     @Test
-    @DisplayName("네이버 OAuth2 로그인 진입 시 네이버 인증 서버로 redirect")
-    void t2() throws Exception {
-        mockMvc.perform(get("/oauth2/authorization/naver"))
-                .andExpect(status().is3xxRedirection())
-                .andExpect(header().exists("Location"))
-                .andExpect(header().string("Location", containsString("nid.naver.com")));
-    }
-
-    @Test
     @DisplayName("구글 OAuth2 로그인 진입 시 구글 인증 서버로 redirect")
-    void t3() throws Exception {
+    void t2() throws Exception {
         mockMvc.perform(get("/oauth2/authorization/google"))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(header().exists("Location"))
@@ -83,7 +74,7 @@ class OAuth2LoginIntegrationTest {
 
     @Test
     @DisplayName("OAuth2 로그인 성공 핸들러 - 토큰 발급 후 프론트로 redirect")
-    void t4() throws Exception {
+    void t3() throws Exception {
         User user = User.create(
                 "GOOGLE_google-sub",
                 "google@test.com",
@@ -115,7 +106,7 @@ class OAuth2LoginIntegrationTest {
 
     @Test
     @DisplayName("OAuth2 로그인 실패 핸들러 - 에러 코드와 함께 프론트 로그인 페이지로 redirect")
-    void t5() throws Exception {
+    void t4() throws Exception {
         MockHttpServletResponse response = new MockHttpServletResponse();
 
         failureHandler.onAuthenticationFailure(

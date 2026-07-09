@@ -8,7 +8,6 @@ import com.back.domain.user.repository.UserRepository;
 import com.back.global.requestcontext.RequestContext;
 import com.back.global.security.oauth2.info.GoogleOAuth2UserInfo;
 import com.back.global.security.oauth2.info.KakaoOAuth2UserInfo;
-import com.back.global.security.oauth2.info.NaverOAuth2UserInfo;
 import com.back.global.security.oauth2.loginhandler.OAuth2LoginFailureHandler;
 import com.back.global.security.oauth2.loginhandler.OAuth2LoginSuccessHandler;
 import com.back.global.security.oauth2.loginhandler.OAuth2RedirectHandler;
@@ -57,25 +56,8 @@ class OAuth2LoginHandlerTest {
     }
 
     @Test
-    @DisplayName("네이버 OAuth2 사용자 정보 파싱")
-    void t2() {
-        NaverOAuth2UserInfo userInfo = new NaverOAuth2UserInfo(Map.of(
-                "response", Map.of(
-                        "id", "naver-id",
-                        "email", "naver@test.com",
-                        "name", "네이버유저",
-                        "nickname", "네이버닉네임"
-                )
-        ));
-
-        assertThat(userInfo.getProviderId()).isEqualTo("naver-id");
-        assertThat(userInfo.getEmail()).isEqualTo("naver@test.com");
-        assertThat(userInfo.getName()).isEqualTo("네이버유저");
-    }
-
-    @Test
     @DisplayName("구글 OAuth2 사용자 정보 파싱")
-    void t3() {
+    void t2() {
         GoogleOAuth2UserInfo userInfo = new GoogleOAuth2UserInfo(Map.of(
                 "sub", "google-sub",
                 "email", "google@test.com",
@@ -89,7 +71,7 @@ class OAuth2LoginHandlerTest {
 
     @Test
     @DisplayName("OAuth2 로그인 성공 시 토큰 발급, refreshToken 쿠키 설정, accessToken fragment redirect")
-    void t4() throws Exception {
+    void t3() throws Exception {
         UserRepository userRepository = mock(UserRepository.class);
         AuthService authService = mock(AuthService.class);
         RequestContext requestContext = mock(RequestContext.class);
@@ -126,7 +108,7 @@ class OAuth2LoginHandlerTest {
 
     @Test
     @DisplayName("OAuth2 로그인 성공 핸들러 - userId 누락 시 실패 redirect")
-    void t5() throws Exception {
+    void t4() throws Exception {
         OAuth2LoginSuccessHandler successHandler = successHandler(
                 mock(UserRepository.class),
                 mock(AuthService.class),
@@ -146,7 +128,7 @@ class OAuth2LoginHandlerTest {
 
     @Test
     @DisplayName("OAuth2 로그인 성공 핸들러 - userId 형식 오류 시 실패 redirect")
-    void t6() throws Exception {
+    void t5() throws Exception {
         OAuth2LoginSuccessHandler successHandler = successHandler(
                 mock(UserRepository.class),
                 mock(AuthService.class),
@@ -166,7 +148,7 @@ class OAuth2LoginHandlerTest {
 
     @Test
     @DisplayName("OAuth2 로그인 성공 핸들러 - 회원 조회 실패 시 실패 redirect")
-    void t7() throws Exception {
+    void t6() throws Exception {
         UserRepository userRepository = mock(UserRepository.class);
         when(userRepository.findByUserIdAndDeletedAtIsNull(1L)).thenReturn(Optional.empty());
 
@@ -189,7 +171,7 @@ class OAuth2LoginHandlerTest {
 
     @Test
     @DisplayName("OAuth2 로그인 성공 핸들러 - 토큰 발급 실패 시 실패 redirect")
-    void t8() throws Exception {
+    void t7() throws Exception {
         UserRepository userRepository = mock(UserRepository.class);
         AuthService authService = mock(AuthService.class);
         RequestContext requestContext = mock(RequestContext.class);
@@ -214,7 +196,7 @@ class OAuth2LoginHandlerTest {
 
     @Test
     @DisplayName("OAuth2 로그인 실패 시 OAuth2 에러 코드로 redirect")
-    void t9() throws Exception {
+    void t8() throws Exception {
         OAuth2LoginFailureHandler failureHandler = new OAuth2LoginFailureHandler(redirectHandler);
         MockHttpServletResponse response = new MockHttpServletResponse();
 

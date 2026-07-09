@@ -27,12 +27,6 @@ public class OAuthUnlinkService {
     @Value("${spring.security.oauth2.client.registration.kakao.client-secret}")
     private String kakaoClientSecret;
 
-    @Value("${spring.security.oauth2.client.registration.naver.client-id}")
-    private String naverClientId;
-
-    @Value("${spring.security.oauth2.client.registration.naver.client-secret}")
-    private String naverClientSecret;
-
     @Value("${spring.security.oauth2.client.registration.google.client-id}")
     private String googleClientId;
 
@@ -49,7 +43,6 @@ public class OAuthUnlinkService {
             String accessToken = reissueAccessToken(loginType, oauthRefreshToken);
             switch (loginType) {
                 case KAKAO -> unlinkKakao(accessToken);
-                case NAVER -> unlinkNaver(accessToken);
                 case GOOGLE -> unlinkGoogle(accessToken);
                 default -> log.warn("지원하지 않는 OAuth 플랫폼: {}", loginType);
             }
@@ -61,7 +54,6 @@ public class OAuthUnlinkService {
     private String reissueAccessToken(LoginType loginType, String refreshToken) {
         return switch (loginType) {
             case KAKAO -> reissueKakaoAccessToken(refreshToken);
-            case NAVER -> reissueNaverAccessToken(refreshToken);
             case GOOGLE -> reissueGoogleAccessToken(refreshToken);
             default -> throw new IllegalArgumentException("지원하지 않는 OAuth 플랫폼: " + loginType);
         };
@@ -79,24 +71,6 @@ public class OAuthUnlinkService {
 
         Map response = restTemplate.postForObject(
                 "https://kauth.kakao.com/oauth/token",
-                new HttpEntity<>(params, headers),
-                Map.class
-        );
-        return (String) response.get("access_token");
-    }
-
-    private String reissueNaverAccessToken(String refreshToken) {
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
-
-        MultiValueMap<String, String> params = new LinkedMultiValueMap<>();
-        params.add("grant_type", "refresh_token");
-        params.add("client_id", naverClientId);
-        params.add("client_secret", naverClientSecret);
-        params.add("refresh_token", refreshToken);
-
-        Map response = restTemplate.postForObject(
-                "https://nid.naver.com/oauth2.0/token",
                 new HttpEntity<>(params, headers),
                 Map.class
         );
@@ -128,23 +102,6 @@ public class OAuthUnlinkService {
         restTemplate.postForObject(
                 "https://kapi.kakao.com/v1/user/unlink",
                 new HttpEntity<>(headers),
-                String.class
-        );
-    }
-
-    private void unlinkNaver(String accessToken) {
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
-
-        MultiValueMap<String, String> params = new LinkedMultiValueMap<>();
-        params.add("grant_type", "delete");
-        params.add("client_id", naverClientId);
-        params.add("client_secret", naverClientSecret);
-        params.add("access_token", accessToken);
-
-        restTemplate.postForObject(
-                "https://nid.naver.com/oauth2.0/token",
-                new HttpEntity<>(params, headers),
                 String.class
         );
     }
