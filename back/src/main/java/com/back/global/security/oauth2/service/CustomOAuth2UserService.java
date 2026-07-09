@@ -8,6 +8,7 @@ import com.back.global.security.oauth2.info.KakaoOAuth2UserInfo;
 import com.back.global.security.oauth2.info.NaverOAuth2UserInfo;
 import com.back.global.security.oauth2.info.OAuth2UserInfo;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.client.userinfo.DefaultOAuth2UserService;
@@ -21,6 +22,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.Map;
 import java.util.UUID;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional
@@ -36,10 +38,16 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
                 .getClientRegistration()
                 .getRegistrationId();
 
+        String refreshToken = userRequest.getAdditionalParameters()
+                .getOrDefault("refresh_token", "").toString();
+
+        log.info("OAuth2 additionalParameters: {}", userRequest.getAdditionalParameters());
+        log.info("OAuth2 refreshToken: {}", refreshToken);
+
         User user = switch (registrationId) {
-            case "kakao" -> getOrCreateUser(oAuth2User.getAttributes(), LoginType.KAKAO);
-            case "naver" -> getOrCreateUser(oAuth2User.getAttributes(), LoginType.NAVER);
-            case "google" -> getOrCreateUser(oAuth2User.getAttributes(), LoginType.GOOGLE);
+            case "kakao" -> getOrCreateUser(oAuth2User.getAttributes(), LoginType.KAKAO, refreshToken);
+            case "naver" -> getOrCreateUser(oAuth2User.getAttributes(), LoginType.NAVER, refreshToken);
+            case "google" -> getOrCreateUser(oAuth2User.getAttributes(), LoginType.GOOGLE, refreshToken);
             default -> throw new OAuth2AuthenticationException("oauth2_provider_not_supported");
         };
 
@@ -67,7 +75,7 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
         };
     }
 
-    private User getOrCreateUser(Map<String, Object> attributes, LoginType loginType) {
+    private User getOrCreateUser(Map<String, Object> attributes, LoginType loginType, String refreshToken) {
         OAuth2UserInfo userInfo = createUserInfo(attributes, loginType);
 
         String platformId = userInfo.getProviderId();
@@ -79,19 +87,21 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
         validateRequired(email, "oauth2_email_missing");
 
         return userRepository.findByLoginIdAndDeletedAtIsNull(loginId)
-                .orElseGet(() -> createOAuthUser(
-                        loginId,
-                        email,
-                        name,
-                        loginType
-                ));
+                .map(user -> {
+                    if (!refreshToken.isBlank()) {
+                        user.updateOauthRefreshToken(refreshToken);
+                    }
+                    return user;
+                })
+                .orElseGet(() -> createOAuthUser(loginId, email, name, loginType, refreshToken));
     }
 
     private User createOAuthUser(
             String loginId,
             String email,
             String name,
-            LoginType loginType
+            LoginType loginType,
+            String refreshToken
     ) {
         if (userRepository.existsByEmailAndDeletedAtIsNull(email)) {
             throw new OAuth2AuthenticationException("oauth2_email_already_exists");
@@ -99,12 +109,13 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
 
         String randomPassword = passwordEncoder.encode(UUID.randomUUID().toString());
 
-        User user = User.create(
+        User user = User.createOAuth(
                 loginId,
                 email,
                 randomPassword,
                 name,
-                loginType
+                loginType,
+                refreshToken.isBlank() ? null : refreshToken
         );
 
         try {

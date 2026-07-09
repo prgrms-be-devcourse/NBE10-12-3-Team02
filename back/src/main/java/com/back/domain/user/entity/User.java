@@ -1,5 +1,6 @@
 package com.back.domain.user.entity;
 
+import com.back.global.jpa.converter.EncryptedStringConverter;
 import com.back.global.jpa.entity.BaseEntity;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
@@ -36,16 +37,25 @@ public class User extends BaseEntity {
 
     private LocalDate deletedAt;
 
-    private User(String loginId, String email, String password, String name, LoginType loginType) {
+    @Column(columnDefinition = "TEXT")
+    @Convert(converter = EncryptedStringConverter.class)
+    private String oauthRefreshToken;
+
+    private User(String loginId, String email, String password, String name, LoginType loginType, String oauthRefreshToken) {
         this.loginId = loginId;
         this.email = email;
         this.password = password;
         this.name = name;
         this.loginType = loginType;
+        this.oauthRefreshToken = oauthRefreshToken;
     }
 
     public static User create(String loginId, String email, String password, String name, LoginType loginType) {
-        return new User(loginId, email, password, name, loginType);
+        return new User(loginId, email, password, name, loginType, null);
+    }
+
+    public static User createOAuth(String loginId, String email, String password, String name, LoginType loginType, String oauthRefreshToken) {
+        return new User(loginId, email, password, name, loginType, oauthRefreshToken);
     }
 
     public void withdraw() {
@@ -53,6 +63,11 @@ public class User extends BaseEntity {
         this.deletedAt = LocalDate.now();
         this.loginId = uuid;
         this.email = uuid + "@deleted.local";
+        this.oauthRefreshToken = null;
+    }
+
+    public void updateOauthRefreshToken(String oauthRefreshToken) {
+        this.oauthRefreshToken = oauthRefreshToken;
     }
 
     public boolean isDeleted() {

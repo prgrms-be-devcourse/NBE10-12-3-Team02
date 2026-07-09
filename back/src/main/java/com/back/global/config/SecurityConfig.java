@@ -3,6 +3,7 @@ package com.back.global.config;
 import com.back.global.exception.ErrorCode;
 import com.back.global.rsData.RsData;
 import com.back.global.security.filter.CustomAuthenticationFilter;
+import com.back.global.security.oauth2.converter.CustomTokenResponseConverter;
 import com.back.global.security.oauth2.service.CustomOAuth2UserService;
 import com.back.global.security.oauth2.repository.HttpCookieOAuth2AuthorizationRequestRepository;
 import com.back.global.security.oauth2.loginhandler.OAuth2LoginFailureHandler;
@@ -12,12 +13,19 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
+import org.springframework.http.converter.FormHttpMessageConverter;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.annotation.web.configurers.HeadersConfigurer;
+import org.springframework.security.oauth2.client.endpoint.OAuth2AccessTokenResponseClient;
+import org.springframework.security.oauth2.client.endpoint.OAuth2AuthorizationCodeGrantRequest;
+import org.springframework.security.oauth2.client.endpoint.RestClientAuthorizationCodeTokenResponseClient;
+import org.springframework.security.oauth2.client.http.OAuth2ErrorResponseErrorHandler;
+import org.springframework.security.oauth2.core.http.converter.OAuth2AccessTokenResponseHttpMessageConverter;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.web.client.RestClient;
 
 @Configuration
 @RequiredArgsConstructor
@@ -29,9 +37,28 @@ public class SecurityConfig {
     private final HttpCookieOAuth2AuthorizationRequestRepository authorizationRequestRepository;
 
     @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http) {
-        http
+    public OAuth2AccessTokenResponseClient<OAuth2AuthorizationCodeGrantRequest> accessTokenResponseClient() {
+        OAuth2AccessTokenResponseHttpMessageConverter tokenResponseConverter =
+                new OAuth2AccessTokenResponseHttpMessageConverter();
+        tokenResponseConverter.setAccessTokenResponseConverter(new CustomTokenResponseConverter());
 
+        RestClient restClient = RestClient.builder()
+                .configureMessageConverters(converters -> {
+                    converters.addCustomConverter(new FormHttpMessageConverter());
+                    converters.addCustomConverter(tokenResponseConverter);
+                })
+                .defaultStatusHandler(new OAuth2ErrorResponseErrorHandler())
+                .build();
+
+        RestClientAuthorizationCodeTokenResponseClient client =
+                new RestClientAuthorizationCodeTokenResponseClient();
+        client.setRestClient(restClient);
+        return client;
+    }
+
+    @Bean
+    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+        http
                 .cors(Customizer.withDefaults())
                 .authorizeHttpRequests(
                         auth -> auth
@@ -71,7 +98,6 @@ public class SecurityConfig {
                                 .authenticationEntryPoint(
                                         (request, response, authException) -> {
                                             response.setContentType("application/json;charset=UTF-8");
-
                                             response.setStatus(401);
                                             response.getWriter().write(
                                                     Ut.json.toString(
@@ -87,7 +113,6 @@ public class SecurityConfig {
                                 .accessDeniedHandler(
                                         (request, response, accessDeniedException) -> {
                                             response.setContentType("application/json;charset=UTF-8");
-
                                             response.setStatus(403);
                                             response.getWriter().write(
                                                     Ut.json.toString(
@@ -104,6 +129,9 @@ public class SecurityConfig {
                 .oauth2Login(oauth2 -> oauth2
                         .authorizationEndpoint(authorization -> authorization
                                 .authorizationRequestRepository(authorizationRequestRepository)
+                        )
+                        .tokenEndpoint(token -> token
+                                .accessTokenResponseClient(accessTokenResponseClient())
                         )
                         .userInfoEndpoint(userInfo -> userInfo
                                 .userService(customOAuth2UserService)
