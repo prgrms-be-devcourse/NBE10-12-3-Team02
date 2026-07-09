@@ -137,4 +137,12 @@ public class ConcertService {
                 ));
     }
 
+    public void validateScheduleBookable(Long scheduleId) {
+        Schedule schedule = scheduleRepository.findById(scheduleId)
+                .orElseThrow(() -> new ServiceException(ErrorCode.CONCERT_SCHEDULE_EMPTY));
+
+        if (LocalDateTime.now().isAfter(schedule.getScheduleDate())) {
+            throw new ServiceException(ErrorCode.EXPIRED_BOOKING_DEADLINE);
+        }
+    }
 }

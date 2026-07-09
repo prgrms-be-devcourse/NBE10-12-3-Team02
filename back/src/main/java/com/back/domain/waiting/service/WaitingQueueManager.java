@@ -15,7 +15,6 @@ import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
-
 @Component
 @RequiredArgsConstructor
 public class WaitingQueueManager {
@@ -125,20 +124,6 @@ public class WaitingQueueManager {
                 userId.toString()
         );
         redisTemplate.delete(generateActiveTokenKey(scheduleId, userId));
-    }
-
-
-        public List<Long> getRemainingUserIds(Long scheduleId) {
-        Set<String> userIds = redisTemplate.opsForZSet()
-                .range(generateWaitKey(scheduleId), 0, -1);
-
-        if (userIds == null || userIds.isEmpty()) {
-            return List.of();
-        }
-
-        return userIds.stream()
-                .map(Long::valueOf)
-                .toList();
     }
 
     public List<Long> addActiveUser(Long scheduleId, long capacity, int batchSize, Duration ttl) {

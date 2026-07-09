@@ -202,7 +202,7 @@ class UserControllerTest {
                 .andExpect(jsonPath("$.resultCode").value("200-1"))
                 .andExpect(jsonPath("$.msg").value("마이페이지 조회 성공"))
                 .andExpect(jsonPath("$.data.name").value("홍길동"))
-                .andExpect(jsonPath("$.data.ticketList").isArray());
+                .andExpect(jsonPath("$.data.ticketGroups").isArray());
     }
 
     @Test

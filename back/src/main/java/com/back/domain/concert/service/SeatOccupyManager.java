@@ -50,6 +50,7 @@ public class SeatOccupyManager {
 
     public SeatOccupyResponse seatOccupy(Long concertId, Long scheduleId, String seatNumber, Long userId) {
         concertService.validateConcertScheduleMatch(concertId, scheduleId);
+        concertService.validateScheduleBookable(scheduleId);
         concertService.validateSeatAvailable(scheduleId, seatNumber);
 
         String redisKey = generateSeatOccupyKey(concertId, scheduleId, seatNumber);
@@ -96,6 +97,7 @@ public class SeatOccupyManager {
 
     public SeatSelectionResponse getSeatSelection(Long concertId, Long scheduleId, Long userId) {
         concertService.validateConcertScheduleMatch(concertId, scheduleId);
+        concertService.validateScheduleBookable(scheduleId);
         long currentTicketCount = ticketRepository.countByUser_UserIdAndSchedule_ScheduleIdAndIsValidTrue(userId, scheduleId);
         if (currentTicketCount >= 3) {
             throw new ServiceException(ErrorCode.EXCEED_TICKET_LIMIT);

@@ -38,6 +38,7 @@ public class WaitingQueueService {
     public WaitingQueueResponse registerWaiting(Long concertId, Long scheduleId, Long userId) {
         validateUser(userId);
         concertService.validateConcertScheduleMatch(concertId, scheduleId);
+        concertService.validateScheduleBookable(scheduleId);
 
         long remainingSeats = scheduleSeatRepository.countBySchedule_ScheduleIdAndSeatStatusIn(
                 scheduleId,

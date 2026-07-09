@@ -1,5 +1,8 @@
 package com.back.domain.user.service;
 
+import com.back.domain.schedule.entity.SeatStatus;
+import com.back.domain.ticket.entity.Ticket;
+import com.back.domain.ticket.event.TicketCancelledEvent;
 import com.back.domain.ticket.repository.TicketRepository;
 import com.back.domain.user.dto.*;
 import com.back.domain.user.entity.LoginType;
@@ -8,12 +11,13 @@ import com.back.domain.user.repository.UserRepository;
 import com.back.global.exception.ErrorCode;
 import com.back.global.exception.ServiceException;
 import com.back.global.security.filter.BearerTokenExtractor;
-import com.back.global.security.jwt.repository.BlacklistRepository;
 import com.back.global.security.jwt.JwtTokenProvider;
+import com.back.global.security.jwt.repository.BlacklistRepository;
 import com.back.global.security.jwt.repository.RefreshTokenRepository;
 import com.back.global.security.oauth2.service.OAuthUnlinkService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -35,6 +39,7 @@ public class UserService {
     private final JwtTokenProvider jwtTokenProvider;
     private final BearerTokenExtractor bearerTokenExtractor;
     private final OAuthUnlinkService oAuthUnlinkService;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Value("${custom.jwt.blacklist.grace-seconds}")
     private long tokenBlacklistGraceSeconds;
@@ -63,6 +68,21 @@ public class UserService {
 
         if (user.getLoginType() != LoginType.NORMAL) {
             oAuthUnlinkService.unlink(user.getLoginType(), user.getOauthRefreshToken());
+        }
+
+        List<Ticket> activeTickets = ticketRepository.findAllByUserWithConcert(user)
+                .stream()
+                .filter(Ticket::isValid)
+                .toList();
+        for (Ticket ticket : activeTickets) {
+            ticket.updateIsValid(false);
+            ticket.getScheduleSeat().updateSeatStatus(SeatStatus.AVAILABLE);
+
+            eventPublisher.publishEvent(new TicketCancelledEvent(
+                    ticket.getSchedule().getConcert().getConcertId(),
+                    ticket.getSchedule().getScheduleId(),
+                    userId
+            ));
         }
 
         user.withdraw();
