@@ -114,8 +114,23 @@ export default function ConcertDetailPage({
                   </div>
                 )}
               </div>
-              <p className="text-sm text-gray-500 mt-3 text-left">예매 가능 시간: 관람일 전일 17시까지</p>
-              <p className="text-sm text-gray-500 mt-1 text-left">회차당 최대 3매까지 예매 가능합니다.</p>
+              <div className="mt-4 mx-4 mb-4 p-4 bg-slate-50 border border-slate-100 rounded-2xl space-y-2.5">
+                <div className="flex items-start gap-2">
+                  <span className="text-blue-500 text-sm mt-0.5">⏰</span>
+                  <div className="text-left">
+                    <p className="text-xs font-semibold text-slate-700">예매 가능 시간</p>
+                    <p className="text-[11px] text-slate-500 mt-0.5">관람일 전일 17시까지</p>
+                  </div>
+                </div>
+                <div className="h-px bg-slate-200/50"></div>
+                <div className="flex items-start gap-2">
+                  <span className="text-amber-500 text-sm mt-0.5">🎟️</span>
+                  <div className="text-left">
+                    <p className="text-xs font-semibold text-slate-700">매수 제한</p>
+                    <p className="text-[11px] text-slate-500 mt-0.5">회차당 최대 3매까지 예매 가능</p>
+                  </div>
+                </div>
+              </div>
             </div>
 
             <div className="p-8 flex-1">
