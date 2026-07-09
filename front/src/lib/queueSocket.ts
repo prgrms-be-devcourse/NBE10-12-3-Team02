@@ -19,6 +19,12 @@ export interface EntryAllowedEvent {
   expiredAt: number;
 }
 
+export interface QueueErrorEvent {
+  scheduleId: number;
+  userId: number | null;
+  message: string;
+}
+
 interface QueueEventResponse<T> {
   eventType: "ENTRY_ALLOWED" | "QUEUE_STATUS_UPDATED" | "QUEUE_ERROR";
   data: T;
@@ -32,6 +38,7 @@ interface ConnectQueueSocketOptions {
   onConnected: () => void;
   onStatusUpdated: (event: QueueStatusEvent) => void;
   onEntryAllowed: (event: EntryAllowedEvent) => void;
+  onQueueError?: (event: QueueErrorEvent) => void;
   onError?: (error: unknown) => void;
 }
 
@@ -43,6 +50,7 @@ export function connectQueueSocket({
   onConnected,
   onStatusUpdated,
   onEntryAllowed,
+  onQueueError,
   onError,
 }: ConnectQueueSocketOptions): Client {
   const client = new Client({
@@ -54,8 +62,12 @@ export function connectQueueSocket({
     onConnect: () => {
       client.subscribe(`/queue/schedules/${scheduleId}/status`, (message: IMessage) => {
         try {
-          const body: QueueEventResponse<QueueStatusEvent> = JSON.parse(message.body);
-          onStatusUpdated(body.data);
+          const body: QueueEventResponse<any> = JSON.parse(message.body);
+          if (body.eventType === "QUEUE_ERROR") {
+            onQueueError?.(body.data);
+          } else {
+            onStatusUpdated(body.data);
+          }
         } catch (e) {
           onError?.(e);
         }
@@ -63,8 +75,12 @@ export function connectQueueSocket({
 
       client.subscribe(`/user/queue/schedules/${scheduleId}/entry`, (message: IMessage) => {
         try {
-          const body: QueueEventResponse<EntryAllowedEvent> = JSON.parse(message.body);
-          onEntryAllowed(body.data);
+          const body: QueueEventResponse<any> = JSON.parse(message.body);
+          if (body.eventType === "QUEUE_ERROR") {
+            onQueueError?.(body.data);
+          } else {
+            onEntryAllowed(body.data);
+          }
         } catch (e) {
           onError?.(e);
         }

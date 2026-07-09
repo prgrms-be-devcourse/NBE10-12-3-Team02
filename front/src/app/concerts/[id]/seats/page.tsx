@@ -152,6 +152,13 @@ function SeatSelectContent({ params }: { params: Promise<{ id: string }> }) {
             isWaitingRef.current = false;
           }
         },
+        onQueueError: (event) => {
+          if (active) {
+            setQueueError(event.message);
+            queueClientRef.current?.deactivate();
+            queueClientRef.current = null;
+          }
+        },
         onError: () => {
           if (active) setQueueError("대기열 연결 중 문제가 발생했습니다.");
         },
@@ -424,7 +431,7 @@ function SeatSelectContent({ params }: { params: Promise<{ id: string }> }) {
             disabled={isCancelingQueue}
             className="w-full mt-4 p-3 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-bold transition disabled:opacity-50"
           >
-            {isCancelingQueue ? "취소 중..." : "대기열 취소"}
+            {queueError ? "돌아가기" : (isCancelingQueue ? "취소 중..." : "대기열 취소")}
           </button>
         </div>
       </div>
