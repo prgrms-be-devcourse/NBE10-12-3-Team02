@@ -3,6 +3,7 @@ package com.back.domain.queue.listener;
 import com.back.domain.queue.constant.QueueEventType;
 import com.back.domain.queue.dto.QueueEventResponse;
 import com.back.domain.queue.event.EntryAllowedEvent;
+import com.back.domain.queue.event.QueueErrorEvent;
 import com.back.domain.queue.event.QueueStatusEvent;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.event.EventListener;
@@ -37,5 +38,24 @@ public class QueueEntryEventHandler {
                 "/queue/schedules/%s/entry".formatted(event.scheduleId()),
                 response
         );
+    }
+
+    @EventListener
+    public void handleQueueError(QueueErrorEvent event) {
+        QueueEventResponse<QueueErrorEvent> response =
+                QueueEventResponse.of(QueueEventType.QUEUE_ERROR, event);
+
+        if (event.userId() != null) {
+            messagingTemplate.convertAndSendToUser(
+                    event.userId().toString(),
+                    "/queue/schedules/%s/entry".formatted(event.scheduleId()),
+                    response
+            );
+        } else {
+            messagingTemplate.convertAndSend(
+                    "/queue/schedules/%s/status".formatted(event.scheduleId()),
+                    response
+            );
+        }
     }
 }

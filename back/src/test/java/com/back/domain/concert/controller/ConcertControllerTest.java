@@ -20,6 +20,7 @@ import org.springframework.data.redis.core.HashOperations;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
 import org.springframework.data.redis.core.ZSetOperations;
+import org.springframework.data.redis.core.script.RedisScript;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -167,11 +168,9 @@ class ConcertControllerTest {
         scheduleSeatRepository.save(seat);
 
         when(redisTemplate.execute(
-                any(org.springframework.data.redis.core.script.RedisScript.class),
+                any(RedisScript.class),
                 anyList(),
-                any(),
-                any(),
-                any()
+                any(Object[].class)
         )).thenReturn(1L);
 
         ZSetOperations<String, String> zSetOperations = mock(ZSetOperations.class);

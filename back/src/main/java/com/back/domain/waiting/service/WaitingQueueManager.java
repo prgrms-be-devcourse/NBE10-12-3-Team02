@@ -164,26 +164,26 @@ public class WaitingQueueManager {
 
     private static final RedisScript<List> ADMIT_USERS_SCRIPT = new DefaultRedisScript<>(
             """                                                                                                                                                                                                                                                                                                               
-                    redis.call('ZREMRANGEBYSCORE', KEYS[2], '-inf', ARGV[3])                                                                                                                                                                                                                                                          
+                    redis.call('ZREMRANGEBYSCORE', KEYS[2], '-inf', ARGV[3])
                     
-                    local activeCount = redis.call('ZCARD', KEYS[2])                                                                                                                                                                                                                                                                  
-                    local availableSlots = tonumber(ARGV[1]) - activeCount                                                                                                                                                                                                                                                            
-                    if availableSlots <= 0 then                                                                                                                                                                                                                                                                                       
-                      return {}                                                                                                                                                                                                                                                                                                       
-                    end                                                                                                                                                                                                                                                                                                               
+                    local activeCount = redis.call('ZCARD', KEYS[2])
+                    local availableSlots = tonumber(ARGV[1]) - activeCount
+                    if availableSlots <= 0 then
+                      return {}
+                    end
                     
-                    local popCount = math.min(availableSlots, tonumber(ARGV[2]))                                                                                                                                                                                                                                                      
-                    local users = redis.call('ZRANGE', KEYS[1], 0, popCount - 1)                                                                                                                                                                                                                                                      
-                    if #users == 0 then                                                                                                                                                                                                                                                                                               
-                      return {}                                                                                                                                                                                                                                                                                                       
-                    end                                                                                                                                                                                                                                                                                                               
+                    local popCount = math.min(availableSlots, tonumber(ARGV[2]))
+                    local users = redis.call('ZRANGE', KEYS[1], 0, popCount - 1)
+                    if #users == 0 then
+                      return {}
+                    end
                     
-                    redis.call('ZREM', KEYS[1], unpack(users))                                                                                                                                                                                                                                                                        
-                    for _, u in ipairs(users) do                                                                                                                                                                                                                                                                                      
-                      redis.call('ZADD', KEYS[2], ARGV[4], u)                                                                                                                                                                                                                                                                         
-                    end                                                                                                                                                                                                                                                                                                               
+                    redis.call('ZREM', KEYS[1], unpack(users))
+                    for _, u in ipairs(users) do
+                      redis.call('ZADD', KEYS[2], ARGV[4], u)
+                    end
                     
-                    return users                                                                                                                                                                                                                                                                                                      
+                    return users
                     """,
             List.class
     );
@@ -243,5 +243,10 @@ public class WaitingQueueManager {
                 userId.toString(),
                 String.valueOf(System.currentTimeMillis())
         );
+    }
+
+    public void clearWaitingQueue(Long scheduleId) {
+        String waitKey = generateWaitKey(scheduleId);
+        redisTemplate.delete(waitKey);
     }
 }

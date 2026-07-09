@@ -2,6 +2,7 @@ package com.back.domain.waiting.service;
 
 import com.back.domain.concert.service.ConcertService;
 import com.back.domain.queue.event.EntryAllowedEvent;
+import com.back.domain.queue.event.QueueErrorEvent;
 import com.back.domain.queue.event.QueueStatusEvent;
 import com.back.domain.schedule.entity.SeatStatus;
 import com.back.domain.schedule.repository.ScheduleSeatRepository;
@@ -37,6 +38,14 @@ public class WaitingQueueService {
     public WaitingQueueResponse registerWaiting(Long concertId, Long scheduleId, Long userId) {
         validateUser(userId);
         concertService.validateConcertScheduleMatch(concertId, scheduleId);
+
+        long remainingSeats = scheduleSeatRepository.countBySchedule_ScheduleIdAndSeatStatusIn(
+                scheduleId,
+                List.of(SeatStatus.AVAILABLE, SeatStatus.HOLD)
+        );
+        if (remainingSeats <= 0) {
+            throw new ServiceException(ErrorCode.CONCERT_SOLD_OUT);
+        }
 
         String activeToken = waitingQueueManager.getActiveToken(scheduleId, userId);
         if (activeToken != null) {
@@ -106,8 +115,20 @@ public class WaitingQueueService {
                 scheduleSeatRepository.countBySchedule_ScheduleIdAndSeatStatus(
                         scheduleId, SeatStatus.AVAILABLE
                 );
-        long capacity = Math.min(remainingSeats, maxActiveUsers);
 
+        // Todo: 정기 취소표 일괄 오픈 기능 추가
+        if (remainingSeats <= 0) {
+            QueueStatusDto status = waitingQueueManager.getQueueStatus(scheduleId);
+            if (status.totalWaitingCount() > 0) {
+                eventPublisher.publishEvent(
+                        new QueueErrorEvent(scheduleId, null, "콘서트가 매진되어 대기열이 종료되었습니다.")
+                );
+                waitingQueueManager.clearWaitingQueue(scheduleId);
+            }
+            return;
+        }
+
+        long capacity = Math.min(remainingSeats, maxActiveUsers);
         List<Long> userIds = waitingQueueManager.addActiveUser(scheduleId, capacity, batchSize, entryTokenTtl);
 
         for (Long userId : userIds) {

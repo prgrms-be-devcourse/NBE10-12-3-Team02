@@ -33,6 +33,7 @@ public class SeatOccupyManager {
               if redis.call('HGET', KEYS[1], 'userId') == ARGV[1] then
                 redis.call('HSET', KEYS[1], 'occupyToken', ARGV[2])
                 redis.call('EXPIRE', KEYS[1], ARGV[3])
+                redis.call('ZADD', KEYS[2], ARGV[5], ARGV[4])
                 return 1
               else
                 return 0
@@ -40,6 +41,7 @@ public class SeatOccupyManager {
             else
               redis.call('HSET', KEYS[1], 'userId', ARGV[1], 'occupyToken', ARGV[2])
               redis.call('EXPIRE', KEYS[1], ARGV[3])
+              redis.call('ZADD', KEYS[2], ARGV[5], ARGV[4])
               return 1
             end
             """,
@@ -51,23 +53,24 @@ public class SeatOccupyManager {
         concertService.validateSeatAvailable(scheduleId, seatNumber);
 
         String redisKey = generateSeatOccupyKey(concertId, scheduleId, seatNumber);
+        String indexKey = generateSeatOccupyIndexKey(concertId, scheduleId);
         String occupyToken = UUID.randomUUID().toString();
+        long now = System.currentTimeMillis();
+        long expireAt = now + (OCCUPY_TTL_SECONDS * 1000);
 
         Long result = redisTemplate.execute(
                 OCCUPY_SCRIPT,
-                List.of(redisKey),
+                List.of(redisKey, indexKey),
                 userId.toString(),
                 occupyToken,
-                String.valueOf(OCCUPY_TTL_SECONDS)
+                String.valueOf(OCCUPY_TTL_SECONDS),
+                seatNumber,
+                String.valueOf(expireAt)
         );
 
         if (result == null || result == 0L) {
             throw new ServiceException(ErrorCode.SEAT_HELD_BY_OTHER_USER);
         }
-
-        String indexKey = generateSeatOccupyIndexKey(concertId, scheduleId);
-        double expireAt = System.currentTimeMillis() + (OCCUPY_TTL_SECONDS * 1000);
-        redisTemplate.opsForZSet().add(indexKey, seatNumber, expireAt);
 
         return SeatOccupyResponse.of(occupyToken, OCCUPY_TTL_SECONDS);
     }

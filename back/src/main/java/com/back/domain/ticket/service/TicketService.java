@@ -1,6 +1,5 @@
 package com.back.domain.ticket.service;
 
-import com.back.domain.concert.service.ConcertService;
 import com.back.domain.concert.service.SeatOccupyManager;
 import com.back.domain.schedule.entity.Schedule;
 import com.back.domain.schedule.entity.ScheduleSeat;
@@ -16,7 +15,6 @@ import com.back.domain.ticket.event.TicketCancelledEvent;
 import com.back.domain.ticket.repository.TicketRepository;
 import com.back.domain.user.entity.User;
 import com.back.domain.user.repository.UserRepository;
-import com.back.domain.waiting.service.WaitingQueueService;
 import com.back.global.exception.ErrorCode;
 import com.back.global.exception.ServiceException;
 import lombok.RequiredArgsConstructor;
@@ -79,6 +77,12 @@ public class TicketService {
                 .map(hold -> SeatOccupyManager.generateSeatOccupyKey(request.concertId(), scheduleId, hold.seatNumber()))
                 .toList();
         redisTemplate.delete(redisKeys);
+
+        String indexKey = SeatOccupyManager.generateSeatOccupyIndexKey(request.concertId(), scheduleId);
+        Object[] seatNumbers = sortedSeatHolds.stream()
+                .map(SeatHoldInfo::seatNumber)
+                .toArray();
+        redisTemplate.opsForZSet().remove(indexKey, seatNumbers);
 
         List<Ticket> tickets = scheduleSeats.stream()
                 .map(seat -> Ticket.create(

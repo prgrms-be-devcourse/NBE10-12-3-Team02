@@ -10,26 +10,20 @@ public enum ErrorCode {
     //global
     BAD_REQUEST("400-4", "잘못된 요청입니다."),
     // Auth
-    AUTH_ID_NOT_FOUND("401-1", "존재하지 않는 아이디입니다."),
     AUTH_PASSWORD_MISMATCH("401-2", "비밀번호가 일치하지 않습니다."),
     AUTH_INVALID_BEARER_HEADER("401-3", "Authorization 헤더가 Bearer 형식이 아닙니다."),
-    AUTH_INVALID_CREDENTIALS("401-4", "인증 정보가 유효하지 않습니다."),
     AUTH_INVALID_REFRESH_TOKEN("401-5", "유효하지 않은 리프레시 토큰입니다."),
-    AUTH_REFRESH_TOKEN_NOT_FOUND_IN_REDIS("401-6", "Redis에 리프레시 토큰이 존재하지 않습니다."),
     AUTH_REFRESH_TOKEN_MISMATCH("401-7", "리프레시 토큰이 일치하지 않습니다."),
     AUTH_LOGIN_REQUIRED("401-8", "로그인 후 이용해주세요."),
     AUTH_EXPIRED_ACCESS_TOKEN("401-9", "Access Token이 만료되었습니다."),
     AUTH_INVALID_ACCESS_TOKEN("401-10", "유효하지 않은 Access Token입니다."),
-
     AUTH_FORBIDDEN("403-1", "권한이 없습니다."),
-
     AUTH_REFRESH_TOKEN_ROTATION_FAILED("500-1", "리프레시 토큰 교체 처리 중 오류가 발생했습니다."),
 
     // User
     USER_NOT_FOUND("404-1", "회원이 존재하지 않습니다."),
     USER_ID_ALREADY_EXISTS("409-1", "이미 사용 중인 아이디입니다."),
     USER_EMAIL_ALREADY_EXISTS("409-2", "이미 사용 중인 이메일입니다."),
-    USER_ACCESS_DENIED("403-2", "본인의 정보만 조회할 수 있습니다."),
     USER_NOT_FOUND_OR_DELETED("404-2", "존재하지 않거나 이미 탈퇴한 회원입니다."),
     USER_NAME_INVALID("400-6", "이름에 공백을 포함할 수 없습니다."),
 
@@ -38,7 +32,6 @@ public enum ErrorCode {
 
     // Schedule
     CONCERT_SCHEDULE_EMPTY("404-4", "등록된 회차가 없습니다."),
-    SCHEDULE_NOT_FOUND("404-5", "존재하지 않는 회차입니다."),
     INVALID_CONCERT_SCHEDULE("400-1", "해당 콘서트의 회차가 아닙니다."),
     CONCERT_NOT_FOUND_OR_MISMATCH("400-4", "콘서트 정보가 없거나 일치하는 콘서트가 아닙니다."),
 
@@ -62,7 +55,8 @@ public enum ErrorCode {
 
     // WAITING
     WAITING_QUEUE_NOT_FOUND("404-8","대기열에 등록되지 않은 사용자입니다."),
-    WAITING_QUEUE_REGISTER_FAILED("500-2", "대기열 등록 처리 중 오류가 발생했습니다.");
+    WAITING_QUEUE_REGISTER_FAILED("500-2", "대기열 등록 처리 중 오류가 발생했습니다."),
+    CONCERT_SOLD_OUT("400-5", "콘서트가 매진되어 대기열이 종료되었습니다.");
 
 
 
