@@ -8,11 +8,13 @@ import { showConfirm } from "@/lib/alert";
 
 export default function Navbar() {
   const [userName, setUserName] = useState<string | null>(null);
+  const [authChecked, setAuthChecked] = useState(false);
 
   useEffect(() => {
     const syncAuth = () => {
       const decoded = decodeToken();
       setUserName(decoded?.name ?? null);
+      setAuthChecked(true);
     };
     restoreSession().then(syncAuth);
     window.addEventListener("auth-changed", syncAuth);
@@ -52,7 +54,11 @@ export default function Navbar() {
             <User size={18} />
             마이페이지
           </Link>
-          {userName ? (
+          {!authChecked ? (
+            // 로그인 여부 확인 중 — "로그인 안 한 상태"로 잘못 깜빡이지 않도록, 확인될 때까지는
+            // 아무 것도(로그인 버튼도, 로그인 정보도) 보여주지 않는다. 자리만 비슷하게 잡아둔다.
+            <div className="w-24 h-9" />
+          ) : userName ? (
             <>
               <span className="text-gray-500">{userName}님</span>
               <button
