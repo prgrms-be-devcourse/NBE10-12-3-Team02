@@ -77,6 +77,6 @@ app:
       maximum-size: 10000
 queue:
   batch-size: 2
-  max-active-users: 5
+  max-active-users: 2
   entry-token:
     ttl: 10m
