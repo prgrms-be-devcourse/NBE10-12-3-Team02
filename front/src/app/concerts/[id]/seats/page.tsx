@@ -45,7 +45,6 @@ const DEFAULT_STYLE = {
 };
 const DIMMED_STYLE = "bg-gray-100 text-gray-300 cursor-not-allowed opacity-50";
 const GRADE_ORDER = ["VIP", "R", "S", "A"];
-const SELECTION_TIME_LIMIT = 300; // 5분
 const MAX_HEADCOUNT = 3; // 1인당 최대 구매 가능 매수
 
 function SeatSelectContent({ params }: { params: Promise<{ id: string }> }) {
@@ -58,7 +57,6 @@ function SeatSelectContent({ params }: { params: Promise<{ id: string }> }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [isReserving, setIsReserving] = useState(false);
-  const [timeLeft, setTimeLeft] = useState<number | null>(null);
   const [userName, setUserName] = useState<string | null>(null);
 
   // 대기열 관련 상태. entryToken이 생기기 전까지는 좌석 조회/선점/결제가 전부 막혀있다.
@@ -79,43 +77,18 @@ function SeatSelectContent({ params }: { params: Promise<{ id: string }> }) {
   const [teenCount, setTeenCount] = useState(0);
   const requiredSeatCount = adultCount + teenCount;
 
-  // 인원수가 변경되면 선택되어 있던 좌석과 타이머를 리셋합니다.
-  useEffect(() => {
-    setPairSeats(null);
-    setFreeSeats([]);
-    setTimeLeft(null);
-  }, [requiredSeatCount]);
-
   // 2인 이상이면 "짝"(나란히 붙은 좌석 2개)을 먼저 채우고, 3인이면 그 뒤에 자유석 1개를 더 받는다.
   const [pairSeats, setPairSeats] = useState<[string, string] | null>(null);
   const [freeSeats, setFreeSeats] = useState<string[]>([]);
   const selectedSeats = [...(pairSeats ?? []), ...freeSeats];
 
+  // 인원수가 변경되면 선택되어 있던 좌석을 리셋합니다.
   useEffect(() => {
-    if (timeLeft === null) return;
-
-    if (timeLeft <= 0) {
-      // 카운트다운 타이머가 0이 됐을 때 선택 상태를 정리하는 로직이라 effect 안에서 setState가 맞다.
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setPairSeats(null);
-      setFreeSeats([]);
-      setTimeLeft(null);
-      showAlert("좌석 선택 시간이 만료되어 선택이 취소되었습니다.");
-      return;
-    }
-
-    const timer = setTimeout(() => {
-      setTimeLeft((prev) => (prev !== null ? prev - 1 : null));
-    }, 1000);
-
-    return () => clearTimeout(timer);
-  }, [timeLeft]);
-
-  const formatTime = (seconds: number) => {
-    const min = Math.floor(seconds / 60);
-    const sec = seconds % 60;
-    return `${min}:${sec.toString().padStart(2, "0")}`;
-  };
+    // 인원수가 바뀌면 기존 선택을 정리하는 로직이라 effect 안에서 setState가 맞다.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setPairSeats(null);
+    setFreeSeats([]);
+  }, [requiredSeatCount]);
 
   useEffect(() => {
     if (!scheduleId) {
@@ -345,14 +318,12 @@ function SeatSelectContent({ params }: { params: Promise<{ id: string }> }) {
     // 이미 짝(페어)의 일부라면, 짝 전체를 같이 취소한다.
     if (pairSeats?.includes(seatNumber)) {
       setPairSeats(null);
-      if (freeSeats.length === 0) setTimeLeft(null);
       return;
     }
     // 이미 자유석으로 선택된 좌석이라면, 그 한 자리만 취소한다.
     if (freeSeats.includes(seatNumber)) {
       const next = freeSeats.filter((s) => s !== seatNumber);
       setFreeSeats(next);
-      if (next.length === 0 && !pairSeats) setTimeLeft(null);
       return;
     }
 
@@ -364,13 +335,11 @@ function SeatSelectContent({ params }: { params: Promise<{ id: string }> }) {
       const neighbor = getRightNeighborSeat(seatNumber);
       if (!neighbor || seatStatusMap.get(neighbor) !== "AVAILABLE") return;
       setPairSeats([seatNumber, neighbor]);
-      setTimeLeft((prev) => prev ?? SELECTION_TIME_LIMIT);
       return;
     }
 
     // 짝을 다 채웠거나(혹은 1명이라 짝이 필요 없거나), 자유석 자리 — 아무 빈 좌석이나 선택.
     setFreeSeats((prev) => [...prev, seatNumber]);
-    setTimeLeft((prev) => prev ?? SELECTION_TIME_LIMIT);
   };
 
   const totalPrice = selectedSeats.reduce((sum, seatNumber) => {
@@ -416,7 +385,7 @@ function SeatSelectContent({ params }: { params: Promise<{ id: string }> }) {
           apiFetch(`/concerts/${id}/schedules/${scheduleId}/seats/occupy`, {
             method: "DELETE",
             body: JSON.stringify({ seatNumber }),
-          }).catch(() => { }),
+          }).catch(() => {}),
         ),
       );
       showError(e instanceof Error ? e.message : "좌석 선점에 실패했습니다.");
@@ -660,17 +629,11 @@ function SeatSelectContent({ params }: { params: Promise<{ id: string }> }) {
                   선택 좌석 {selectedSeats.length} / {requiredSeatCount}
                 </h2>
                 <div className="flex items-center gap-3">
-                  {timeLeft !== null && (
-                    <span className="text-red-500 text-sm font-bold">
-                      {formatTime(timeLeft)}
-                    </span>
-                  )}
                   {selectedSeats.length > 0 && (
                     <button
                       onClick={() => {
                         setPairSeats(null);
                         setFreeSeats([]);
-                        setTimeLeft(null);
                       }}
                       className="text-xs text-gray-400 hover:text-red-500"
                     >

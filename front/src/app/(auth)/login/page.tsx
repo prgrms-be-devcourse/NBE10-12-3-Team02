@@ -24,11 +24,6 @@ const SOCIAL_PROVIDERS = [
     className: "bg-[#FEE500] hover:bg-[#fada0a] text-[#191919]",
   },
   {
-    key: "naver",
-    label: "네이버로 시작하기",
-    className: "bg-[#03C75A] hover:bg-[#02b350] text-white",
-  },
-  {
     key: "google",
     label: "Google로 시작하기",
     className: "bg-white hover:bg-gray-50 text-gray-700 border border-gray-200",

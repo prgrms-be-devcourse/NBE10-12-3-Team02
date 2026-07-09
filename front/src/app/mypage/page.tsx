@@ -47,7 +47,7 @@ export default function MyPage() {
   const [showWithdrawModal, setShowWithdrawModal] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
-  const [cancelingScheduleId, setCancelingScheduleId] = useState<number | null>(null);
+  const [cancelingKey, setCancelingKey] = useState<number | null>(null);
   const ticketsPerPage = 5;
 
   const [isEditing, setIsEditing] = useState(false);
@@ -174,8 +174,32 @@ export default function MyPage() {
 
   const isSocialLogin = data.loginType !== "NORMAL";
 
+  // 백엔드는 "같은 회차(scheduleId)"를 기준으로만 묶어주는데, 같은 회차를 여러 번 따로 결제한
+  // 경우(예: 취소한 옛날 예매 + 새로 산 예매)까지 하나로 합쳐버릴 수 있다.
+  // 그래서 그룹 안에서 다시 한번, "한 번의 결제로 생성된 티켓들은 ticketId가 바로 이어진다"는
+  // 규칙으로 진짜 예매 단위로 쪼갠다.
+  const splitIntoReservations = (group: TicketGroupInfo): TicketGroupInfo[] => {
+    const byIdAsc = [...group.tickets].sort((a, b) => a.ticketId - b.ticketId);
+    const chunks: TicketSummary[][] = [];
+    for (const ticket of byIdAsc) {
+      const last = chunks[chunks.length - 1];
+      const lastTicket = last?.[last.length - 1];
+      if (lastTicket && ticket.ticketId === lastTicket.ticketId + 1) {
+        last.push(ticket);
+      } else {
+        chunks.push([ticket]);
+      }
+    }
+    return chunks.map((tickets) => ({
+      ...group,
+      tickets,
+      totalPrice: tickets.reduce((sum, t) => sum + t.ticketPrice, 0),
+    }));
+  };
+  const reservations = data.ticketGroups.flatMap(splitIntoReservations);
+
   // 최근 예매가 먼저 보이도록, 그룹 안에서 가장 큰 ticketId를 기준으로 정렬한다.
-  const sortedGroups = [...data.ticketGroups].sort((a, b) => {
+  const sortedGroups = [...reservations].sort((a, b) => {
     const maxA = Math.max(...a.tickets.map((t) => t.ticketId));
     const maxB = Math.max(...b.tickets.map((t) => t.ticketId));
     return maxB - maxA;
@@ -212,7 +236,7 @@ export default function MyPage() {
     );
     if (!confirmed) return;
 
-    setCancelingScheduleId(group.scheduleId);
+    setCancelingKey(group.tickets[0].ticketId);
     try {
       await Promise.all(
         validTickets.map((t) => apiFetch(`/tickets/cancel/${t.ticketId}`, { method: "PATCH" })),
@@ -239,7 +263,7 @@ export default function MyPage() {
     } catch (e) {
       showError(e instanceof Error ? e.message : "취소 처리 중 오류가 발생했습니다.");
     } finally {
-      setCancelingScheduleId(null);
+      setCancelingKey(null);
     }
   };
 
@@ -389,7 +413,7 @@ export default function MyPage() {
 
               return (
                 <div
-                  key={group.scheduleId}
+                  key={group.tickets[0].ticketId}
                   onClick={() => goToTicketDetail(group)}
                   role="button"
                   tabIndex={0}
@@ -419,10 +443,10 @@ export default function MyPage() {
                               e.stopPropagation();
                               handleCancelGroup(group);
                             }}
-                            disabled={cancelingScheduleId === group.scheduleId}
+                            disabled={cancelingKey === group.tickets[0].ticketId}
                             className="text-xs text-gray-400 hover:text-red-500 border border-gray-200 hover:border-red-300 px-3 py-1 rounded-lg transition disabled:opacity-50"
                           >
-                            {cancelingScheduleId === group.scheduleId ? "취소 중..." : "예매 취소"}
+                            {cancelingKey === group.tickets[0].ticketId ? "취소 중..." : "예매 취소"}
                           </button>
                         )}
                         <span className={`px-2 py-1 text-xs rounded-full font-semibold ${statusClass}`}>

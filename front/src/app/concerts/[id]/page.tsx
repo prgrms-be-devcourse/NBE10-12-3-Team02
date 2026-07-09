@@ -2,7 +2,7 @@
 
 import { useState, useEffect, use } from "react";
 import { useRouter } from "next/navigation";
-import { apiFetch, decodeToken, restoreSession } from "@/lib/api";
+import { apiFetch, decodeToken } from "@/lib/api";
 import { showAlert } from "@/lib/alert";
 import { getConcertDetailImages, getLocalConcertPoster } from "@/lib/concertDetailImages";
 
@@ -66,7 +66,6 @@ export default function ConcertDetailPage({
   }, [id]);
 
   const handleBookingClick = async () => {
-    await restoreSession();
     if (!decodeToken()) {
       await showAlert("로그인이 필요합니다.");
       router.replace("/login");
@@ -115,15 +114,8 @@ export default function ConcertDetailPage({
                   </div>
                 )}
               </div>
-              <div className="mt-4 mx-3 p-4 bg-blue-50/50 rounded-xl border border-blue-100 flex flex-col gap-2">
-                <div className="flex items-center gap-1.5 text-xs font-semibold text-blue-700">
-                  <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
-                  회차당 3매까지 예매 가능합니다.
-                </div>
-                <div className="flex items-center gap-1.5 text-xs font-medium text-gray-500 pl-3">
-                  예매 가능 시간: 관람일 전일 17시까지
-                </div>
-              </div>
+              <p className="text-sm text-gray-500 mt-3 text-left">예매 가능 시간: 관람일 전일 17시까지</p>
+              <p className="text-sm text-gray-500 mt-1 text-left">회차당 최대 3매까지 예매 가능합니다.</p>
             </div>
 
             <div className="p-8 flex-1">
@@ -196,21 +188,40 @@ export default function ConcertDetailPage({
                 )}
               </div>
 
-              {selectedSchedule && concert.bookable ? (
-                <button
-                  onClick={handleBookingClick}
-                  className="block w-full p-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold text-center transition"
-                >
-                  예매하기
-                </button>
-              ) : (
-                <button
-                  disabled
-                  className="w-full p-3 bg-gray-300 text-gray-500 rounded-lg font-bold cursor-not-allowed"
-                >
-                  {concert.bookable ? "회차를 선택해주세요" : "예매 불가능한 공연입니다"}
-                </button>
-              )}
+              {(() => {
+                const selectedScheduleData = schedules.find(
+                  (s) => s.scheduleId === selectedSchedule
+                );
+                // 회차 자체는 살아있어도(콘서트 전체 기간 안이어도), 그 회차의 공연 날짜가
+                // 이미 지났으면 예매할 수 없다 — 콘서트 전체 bookable 여부와는 별개로 확인한다.
+                const isSelectedSchedulePast =
+                  !!selectedScheduleData &&
+                  new Date(selectedScheduleData.scheduleDate) < new Date();
+
+                if (selectedSchedule && concert.bookable && !isSelectedSchedulePast) {
+                  return (
+                    <button
+                      onClick={handleBookingClick}
+                      className="block w-full p-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold text-center transition"
+                    >
+                      예매하기
+                    </button>
+                  );
+                }
+
+                const message = !selectedSchedule
+                  ? "회차를 선택해주세요"
+                  : "예매 불가능한 공연입니다";
+
+                return (
+                  <button
+                    disabled
+                    className="w-full p-3 bg-gray-300 text-gray-500 rounded-lg font-bold cursor-not-allowed"
+                  >
+                    {message}
+                  </button>
+                );
+              })()}
             </div>
           </div>
         </div>

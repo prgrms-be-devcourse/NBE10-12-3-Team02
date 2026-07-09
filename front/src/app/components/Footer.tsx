@@ -2,7 +2,7 @@ import Link from "next/link";
 
 export default function Footer() {
   return (
-    <footer className="bg-white border-t border-gray-100 mt-auto">
+    <footer className="print:hidden bg-white border-t border-gray-100 mt-auto">
       <div className="max-w-5xl mx-auto px-6 py-10">
         <div className="flex flex-col md:flex-row justify-between gap-8">
           {/* 로고 + 소개 */}

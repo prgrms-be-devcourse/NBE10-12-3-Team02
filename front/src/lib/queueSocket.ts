@@ -2,6 +2,9 @@ import { Client, type IMessage } from "@stomp/stompjs";
 import SockJS from "sockjs-client";
 import { BASE_URL, getAccessToken } from "./api";
 
+// 순번 알림은 이제 "나한테만" 오는 게 아니라, 그 회차를 기다리는 모두에게 방송되는 형태다.
+// currentRank는 "지금 몇 번째 사람까지 입장이 허가됐는지"를 뜻하고(내 순번이 아님),
+// 내가 몇 번째인지는 등록할 때 받은 myQueueNumber와 비교해서 계산해야 한다.
 export interface QueueStatusEvent {
   scheduleId: number;
   currentRank: number;
@@ -33,7 +36,8 @@ interface ConnectQueueSocketOptions {
 }
 
 // 대기열 실시간 알림(WebSocket/STOMP)에 연결한다.
-// 서버는 순번이 바뀔 때(/status)와 입장이 허가됐을 때(/entry) 두 종류의 메시지를 보내준다.
+// 순번 진행 상황(/status)은 그 회차를 기다리는 모두에게 방송되고,
+// 입장 허가(/entry)는 나한테만(1:1) 온다.
 export function connectQueueSocket({
   scheduleId,
   onConnected,

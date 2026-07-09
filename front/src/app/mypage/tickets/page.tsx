@@ -95,10 +95,11 @@ function TicketDetailContent() {
             page-break-inside: avoid;
             margin-bottom: 24px;
           }
+          .print-page-wrap { padding: 0 !important; background: white !important; }
         }
       `}</style>
 
-      <div className="max-w-md mx-auto">
+      <div className="print-page-wrap max-w-md mx-auto">
         <div className="no-print flex items-center justify-between mb-6">
           <button
             onClick={() => router.push("/mypage")}
@@ -116,7 +117,7 @@ function TicketDetailContent() {
           </button>
         </div>
 
-        <div className="mb-6">
+        <div className="no-print mb-6">
           <h1 className="text-xl font-bold text-gray-800">{group.concertName}</h1>
           <p className="text-sm text-gray-400 mt-1">
             {group.startDate} ~ {group.endDate} · {group.tickets.length}매
@@ -126,7 +127,7 @@ function TicketDetailContent() {
         <div className="max-w-xs mx-auto" style={{ perspective: "1200px" }}>
           <button
             onClick={() => setIsFlipped((prev) => !prev)}
-            className="ticket-flip-inner relative w-full aspect-[3/4.6] block text-left"
+            className="ticket-flip-inner relative w-full aspect-[3/5] block text-left"
             style={{
               transformStyle: "preserve-3d",
               transition: "transform 0.6s cubic-bezier(0.4, 0, 0.2, 1)",
