@@ -8,15 +8,15 @@ public record MyPageResponse(
         String id,
         String email,
         String loginType,
-        List<TicketInfo> ticketList
+        List<TicketGroupInfo> ticketGroups
 ) {
-    public static MyPageResponse from(User user, List<TicketInfo> ticketList) {
+    public static MyPageResponse from(User user, List<TicketGroupInfo> ticketGroups) {
         return new MyPageResponse(
                 user.getName(),
                 user.getLoginId(),
                 user.getEmail(),
                 user.getLoginType().name(),
-                ticketList
+                ticketGroups
         );
     }
 }

@@ -11,6 +11,7 @@ import com.back.global.security.filter.BearerTokenExtractor;
 import com.back.global.security.jwt.repository.BlacklistRepository;
 import com.back.global.security.jwt.JwtTokenProvider;
 import com.back.global.security.jwt.repository.RefreshTokenRepository;
+import com.back.global.security.oauth2.service.OAuthUnlinkService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -19,6 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Duration;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -32,6 +34,7 @@ public class UserService {
     private final BlacklistRepository blacklistRepository;
     private final JwtTokenProvider jwtTokenProvider;
     private final BearerTokenExtractor bearerTokenExtractor;
+    private final OAuthUnlinkService oAuthUnlinkService;
 
     @Value("${custom.jwt.blacklist.grace-seconds}")
     private long tokenBlacklistGraceSeconds;
@@ -57,6 +60,11 @@ public class UserService {
         String accessToken = bearerTokenExtractor.extract(authorization);
         User user = userRepository.findByUserIdAndDeletedAtIsNull(userId)
                 .orElseThrow(() -> new ServiceException(ErrorCode.USER_NOT_FOUND_OR_DELETED));
+
+        if (user.getLoginType() != LoginType.NORMAL) {
+            oAuthUnlinkService.unlink(user.getLoginType(), user.getOauthRefreshToken());
+        }
+
         user.withdraw();
         refreshTokenRepository.deleteAllByUserId(userId);
         long remaining = jwtTokenProvider.getRemainingSeconds(accessToken);
@@ -67,12 +75,15 @@ public class UserService {
         User user = userRepository.findByUserIdAndDeletedAtIsNull(userId)
                 .orElseThrow(() -> new ServiceException(ErrorCode.USER_NOT_FOUND));
 
-        List<TicketInfo> ticketList = ticketRepository.findAllByUserWithConcert(user)
+        List<TicketGroupInfo> ticketGroups = ticketRepository.findAllByUserWithConcert(user)
                 .stream()
-                .map(TicketInfo::from)
+                .collect(Collectors.groupingBy(t -> t.getSchedule().getScheduleId()))
+                .values()
+                .stream()
+                .map(TicketGroupInfo::from)
                 .toList();
 
-        return MyPageResponse.from(user, ticketList);
+        return MyPageResponse.from(user, ticketGroups);
     }
 
     @Transactional
