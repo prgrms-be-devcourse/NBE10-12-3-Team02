@@ -35,6 +35,8 @@ interface ConcertDetailResponse {
   urlPoster: string;
 }
 
+type ConcertStatusFilter = "all" | "ongoing" | "closed";
+
 function HomeContent() {
   const router = useRouter();
   const pathname = usePathname();
@@ -56,6 +58,7 @@ function HomeContent() {
 
   const [keyword, setKeyword] = useState("");
   const [sort, setSort] = useState("latest");
+  const [statusFilter, setStatusFilter] = useState<ConcertStatusFilter>("all");
 
   const [currentPage, setCurrentPage] = useState(() => {
     const page = Number(searchParams.get("page"));
@@ -175,8 +178,14 @@ function HomeContent() {
     fetchTopConcerts();
   }, []);
 
-  const totalPages = Math.ceil(concerts.length / itemsPerPage);
-  const pagedConcerts = concerts.slice(
+  const filteredConcerts = concerts.filter((c) => {
+    if (statusFilter === "ongoing") return c.status !== "CLOSED";
+    if (statusFilter === "closed") return c.status === "CLOSED";
+    return true;
+  });
+
+  const totalPages = Math.ceil(filteredConcerts.length / itemsPerPage);
+  const pagedConcerts = filteredConcerts.slice(
     (currentPage - 1) * itemsPerPage,
     currentPage * itemsPerPage
   );
@@ -189,6 +198,15 @@ function HomeContent() {
   const handleSortChange = (e: ChangeEvent<HTMLSelectElement>) => {
     setSort(e.target.value);
     goToPage(1);
+  };
+
+  const handleStatusFilterChange = (filter: ConcertStatusFilter) => {
+    setStatusFilter(filter);
+    // goToPage(1)과 달리, 여기는 화면을 스크롤시키지 않고 그 자리에서 필터만 바꾼다.
+    setCurrentPage(1);
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("page", "1");
+    router.push(`${pathname}?${params.toString()}`, { scroll: false });
   };
 
   return (
@@ -319,7 +337,29 @@ function HomeContent() {
       <div className="max-w-5xl mx-auto px-6 py-10">
         <div ref={listSectionRef} className="flex items-center justify-between mb-6 scroll-mt-6">
           <h2 className="text-2xl font-bold text-gray-800">전체 공연</h2>
-          <span className="text-sm text-gray-400">{concerts.length}개의 공연</span>
+          <span className="text-sm text-gray-400">{filteredConcerts.length}개의 공연</span>
+        </div>
+
+        <div className="flex gap-2 mb-4">
+          {(
+            [
+              { key: "all", label: "전체" },
+              { key: "ongoing", label: "공연중" },
+              { key: "closed", label: "마감된 공연" },
+            ] as const
+          ).map((f) => (
+            <button
+              key={f.key}
+              onClick={() => handleStatusFilterChange(f.key)}
+              className={`px-3 py-1.5 rounded-lg text-sm font-semibold border transition ${
+                statusFilter === f.key
+                  ? "bg-blue-600 text-white border-blue-600"
+                  : "bg-white text-gray-600 border-gray-200 hover:border-blue-400"
+              }`}
+            >
+              {f.label}
+            </button>
+          ))}
         </div>
 
         <div className="flex flex-col md:flex-row gap-3 mb-6">
@@ -348,8 +388,8 @@ function HomeContent() {
           <p className="text-center text-gray-400 py-20">불러오는 중...</p>
         ) : error ? (
           <p className="text-center text-red-400 py-20">{error}</p>
-        ) : concerts.length === 0 ? (
-          <p className="text-center text-gray-400 py-20">검색 결과가 없습니다.</p>
+        ) : filteredConcerts.length === 0 ? (
+          <p className="text-center text-gray-400 py-20">해당 조건의 공연이 없습니다.</p>
         ) : (
           <>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
