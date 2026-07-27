@@ -11,6 +11,7 @@ interface TicketSummary {
   ticketId: number;
   ticketNumber: string;
   qrToken?: string;
+  groupToken?: string;
   seatNumber: string;
   gradeName: string;
   ticketPrice: number;
