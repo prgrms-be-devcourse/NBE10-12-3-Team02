@@ -58,3 +58,7 @@ yarn-error.log*
 **/application-secret.yaml
 **/local-ssl.p12
 *.pem
+
+# AI
+back/docs
+back/AGENTS.md
