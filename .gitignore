@@ -1,4 +1,60 @@
+# Operating System
+.DS_Store
+Thumbs.db
+
+# IDE & Editor
 .idea/
-db_dev.mv.db
-db_dev.lock.db
-db_dev.trace.db
+*.iws
+*.iml
+*.ipr
+.vscode/
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings
+.springBeans
+.sts4-cache
+
+# Build & Output
+**/build/
+**/out/
+**/dist/
+**/bin/
+!**/src/main/**/build/
+!**/src/test/**/build/
+
+# Gradle & Kotlin
+.gradle/
+.kotlin/
+!gradle/wrapper/gradle-wrapper.jar
+
+# Node & Frontend
+**/node_modules/
+.pnp
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
+**/coverage/
+**/.next/
+**/.vercel/
+*.tsbuildinfo
+**/next-env.d.ts
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# Database & Storage
+*.mv.db
+*.lock.db
+*.trace.db
+
+# Environment & Secret Files
+**/.env.local
+**/application-secret.yaml
+**/local-ssl.p12
+*.pem
