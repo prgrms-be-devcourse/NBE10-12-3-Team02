@@ -5,6 +5,8 @@ services:
     ports:
       - "6379:6379"
     command: redis-server --appendonly yes --replica-announce-ip redis-master --requirepass ""
+    labels:
+      - "org.springframework.boot.ignore=true"
     networks:
       - redis-net
 
@@ -14,6 +16,8 @@ services:
     ports:
       - "6380:6379"
     command: redis-server --appendonly yes --replicaof redis-master 6379 --replica-announce-ip redis-slave --requirepass "" --masterauth ""
+    labels:
+      - "org.springframework.boot.ignore=true"
     depends_on:
       - redis-master
     networks:
@@ -26,6 +30,8 @@ services:
       - "26379:26379"
     command: >
       sh -c "printf 'port 26379\nsentinel monitor mymaster redis-master 6379 2\nsentinel down-after-milliseconds mymaster 5000\nsentinel failover-timeout mymaster 10000\nsentinel parallel-syncs mymaster 1\nsentinel resolve-hostnames yes\nsentinel announce-hostnames yes\nsentinel announce-ip redis-sentinel-1\n' > /tmp/sentinel.conf && redis-sentinel /tmp/sentinel.conf"
+    labels:
+      - "org.springframework.boot.ignore=true"
     depends_on:
       - redis-master
       - redis-slave
@@ -39,6 +45,8 @@ services:
       - "26380:26379"
     command: >
       sh -c "printf 'port 26379\nsentinel monitor mymaster redis-master 6379 2\nsentinel down-after-milliseconds mymaster 5000\nsentinel failover-timeout mymaster 10000\nsentinel parallel-syncs mymaster 1\nsentinel resolve-hostnames yes\nsentinel announce-hostnames yes\nsentinel announce-ip redis-sentinel-2\n' > /tmp/sentinel.conf && redis-sentinel /tmp/sentinel.conf"
+    labels:
+      - "org.springframework.boot.ignore=true"
     depends_on:
       - redis-master
       - redis-slave
@@ -52,6 +60,8 @@ services:
       - "26381:26379"
     command: >
       sh -c "printf 'port 26379\nsentinel monitor mymaster redis-master 6379 2\nsentinel down-after-milliseconds mymaster 5000\nsentinel failover-timeout mymaster 10000\nsentinel parallel-syncs mymaster 1\nsentinel resolve-hostnames yes\nsentinel announce-hostnames yes\nsentinel announce-ip redis-sentinel-3\n' > /tmp/sentinel.conf && redis-sentinel /tmp/sentinel.conf"
+    labels:
+      - "org.springframework.boot.ignore=true"
     depends_on:
       - redis-master
       - redis-slave
