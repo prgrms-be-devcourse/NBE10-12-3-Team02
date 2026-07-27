@@ -29,6 +29,9 @@ class Ticket(
     @Column(unique = true)
     val qrToken: String? = null,
 
+    @Column
+    val groupToken: String? = null,
+
     @Column(nullable = false)
     val ticketPrice: Int = 0,
 
@@ -56,13 +59,15 @@ class Ticket(
             schedule: Schedule,
             scheduleSeat: ScheduleSeat,
             ticketNumber: String,
-            ticketPrice: Int
+            ticketPrice: Int,
+            groupToken: String
         ): Ticket = Ticket(
             user = user,
             schedule = schedule,
             scheduleSeat = scheduleSeat,
             ticketNumber = ticketNumber,
             qrToken = UUID.randomUUID().toString(),
+            groupToken = groupToken,
             ticketPrice = ticketPrice,
             isValid = true
         )

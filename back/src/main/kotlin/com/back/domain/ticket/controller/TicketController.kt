@@ -2,6 +2,7 @@ package com.back.domain.ticket.controller
 
 import com.back.domain.ticket.dto.PaymentTicketRequest
 import com.back.domain.ticket.dto.PaymentTicketResponse
+import com.back.domain.ticket.dto.TicketGroupVerifyResponse
 import com.back.domain.ticket.dto.TicketVerifyResponse
 import com.back.domain.ticket.service.TicketService
 import com.back.global.annotation.ApiV1
@@ -59,6 +60,16 @@ class TicketController(
             "200-1",
             "티켓 검증 성공",
             ticketService.verifyTicket(qrToken)
+        )
+    }
+
+    @GetMapping("/verify/group/{groupToken}")
+    @Operation(summary = "티켓 그룹 QR 검증", description = "그룹 토큰으로 결제 묶음 내 전체 티켓을 검증합니다 (인증 불필요)")
+    fun verifyGroup(@PathVariable groupToken: String): RsData<TicketGroupVerifyResponse> {
+        return RsData(
+            "200-1",
+            "티켓 그룹 검증 성공",
+            ticketService.verifyGroup(groupToken)
         )
     }
 }

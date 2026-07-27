@@ -11,6 +11,7 @@ import com.back.domain.schedule.repository.ScheduleSeatRepository
 import com.back.domain.ticket.dto.PaymentTicketRequest
 import com.back.domain.ticket.dto.PaymentTicketResponse
 import com.back.domain.ticket.dto.SeatHoldInfo
+import com.back.domain.ticket.dto.TicketGroupVerifyResponse
 import com.back.domain.ticket.dto.TicketVerifyResponse
 import com.back.domain.ticket.entity.Ticket
 import com.back.domain.ticket.event.PaymentCompletedEvent
@@ -73,8 +74,9 @@ class TicketService(
             sseEmitterRegistry.broadcast(scheduleId, holdInfo.seatNumber, SeatStatus.SOLD_OUT.name)
         }
 
+        val groupToken = UUID.randomUUID().toString()
         val tickets = scheduleSeats.map { seat ->
-            Ticket.create(user, schedule, seat, createTicketNumber(), seat.seatPrice)
+            Ticket.create(user, schedule, seat, createTicketNumber(), seat.seatPrice, groupToken)
         }
         ticketRepository.saveAll(tickets)
 
@@ -113,6 +115,12 @@ class TicketService(
         ticketRepository.findByQrTokenWithDetails(qrToken)
             ?.let { TicketVerifyResponse.from(it) }
             ?: throw ServiceException(ErrorCode.TICKET_NOT_FOUND)
+
+    fun verifyGroup(groupToken: String): TicketGroupVerifyResponse {
+        val tickets = ticketRepository.findAllByGroupTokenWithDetails(groupToken)
+        if (tickets.isEmpty()) throw ServiceException(ErrorCode.TICKET_NOT_FOUND)
+        return TicketGroupVerifyResponse.from(tickets)
+    }
 
     fun createTicketNumber(): String = UUID.randomUUID().toString()
 
