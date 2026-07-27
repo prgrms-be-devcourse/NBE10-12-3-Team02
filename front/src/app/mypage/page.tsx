@@ -10,7 +10,6 @@ import PasswordStrengthMeter from "@/app/components/PasswordStrengthMeter";
 interface TicketSummary {
   ticketId: number;
   ticketNumber: string;
-  qrToken?: string;
   groupToken?: string;
   seatNumber: string;
   gradeName: string;

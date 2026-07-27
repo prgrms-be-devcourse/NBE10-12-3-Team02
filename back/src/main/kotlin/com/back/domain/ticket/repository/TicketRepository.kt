@@ -27,16 +27,6 @@ interface TicketRepository : JpaRepository<Ticket, Long> {
         JOIN FETCH s.concert
         JOIN FETCH s.venue
         JOIN FETCH t.scheduleSeat
-        WHERE t.qrToken = :qrToken
-    """)
-    fun findByQrTokenWithDetails(@Param("qrToken") qrToken: String): Ticket?
-
-    @Query("""
-        SELECT t FROM Ticket t
-        JOIN FETCH t.schedule s
-        JOIN FETCH s.concert
-        JOIN FETCH s.venue
-        JOIN FETCH t.scheduleSeat
         WHERE t.groupToken = :groupToken
     """)
     fun findAllByGroupTokenWithDetails(@Param("groupToken") groupToken: String): List<Ticket>

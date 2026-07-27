@@ -12,7 +12,6 @@ import com.back.domain.ticket.dto.PaymentTicketRequest
 import com.back.domain.ticket.dto.PaymentTicketResponse
 import com.back.domain.ticket.dto.SeatHoldInfo
 import com.back.domain.ticket.dto.TicketGroupVerifyResponse
-import com.back.domain.ticket.dto.TicketVerifyResponse
 import com.back.domain.ticket.entity.Ticket
 import com.back.domain.ticket.event.PaymentCompletedEvent
 import com.back.domain.ticket.event.TicketCancelledEvent
@@ -110,11 +109,6 @@ class TicketService(
 
         eventPublisher.publishEvent(TicketCancelledEvent(concertId, scheduleId, userId))
     }
-
-    fun verifyTicket(qrToken: String): TicketVerifyResponse =
-        ticketRepository.findByQrTokenWithDetails(qrToken)
-            ?.let { TicketVerifyResponse.from(it) }
-            ?: throw ServiceException(ErrorCode.TICKET_NOT_FOUND)
 
     fun verifyGroup(groupToken: String): TicketGroupVerifyResponse {
         val tickets = ticketRepository.findAllByGroupTokenWithDetails(groupToken)

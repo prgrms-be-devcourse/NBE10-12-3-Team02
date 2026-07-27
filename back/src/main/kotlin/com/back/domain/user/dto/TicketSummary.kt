@@ -5,7 +5,6 @@ import com.back.domain.ticket.entity.Ticket
 data class TicketSummary(
     val ticketId: Long,
     val ticketNumber: String,
-    val qrToken: String?,
     val groupToken: String?,
     val seatNumber: String,
     val gradeName: String,
@@ -17,7 +16,6 @@ data class TicketSummary(
         fun from(ticket: Ticket): TicketSummary = TicketSummary(
             ticketId = checkNotNull(ticket.ticketId) { "Ticket ID null" },
             ticketNumber = ticket.ticketNumber,
-            qrToken = ticket.qrToken,
             groupToken = ticket.groupToken,
             seatNumber = ticket.scheduleSeat.seatNumber,
             gradeName = ticket.scheduleSeat.gradeName,

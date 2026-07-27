@@ -10,7 +10,6 @@ import { getLocalConcertPoster } from "@/lib/concertDetailImages";
 interface TicketSummary {
   ticketId: number;
   ticketNumber: string;
-  qrToken?: string;
   groupToken?: string;
   seatNumber: string;
   gradeName: string;
@@ -233,46 +232,19 @@ function TicketDetailContent() {
                 </span>
               </div>
 
-              {origin && (() => {
-                const groupToken = group.tickets.find((t) => t.groupToken)?.groupToken;
-                if (groupToken) {
-                  return (
-                    <div className="border-t border-white/20 pt-3 mb-2">
-                      <p className="text-blue-200 text-[10px] tracking-widest mb-2">QR CODE</p>
-                      <div className="flex justify-center">
-                        <div className="bg-white p-1.5 rounded">
-                          <QRCodeSVG value={`${origin}/verify/group/${groupToken}`} size={80} />
-                        </div>
-                      </div>
+              {origin && group.tickets.find((t) => t.groupToken)?.groupToken && (
+                <div className="border-t border-white/20 pt-3 mb-2">
+                  <p className="text-blue-200 text-[10px] tracking-widest mb-2">QR CODE</p>
+                  <div className="flex justify-center">
+                    <div className="bg-white p-1.5 rounded">
+                      <QRCodeSVG
+                        value={`${origin}/verify/group/${group.tickets.find((t) => t.groupToken)!.groupToken}`}
+                        size={80}
+                      />
                     </div>
-                  );
-                }
-                if (group.tickets.some((t) => t.qrToken)) {
-                  return (
-                    <div className="border-t border-white/20 pt-3 mb-2">
-                      <p className="text-blue-200 text-[10px] tracking-widest mb-2">QR CODE</p>
-                      <div className="flex gap-3 justify-center flex-wrap">
-                        {group.tickets.map((t, index) =>
-                          t.qrToken ? (
-                            <div key={t.ticketId} className="flex flex-col items-center gap-1">
-                              {group.tickets.length > 1 && (
-                                <span className="text-[9px] text-blue-200">No.{index + 1}</span>
-                              )}
-                              <div className="bg-white p-1.5 rounded">
-                                <QRCodeSVG
-                                  value={`${origin}/verify/${t.qrToken}`}
-                                  size={group.tickets.length === 1 ? 80 : 60}
-                                />
-                              </div>
-                            </div>
-                          ) : null
-                        )}
-                      </div>
-                    </div>
-                  );
-                }
-                return null;
-              })()}
+                  </div>
+                </div>
+              )}
 
               <p className="no-print text-blue-200 text-[11px] mt-auto pt-2 text-center">탭하여 앞면으로 ↻</p>
             </div>
