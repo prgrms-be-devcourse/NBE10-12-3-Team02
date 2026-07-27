@@ -58,18 +58,29 @@ class WaitingQueueManager(
         redissonClient.getScoredSortedSet<String>(generateWaitKey(scheduleId))
             .remove(userId.toString())
 
-    fun cancelActiveUser(scheduleId: Long, userId: Long): Boolean {
+    fun cancelActiveUser(scheduleId: Long, userId: Long): Boolean =
+        deleteActiveUser(scheduleId, userId)
+
+    fun removeActiveUser(scheduleId: Long, userId: Long) {
+        deleteActiveUser(scheduleId, userId)
+    }
+
+    private fun deleteActiveUser(scheduleId: Long, userId: Long): Boolean {
         val activeSet = redissonClient.getScoredSortedSet<String>(generateQueueActiveKey(scheduleId))
         val removed = activeSet.remove(userId.toString())
         redissonClient.getBucket<String>(generateActiveTokenKey(scheduleId, userId)).delete()
         return removed
     }
 
-    fun removeActiveUser(scheduleId: Long, userId: Long) {
-        val activeSet = redissonClient.getScoredSortedSet<String>(generateQueueActiveKey(scheduleId))
-        activeSet.remove(userId.toString())
-        redissonClient.getBucket<String>(generateActiveTokenKey(scheduleId, userId)).delete()
+    fun hasValidSession(scheduleId: Long, userId: Long): Boolean {
+        val expiresAt = redissonClient
+            .getScoredSortedSet<String>(generateQueueActiveKey(scheduleId))
+            .getScore(userId.toString()) ?: return false
+        return expiresAt >= System.currentTimeMillis()
     }
+
+    fun getStoredToken(scheduleId: Long, userId: Long): String? =
+        redissonClient.getBucket<String>(generateActiveTokenKey(scheduleId, userId)).get()
 
     fun removeExpiredActiveUsers(scheduleId: Long): Long {
         val activeSet = redissonClient.getScoredSortedSet<String>(generateQueueActiveKey(scheduleId))

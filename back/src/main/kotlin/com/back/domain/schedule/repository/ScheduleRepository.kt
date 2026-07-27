@@ -13,6 +13,8 @@ interface ScheduleRepository : JpaRepository<Schedule, Long> {
 
     fun findByScheduleIdAndConcert_ConcertId(scheduleId: Long, concertId: Long): Schedule?
 
+    fun findByScheduleId(scheduleId: Long): Schedule?
+
     @Query("SELECT s FROM Schedule s JOIN FETCH s.venue WHERE s.concert.concertId IN :concertIds")
     fun findAllWithVenueByConcertIds(@Param("concertIds") concertIds: List<Long>): List<Schedule>
 

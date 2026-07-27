@@ -21,25 +21,16 @@ class RedisConfig {
 
     @Bean
     @ConditionalOnMissingBean(StringRedisTemplate::class)
-    fun stringRedisTemplate(redisConnectionFactory: RedisConnectionFactory): StringRedisTemplate {
-        val template = StringRedisTemplate()
-        template.connectionFactory = redisConnectionFactory
-        template.keySerializer = StringRedisSerializer()
-        template.valueSerializer = StringRedisSerializer()
-        template.hashKeySerializer = StringRedisSerializer()
-        template.hashValueSerializer = StringRedisSerializer()
-        template.afterPropertiesSet()
-        return template
-    }
+    fun stringRedisTemplate(redisConnectionFactory: RedisConnectionFactory): StringRedisTemplate =
+        StringRedisTemplate(redisConnectionFactory)
 
     @Bean
     @ConditionalOnMissingBean(name = ["redisTemplate"])
-    fun redisTemplate(redisConnectionFactory: RedisConnectionFactory): RedisTemplate<String, Any> {
-        val template = RedisTemplate<String, Any>()
-        template.connectionFactory = redisConnectionFactory
-        template.keySerializer = StringRedisSerializer()
-        template.hashKeySerializer = StringRedisSerializer()
-        template.afterPropertiesSet()
-        return template
-    }
+    fun redisTemplate(redisConnectionFactory: RedisConnectionFactory): RedisTemplate<String, Any> =
+        RedisTemplate<String, Any>().apply {
+            connectionFactory = redisConnectionFactory
+            keySerializer = StringRedisSerializer()
+            hashKeySerializer = StringRedisSerializer()
+            afterPropertiesSet()
+        }
 }
