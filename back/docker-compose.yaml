@@ -4,7 +4,7 @@ services:
     container_name: redis-master
     ports:
       - "6379:6379"
-    command: redis-server --appendonly yes --requirepass ""
+    command: redis-server --appendonly yes --replica-announce-ip redis-master --requirepass ""
     networks:
       - redis-net
 
@@ -13,7 +13,7 @@ services:
     container_name: redis-slave
     ports:
       - "6380:6379"
-    command: redis-server --appendonly yes --replicaof redis-master 6379 --requirepass "" --masterauth ""
+    command: redis-server --appendonly yes --replicaof redis-master 6379 --replica-announce-ip redis-slave --requirepass "" --masterauth ""
     depends_on:
       - redis-master
     networks:
