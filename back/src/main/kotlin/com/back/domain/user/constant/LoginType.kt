@@ -1,4 +1,4 @@
-package com.back.domain.user.entity
+package com.back.domain.user.constant
 
 enum class LoginType {
     NORMAL,

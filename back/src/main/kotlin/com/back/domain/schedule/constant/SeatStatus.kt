@@ -1,4 +1,4 @@
-package com.back.domain.schedule.entity
+package com.back.domain.schedule.constant
 
 enum class SeatStatus {
     AVAILABLE,

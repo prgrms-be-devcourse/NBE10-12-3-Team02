@@ -2,7 +2,7 @@ package com.back.domain.ticket.dto
 
 import com.back.domain.schedule.entity.Schedule
 import com.back.domain.schedule.entity.ScheduleSeat
-import com.back.domain.schedule.entity.SeatStatus
+import com.back.domain.schedule.constant.SeatStatus
 import com.back.domain.ticket.entity.Ticket
 import java.time.LocalDateTime
 

@@ -4,8 +4,8 @@ import com.back.domain.concert.entity.Concert
 import com.back.domain.concert.repository.ConcertRepository
 import com.back.domain.schedule.entity.Schedule
 import com.back.domain.schedule.entity.ScheduleSeat
-import com.back.domain.schedule.entity.SeatStatus.AVAILABLE
-import com.back.domain.schedule.entity.SeatStatus.HOLD
+import com.back.domain.schedule.constant.SeatStatus.AVAILABLE
+import com.back.domain.schedule.constant.SeatStatus.HOLD
 import com.back.domain.schedule.repository.ScheduleRepository
 import com.back.domain.schedule.repository.ScheduleSeatRepository
 import com.back.domain.venue.entity.Venue

@@ -3,11 +3,11 @@ package com.back.domain.concert.service
 import com.back.domain.concert.dto.ConcertDetailResponse
 import com.back.domain.concert.dto.ConcertListResponse
 import com.back.domain.concert.entity.Concert
-import com.back.domain.concert.enums.ConcertSortType
+import com.back.domain.concert.constant.ConcertSortType
 import com.back.domain.concert.repository.ConcertDeatilRepository
 import com.back.domain.concert.repository.ConcertRepository
 import com.back.domain.schedule.entity.ScheduleSeat
-import com.back.domain.schedule.entity.SeatStatus
+import com.back.domain.schedule.constant.SeatStatus
 import com.back.domain.schedule.repository.ScheduleRepository
 import com.back.domain.schedule.repository.ScheduleSeatRepository
 import com.back.global.exception.ErrorCode

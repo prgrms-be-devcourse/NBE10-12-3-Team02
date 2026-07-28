@@ -1,10 +1,10 @@
 package com.back.domain.user.service
 
-import com.back.domain.schedule.entity.SeatStatus
+import com.back.domain.schedule.constant.SeatStatus
 import com.back.domain.ticket.event.TicketCancelledEvent
 import com.back.domain.ticket.repository.TicketRepository
 import com.back.domain.user.dto.*
-import com.back.domain.user.entity.LoginType
+import com.back.domain.user.constant.LoginType
 import com.back.domain.user.entity.User
 import com.back.domain.user.repository.UserRepository
 import com.back.global.exception.ErrorCode

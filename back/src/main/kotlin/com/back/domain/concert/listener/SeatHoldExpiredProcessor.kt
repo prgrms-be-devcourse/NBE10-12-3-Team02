@@ -2,7 +2,7 @@ package com.back.domain.concert.listener
 
 import com.back.domain.concert.event.SeatExpiredEvent
 import com.back.domain.concert.service.SeatOccupyManager
-import com.back.domain.schedule.entity.SeatStatus
+import com.back.domain.schedule.constant.SeatStatus
 import com.back.domain.schedule.repository.ScheduleSeatRepository
 import org.slf4j.LoggerFactory
 import org.springframework.context.ApplicationEventPublisher
