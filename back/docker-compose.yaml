@@ -28,8 +28,21 @@ services:
     container_name: redis-sentinel-1
     ports:
       - "26379:26379"
-    command: >
-      sh -c "printf 'port 26379\nsentinel monitor mymaster redis-master 6379 2\nsentinel down-after-milliseconds mymaster 5000\nsentinel failover-timeout mymaster 10000\nsentinel parallel-syncs mymaster 1\nsentinel resolve-hostnames yes\nsentinel announce-hostnames yes\nsentinel announce-ip redis-sentinel-1\n' > /tmp/sentinel.conf && redis-sentinel /tmp/sentinel.conf"
+    command:
+      - sh
+      - -c
+      - |
+        cat <<EOF > /tmp/sentinel.conf
+        port 26379
+        sentinel monitor mymaster redis-master 6379 2
+        sentinel down-after-milliseconds mymaster 5000
+        sentinel failover-timeout mymaster 10000
+        sentinel parallel-syncs mymaster 1
+        sentinel resolve-hostnames yes
+        sentinel announce-hostnames yes
+        sentinel announce-ip redis-sentinel-1
+        EOF
+        exec redis-sentinel /tmp/sentinel.conf
     labels:
       - "org.springframework.boot.ignore=true"
     depends_on:
@@ -43,8 +56,21 @@ services:
     container_name: redis-sentinel-2
     ports:
       - "26380:26379"
-    command: >
-      sh -c "printf 'port 26379\nsentinel monitor mymaster redis-master 6379 2\nsentinel down-after-milliseconds mymaster 5000\nsentinel failover-timeout mymaster 10000\nsentinel parallel-syncs mymaster 1\nsentinel resolve-hostnames yes\nsentinel announce-hostnames yes\nsentinel announce-ip redis-sentinel-2\n' > /tmp/sentinel.conf && redis-sentinel /tmp/sentinel.conf"
+    command:
+      - sh
+      - -c
+      - |
+        cat <<EOF > /tmp/sentinel.conf
+        port 26379
+        sentinel monitor mymaster redis-master 6379 2
+        sentinel down-after-milliseconds mymaster 5000
+        sentinel failover-timeout mymaster 10000
+        sentinel parallel-syncs mymaster 1
+        sentinel resolve-hostnames yes
+        sentinel announce-hostnames yes
+        sentinel announce-ip redis-sentinel-2
+        EOF
+        exec redis-sentinel /tmp/sentinel.conf
     labels:
       - "org.springframework.boot.ignore=true"
     depends_on:
@@ -58,8 +84,21 @@ services:
     container_name: redis-sentinel-3
     ports:
       - "26381:26379"
-    command: >
-      sh -c "printf 'port 26379\nsentinel monitor mymaster redis-master 6379 2\nsentinel down-after-milliseconds mymaster 5000\nsentinel failover-timeout mymaster 10000\nsentinel parallel-syncs mymaster 1\nsentinel resolve-hostnames yes\nsentinel announce-hostnames yes\nsentinel announce-ip redis-sentinel-3\n' > /tmp/sentinel.conf && redis-sentinel /tmp/sentinel.conf"
+    command:
+      - sh
+      - -c
+      - |
+        cat <<EOF > /tmp/sentinel.conf
+        port 26379
+        sentinel monitor mymaster redis-master 6379 2
+        sentinel down-after-milliseconds mymaster 5000
+        sentinel failover-timeout mymaster 10000
+        sentinel parallel-syncs mymaster 1
+        sentinel resolve-hostnames yes
+        sentinel announce-hostnames yes
+        sentinel announce-ip redis-sentinel-3
+        EOF
+        exec redis-sentinel /tmp/sentinel.conf
     labels:
       - "org.springframework.boot.ignore=true"
     depends_on:
