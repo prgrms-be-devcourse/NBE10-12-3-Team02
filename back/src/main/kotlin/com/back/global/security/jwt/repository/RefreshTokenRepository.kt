@@ -56,11 +56,11 @@ class RefreshTokenRepository(
 
     fun save(userId: Long, jti: String, refreshTokenHash: String, ttl: Duration) {
         redissonClient
-            .getBucket<String>(generateKey(RefreshTokenKeyType.TOKEN, userId, jti))
+            .getBucket<String>(generateKey(RefreshTokenKeyType.TOKEN, userId, jti), StringCodec.INSTANCE)
             .set(refreshTokenHash, ttl)
 
         redissonClient
-            .getSet<String>(generateKey(RefreshTokenKeyType.INDEX, userId))
+            .getSet<String>(generateKey(RefreshTokenKeyType.INDEX, userId), StringCodec.INSTANCE)
             .apply {
                 add(jti)
                 expire(ttl)
@@ -69,7 +69,7 @@ class RefreshTokenRepository(
 
     fun verify(userId: Long, jti: String, requestRefreshTokenHash: String): RefreshTokenValidationResult {
         val savedHash = redissonClient
-            .getBucket<String>(generateKey(RefreshTokenKeyType.TOKEN, userId, jti))
+            .getBucket<String>(generateKey(RefreshTokenKeyType.TOKEN, userId, jti), StringCodec.INSTANCE)
             .get()
 
         return when {
@@ -81,16 +81,16 @@ class RefreshTokenRepository(
 
     fun delete(userId: Long, jti: String) {
         redissonClient
-            .getBucket<String>(generateKey(RefreshTokenKeyType.TOKEN, userId, jti))
+            .getBucket<String>(generateKey(RefreshTokenKeyType.TOKEN, userId, jti), StringCodec.INSTANCE)
             .delete()
 
         redissonClient
-            .getSet<String>(generateKey(RefreshTokenKeyType.INDEX, userId))
+            .getSet<String>(generateKey(RefreshTokenKeyType.INDEX, userId), StringCodec.INSTANCE)
             .remove(jti)
     }
 
     fun deleteAllByUserId(userId: Long) {
-        val index = redissonClient.getSet<String>(generateKey(RefreshTokenKeyType.INDEX, userId))
+        val index = redissonClient.getSet<String>(generateKey(RefreshTokenKeyType.INDEX, userId), StringCodec.INSTANCE)
         val jtis = index.readAll()
 
         if (jtis.isEmpty()) {
@@ -99,7 +99,7 @@ class RefreshTokenRepository(
 
         jtis
             .map { jti -> generateKey(RefreshTokenKeyType.TOKEN, userId, jti) }
-            .forEach { key -> redissonClient.getBucket<String>(key).delete() }
+            .forEach { key -> redissonClient.getBucket<String>(key, StringCodec.INSTANCE).delete() }
 
         index.delete()
     }
