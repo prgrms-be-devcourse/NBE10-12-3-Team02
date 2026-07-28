@@ -20,7 +20,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  # ── 백엔드: 테스트 및 컴파일 검증 (Java 25) ──
+  # ── 백엔드: Java 25 + Kotlin 2.4.10 + Spring Boot 4.0.7 테스트 및 컴파일 검증 ──
   backend-test:
     runs-on: ubuntu-latest
     defaults:
@@ -29,18 +29,24 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # 1. JDK 25 설정 (Temurin 25)
       - name: Set up JDK 25
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '25'
-          cache: gradle
 
+      # 2. Gradle 공식 액션 적용 (빌드속도 향상 및 캐싱 최적화)
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      # 3. 단위 및 통합 테스트 실행 (Kotlin 2.4.10 & Spring Boot 4.0.7 검증)
       - name: Run tests (unit/integration)
         run: |
           chmod +x gradlew
           ./gradlew test --no-daemon
 
+      # 4. 테스트 실패 시 리포트 업로드
       - name: Upload test report on failure
         if: failure()
         uses: actions/upload-artifact@v4
@@ -49,7 +55,7 @@ jobs:
           path: back/build/reports/tests/test
           retention-days: 7
 
-  # ── 프론트엔드: pnpm v9 + Node 22 기반 lint + build (Vercel 배포 전 CI 검증) ──
+  # ── 프론트엔드: pnpm v9 + Node.js 22 기반 lint + build (Vercel 배포 전 CI 검증) ──
   frontend-check:
     runs-on: ubuntu-latest
     defaults:
@@ -58,13 +64,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # 1. pnpm v9 설치
-      - name: Install pnpm
+      # 1. pnpm v9.x 설치
+      - name: Install pnpm v9
         uses: pnpm/action-setup@v3
         with:
           version: 9
 
-      # 2. Node 22 설정 및 pnpm 패키지 캐시 활성화
+      # 2. Node.js 22.x 설정 및 pnpm 패키지 캐시 활성화
       - name: Set up Node 22
         uses: actions/setup-node@v4
         with:
@@ -72,14 +78,23 @@ jobs:
           cache: pnpm
           cache-dependency-path: front/pnpm-lock.yaml
 
-      # 3. pnpm-lock.yaml 파일 변경 없이 설치
+      # 3. Next.js 빌드 캐시 설정 (빌드 속도 최적화)
+      - name: Restore Next.js build cache
+        uses: actions/cache@v4
+        with:
+          path: front/.next/cache
+          key: ${{ runner.os }}-nextjs-${{ hashFiles('front/pnpm-lock.yaml') }}-${{ hashFiles('front/src/**') }}
+          restore-keys: |
+            ${{ runner.os }}-nextjs-${{ hashFiles('front/pnpm-lock.yaml') }}-
+
+      # 4. pnpm-lock.yaml 기반 패키지 설치
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      # 4. 정적 코드 분석
+      # 5. ESLint 정적 코드 분석
       - name: Lint check
         run: pnpm run lint
 
-      # 5. TypeScript + Next.js 빌드 검증
+      # 6. TypeScript + Next.js 빌드 검증
       - name: Build check
         run: pnpm run build
