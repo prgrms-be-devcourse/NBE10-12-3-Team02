@@ -4,7 +4,7 @@ import com.back.domain.concert.service.ConcertService
 import com.back.domain.queue.event.EntryAllowedEvent
 import com.back.domain.queue.event.QueueErrorEvent
 import com.back.domain.queue.event.QueueStatusEvent
-import com.back.domain.schedule.entity.SeatStatus
+import com.back.domain.schedule.constant.SeatStatus
 import com.back.domain.schedule.repository.ScheduleSeatRepository
 import com.back.domain.user.repository.UserRepository
 import com.back.domain.waiting.dto.WaitingQueueResponse

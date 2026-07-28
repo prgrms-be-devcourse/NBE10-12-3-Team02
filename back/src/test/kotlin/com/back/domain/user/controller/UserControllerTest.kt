@@ -1,6 +1,6 @@
 package com.back.domain.user.controller
 
-import com.back.domain.user.entity.LoginType
+import com.back.domain.user.constant.LoginType
 import com.back.domain.user.entity.User
 import com.back.domain.user.repository.UserRepository
 import com.back.global.RedisTestConfig

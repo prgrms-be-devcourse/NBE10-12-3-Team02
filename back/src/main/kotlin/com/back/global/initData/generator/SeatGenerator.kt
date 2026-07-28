@@ -2,7 +2,7 @@ package com.back.global.initData.generator
 
 import com.back.domain.schedule.entity.Schedule
 import com.back.domain.schedule.entity.ScheduleSeat
-import com.back.domain.schedule.entity.SeatStatus
+import com.back.domain.schedule.constant.SeatStatus
 
 object SeatGenerator {
 
