@@ -3,6 +3,7 @@ package com.back.domain.concert.listener
 import com.back.domain.concert.event.SeatOccupiedEvent
 import org.slf4j.LoggerFactory
 import org.redisson.api.RedissonClient
+import org.redisson.client.codec.StringCodec
 import org.springframework.stereotype.Component
 import org.springframework.transaction.event.TransactionPhase
 import org.springframework.transaction.event.TransactionalEventListener
@@ -19,7 +20,7 @@ class SeatOccupiedEventListener(
         val message = buildMessage(event.concertId, event.scheduleId, event.seatNumber)
 
         try {
-            val blockingQueue = redissonClient.getBlockingQueue<String>(SeatHoldExpiredHandler.DELAYED_QUEUE_KEY)
+            val blockingQueue = redissonClient.getBlockingQueue<String>(SeatHoldExpiredHandler.DELAYED_QUEUE_KEY, StringCodec.INSTANCE)
             val delayedQueue = redissonClient.getDelayedQueue(blockingQueue)
 
             delayedQueue.offer(message, event.ttlSeconds, TimeUnit.SECONDS)

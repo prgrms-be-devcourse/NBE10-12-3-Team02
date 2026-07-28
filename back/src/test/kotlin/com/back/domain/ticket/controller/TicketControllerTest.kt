@@ -24,6 +24,7 @@ import org.mockito.ArgumentMatchers.anyString
 import org.mockito.Mockito.doReturn
 import org.mockito.Mockito.mock
 import org.mockito.Mockito.`when`
+import org.redisson.client.codec.Codec
 import org.redisson.api.RBlockingQueue
 import org.redisson.api.RBucket
 import org.redisson.api.RDelayedQueue
@@ -76,20 +77,24 @@ class TicketControllerTest @Autowired constructor(
 
         val activeSet = mock(RScoredSortedSet::class.java) as RScoredSortedSet<String>
         doReturn(activeSet).`when`(redissonClient).getScoredSortedSet<String>(anyString())
+        doReturn(activeSet).`when`(redissonClient).getScoredSortedSet<String>(anyString(), any(Codec::class.java))
         `when`(activeSet.getScore(anyString())).thenReturn((System.currentTimeMillis() + 600000).toDouble())
 
         val tokenBucket = mock(RBucket::class.java) as RBucket<String>
         doReturn(tokenBucket).`when`(redissonClient).getBucket<String>(anyString())
+        doReturn(tokenBucket).`when`(redissonClient).getBucket<String>(anyString(), any(Codec::class.java))
         `when`(tokenBucket.get()).thenReturn("test-queue-token")
 
         val hashMap = mock(RMap::class.java) as RMap<String, String>
         doReturn(hashMap).`when`(redissonClient).getMap<String, String>(anyString())
+        doReturn(hashMap).`when`(redissonClient).getMap<String, String>(anyString(), any(Codec::class.java))
         `when`(hashMap["userId"]).thenReturn(userEntity.userId.toString())
         `when`(hashMap["occupyToken"]).thenReturn("test-token")
 
         val blockingQueue = mock(RBlockingQueue::class.java) as RBlockingQueue<String>
         val delayedQueue = mock(RDelayedQueue::class.java) as RDelayedQueue<String>
         doReturn(blockingQueue).`when`(redissonClient).getBlockingQueue<String>(anyString())
+        doReturn(blockingQueue).`when`(redissonClient).getBlockingQueue<String>(anyString(), any(Codec::class.java))
         doReturn(delayedQueue).`when`(redissonClient).getDelayedQueue<String>(any())
 
         concert = concertRepository.save(
@@ -110,7 +115,8 @@ class TicketControllerTest @Autowired constructor(
     fun createTicket() {
         val hashMap = mock(RMap::class.java) as RMap<String, String>
         doReturn(hashMap).`when`(redissonClient).getMap<String, String>(anyString())
-        `when`(redissonClient.getMap<String, String>(anyString())).thenAnswer { invocation ->
+        doReturn(hashMap).`when`(redissonClient).getMap<String, String>(anyString(), any(Codec::class.java))
+        val mapAnswer = { invocation: org.mockito.invocation.InvocationOnMock ->
             val key = invocation.getArgument(0, String::class.java)
             val map = mock(RMap::class.java) as RMap<String, String>
             when {
@@ -129,6 +135,8 @@ class TicketControllerTest @Autowired constructor(
             }
             map
         }
+        `when`(redissonClient.getMap<String, String>(anyString())).thenAnswer(mapAnswer)
+        `when`(redissonClient.getMap<String, String>(anyString(), any(Codec::class.java))).thenAnswer(mapAnswer)
 
         val requestBody = """
             {

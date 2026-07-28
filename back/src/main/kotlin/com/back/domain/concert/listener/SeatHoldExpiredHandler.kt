@@ -4,6 +4,7 @@ import jakarta.annotation.PostConstruct
 import jakarta.annotation.PreDestroy
 import org.slf4j.LoggerFactory
 import org.redisson.api.RedissonClient
+import org.redisson.client.codec.StringCodec
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.stereotype.Component
 import java.util.concurrent.Executors
@@ -40,7 +41,7 @@ class SeatHoldExpiredHandler(
     private fun listen() {
         while (running) {
             try {
-                val blockingQueue = redissonClient.getBlockingQueue<String>(DELAYED_QUEUE_KEY)
+                val blockingQueue = redissonClient.getBlockingQueue<String>(DELAYED_QUEUE_KEY, StringCodec.INSTANCE)
                 val message = blockingQueue.poll(2, TimeUnit.SECONDS)
                 if (message != null) {
                     handleMessage(message)

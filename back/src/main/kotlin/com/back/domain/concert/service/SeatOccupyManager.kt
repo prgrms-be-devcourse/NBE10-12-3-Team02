@@ -83,7 +83,7 @@ class SeatOccupyManager(
         concertService.validateConcertScheduleMatch(concertId, scheduleId)
 
         val redisKey = generateSeatOccupyKey(concertId, scheduleId, seatNumber)
-        val hashMap = redissonClient.getMap<String, String>(redisKey)
+        val hashMap = redissonClient.getMap<String, String>(redisKey, StringCodec.INSTANCE)
 
         val occupyUserId = hashMap["userId"]
             ?: throw ServiceException(ErrorCode.SEAT_HOLD_EXPIRED)
@@ -124,14 +124,14 @@ class SeatOccupyManager(
     }
 
     fun cleanupRedis(redisKey: String, indexKey: String, seatNumber: String) {
-        redissonClient.getMap<String, String>(redisKey).delete()
-        redissonClient.getScoredSortedSet<String>(indexKey).remove(seatNumber)
+        redissonClient.getMap<String, String>(redisKey, StringCodec.INSTANCE).delete()
+        redissonClient.getScoredSortedSet<String>(indexKey, StringCodec.INSTANCE).remove(seatNumber)
     }
 
     fun validateSeatHolds(userId: Long, concertId: Long, scheduleId: Long, seatHolds: List<SeatHoldInfo>) {
         for (hold in seatHolds) {
             val redisKey = generateSeatOccupyKey(concertId, scheduleId, hold.seatNumber)
-            val hashMap = redissonClient.getMap<String, String>(redisKey)
+            val hashMap = redissonClient.getMap<String, String>(redisKey, StringCodec.INSTANCE)
 
             val holdUserId = hashMap["userId"]
             val holdOccupyToken = hashMap["occupyToken"]
@@ -151,7 +151,7 @@ class SeatOccupyManager(
     fun cancelDelayedQueueMessage(concertId: Long, scheduleId: Long, seatNumber: String) {
         try {
             val message = SeatOccupiedEventListener.buildMessage(concertId, scheduleId, seatNumber)
-            val blockingQueue = redissonClient.getBlockingQueue<String>(SeatHoldExpiredHandler.DELAYED_QUEUE_KEY)
+            val blockingQueue = redissonClient.getBlockingQueue<String>(SeatHoldExpiredHandler.DELAYED_QUEUE_KEY, StringCodec.INSTANCE)
             val delayedQueue = redissonClient.getDelayedQueue(blockingQueue)
             delayedQueue.remove(message)
         } catch (e: Exception) {
