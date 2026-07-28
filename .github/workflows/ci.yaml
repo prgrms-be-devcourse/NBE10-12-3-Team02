@@ -1,0 +1,108 @@
+name: CI
+
+# - feat/**, fix/**, refactor/** 브랜치 push -> 바로 피드백
+# - main 대상 PR                        -> 머지 전 최종 검증 게이트
+# - main push 제외                       -> main push는 CD(배포) 스크립트가 담당
+on:
+  push:
+    branches:
+      - 'feat/**'
+      - 'fix/**'
+      - 'refactor/**'
+  pull_request:
+    branches:
+      - 'main'
+  workflow_dispatch:
+
+# 같은 브랜치에 연속 push 발생 시 이전 실행 중인 CI는 자동 취소 (자원 절약)
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ── 백엔드: Java 25 + Kotlin 2.4.10 + Spring Boot 4.0.7 테스트 및 컴파일 검증 ──
+  backend:
+    name: Backend CI
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: back
+    steps:
+      - uses: actions/checkout@v4
+
+      # 1. JDK 25 설정
+      - name: Set up JDK 25
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+
+      # 2. GitHub Secrets 기반 application-secret.yaml 동적 생성
+      - name: Create application-secret.yaml from Secret
+        run: |
+          mkdir -p src/main/resources
+          echo "${{ secrets.APPLICATION_SECRET_YAML }}" > src/main/resources/application-secret.yaml
+
+      # 3. Gradle 공식 액션 적용
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      # 4. 단위 및 통합 테스트 실행 (SPRING_PROFILES_ACTIVE: test 적용)
+      - name: Run tests (unit/integration)
+        env:
+          SPRING_PROFILES_ACTIVE: test
+        run: |
+          chmod +x gradlew
+          ./gradlew test --no-daemon
+
+      # 5. 테스트 실패 시 리포트 업로드
+      - name: Upload test report on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-test-report
+          path: back/build/reports/tests/test
+          retention-days: 7
+
+  # ── 프론트엔드: Node.js 22 + pnpm v9 기반 lint + build ──
+  frontend:
+    name: Frontend CI
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: front
+    steps:
+      - uses: actions/checkout@v4
+
+      # 1. Node.js 22.x 먼저 설정
+      - name: Set up Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      # 2. pnpm v9.x 설치 (action-setup v4 적용)
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      # 3. Next.js 빌드 캐시 설정
+      - name: Restore Next.js build cache
+        uses: actions/cache@v4
+        with:
+          path: front/.next/cache
+          key: ${{ runner.os }}-nextjs-${{ hashFiles('front/pnpm-lock.yaml') }}-${{ hashFiles('front/src/**') }}
+          restore-keys: |
+            ${{ runner.os }}-nextjs-${{ hashFiles('front/pnpm-lock.yaml') }}-
+
+      # 4. pnpm-lock.yaml 기반 패키지 설치
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # 5. ESLint 정적 코드 분석
+      - name: Lint check
+        run: pnpm run lint
+
+      # 6. TypeScript + Next.js 빌드 검증
+      - name: Build check
+        run: pnpm run build

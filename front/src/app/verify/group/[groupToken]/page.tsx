@@ -26,13 +26,12 @@ type VerifyState =
 export default function GroupVerifyPage() {
   const params = useParams();
   const groupToken = params.groupToken as string;
-  const [state, setState] = useState<VerifyState>({ status: "loading" });
+  const [state, setState] = useState<VerifyState>(() =>
+    groupToken ? { status: "loading" } : { status: "notfound" }
+  );
 
   useEffect(() => {
-    if (!groupToken) {
-      setState({ status: "notfound" });
-      return;
-    }
+    if (!groupToken) return;
 
     fetch(`${BASE_URL}/api/v1/tickets/verify/group/${groupToken}`)
       .then(async (res) => {

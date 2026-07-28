@@ -1,0 +1,109 @@
+name: CD - Build & Deploy Backend (EC2)
+
+# main 브랜치에 백엔드 코드가 머지되면 
+# ECR로 Docker 이미지를 push하고, EC2에 SSH로 접속하여 자동 배포합니다.
+# (프론트엔드는 Vercel 연동을 통해 자동 배포되므로 EC2 배포 대상에서 제외됩니다.)
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'back/**'
+      - '.github/workflows/cd.yaml'
+  workflow_dispatch: # 수동 실행 허용
+
+# OIDC로 AWS 로그인하기 위한 id-token 권한 설정
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  AWS_REGION: ap-northeast-2
+
+jobs:
+  # ── 1. 백엔드 변경 감지 ──
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      backend: ${{ steps.filter.outputs.backend }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            backend:
+              - 'back/**'
+
+  # ── 2. 백엔드 이미지 빌드 → ECR push ──
+  build-backend:
+    needs: changes
+    if: needs.changes.outputs.backend == 'true' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Secrets 기반 application-secret.yaml 동적 생성 (Docker 이미지에 포함)
+      - name: Create application-secret.yaml from Secret
+        run: |
+          mkdir -p back/src/main/resources
+          echo "${{ secrets.APPLICATION_SECRET_YAML }}" > back/src/main/resources/application-secret.yaml
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build & push backend image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./back
+          push: true
+          tags: |
+            ${{ steps.ecr.outputs.registry }}/NBE10-12-3-Team02:latest
+            ${{ steps.ecr.outputs.registry }}/NBE10-12-3-Team02:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # ── 3. EC2 SSH 자동 배포 (pull → up) ──
+  deploy:
+    needs: build-backend
+    if: always() && needs.build-backend.result == 'success'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Deploy to EC2 via SSH
+        uses: appleboy/ssh-action@v1
+        env:
+          ECR_REGISTRY: ${{ steps.ecr.outputs.registry }}
+          IMAGE_TAG: ${{ github.sha }}
+          AWS_REGION: ${{ env.AWS_REGION }}
+        with:
+          host: ${{ secrets.EC2_APP_HOST }}
+          username: ubuntu
+          key: ${{ secrets.EC2_SSH_KEY }}
+          envs: ECR_REGISTRY,IMAGE_TAG,AWS_REGION
+          script: |
+            cd ~/app
+            aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $ECR_REGISTRY
+            export IMAGE_TAG=$IMAGE_TAG
+            docker compose --env-file .env pull
+            docker compose --env-file .env up -d
+            docker image prune -f
