@@ -36,11 +36,17 @@ jobs:
           distribution: temurin
           java-version: '25'
 
-      # 2. Gradle 공식 액션 적용
+      # 2. GitHub Secrets 기반 application-secret.yaml 동적 생성
+      - name: Create application-secret.yaml from Secret
+        run: |
+          mkdir -p src/main/resources
+          echo "${{ secrets.APPLICATION_SECRET_YAML }}" > src/main/resources/application-secret.yaml
+
+      # 3. Gradle 공식 액션 적용
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
 
-      # 3. 단위 및 통합 테스트 실행 (SPRING_PROFILES_ACTIVE: test 적용)
+      # 4. 단위 및 통합 테스트 실행 (SPRING_PROFILES_ACTIVE: test 적용)
       - name: Run tests (unit/integration)
         env:
           SPRING_PROFILES_ACTIVE: test
@@ -48,7 +54,7 @@ jobs:
           chmod +x gradlew
           ./gradlew test --no-daemon
 
-      # 4. 테스트 실패 시 리포트 업로드
+      # 5. 테스트 실패 시 리포트 업로드
       - name: Upload test report on failure
         if: failure()
         uses: actions/upload-artifact@v4
