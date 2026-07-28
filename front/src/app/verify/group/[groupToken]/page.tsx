@@ -5,35 +5,39 @@ import { useParams } from "next/navigation";
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
 
-interface TicketVerifyResponse {
-  concertName: string;
-  venueName: string;
-  scheduleDate: string;
+interface SeatVerifyInfo {
   seatNumber: string;
   isValid: boolean;
 }
 
+interface TicketGroupVerifyResponse {
+  concertName: string;
+  venueName: string;
+  scheduleDate: string;
+  seats: SeatVerifyInfo[];
+}
+
 type VerifyState =
   | { status: "loading" }
-  | { status: "valid"; data: TicketVerifyResponse }
-  | { status: "invalid" }
+  | { status: "found"; data: TicketGroupVerifyResponse }
+  | { status: "notfound" }
   | { status: "error" };
 
-export default function VerifyPage() {
+export default function GroupVerifyPage() {
   const params = useParams();
-  const qrToken = params.qrToken as string;
+  const groupToken = params.groupToken as string;
   const [state, setState] = useState<VerifyState>({ status: "loading" });
 
   useEffect(() => {
-    if (!qrToken) {
-      setState({ status: "invalid" });
+    if (!groupToken) {
+      setState({ status: "notfound" });
       return;
     }
 
-    fetch(`${BASE_URL}/api/v1/tickets/verify/${qrToken}`)
+    fetch(`${BASE_URL}/api/v1/tickets/verify/group/${groupToken}`)
       .then(async (res) => {
         if (res.status === 404) {
-          setState({ status: "invalid" });
+          setState({ status: "notfound" });
           return;
         }
         if (!res.ok) {
@@ -41,14 +45,10 @@ export default function VerifyPage() {
           return;
         }
         const json = await res.json();
-        if (!json.data?.isValid) {
-          setState({ status: "invalid" });
-          return;
-        }
-        setState({ status: "valid", data: json.data });
+        setState({ status: "found", data: json.data });
       })
       .catch(() => setState({ status: "error" }));
-  }, [qrToken]);
+  }, [groupToken]);
 
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center p-6">
@@ -57,18 +57,12 @@ export default function VerifyPage() {
           <p className="text-gray-400 text-sm">검증 중...</p>
         )}
 
-        {state.status === "valid" && (
+        {state.status === "found" && (
           <>
-            <div className="text-5xl mb-4">✅</div>
-            <h1 className="text-xl font-bold text-gray-800 mb-1">유효한 티켓입니다</h1>
-            <p className={`text-xs font-semibold px-3 py-1 rounded-full inline-block mb-6 ${
-              state.data.isValid
-                ? "bg-green-100 text-green-700"
-                : "bg-gray-100 text-gray-400"
-            }`}>
-              {state.data.isValid ? "예매완료" : "취소됨"}
-            </p>
-            <div className="space-y-3 text-sm text-left border-t border-gray-100 pt-5">
+            <div className="text-5xl mb-4">🎟️</div>
+            <h1 className="text-xl font-bold text-gray-800 mb-1">티켓 정보</h1>
+
+            <div className="space-y-3 text-sm text-left border-t border-gray-100 pt-5 mt-4">
               <div className="flex justify-between">
                 <span className="text-gray-400 w-20 shrink-0">콘서트</span>
                 <span className="text-gray-800 font-semibold text-right">{state.data.concertName}</span>
@@ -89,15 +83,30 @@ export default function VerifyPage() {
                   })}
                 </span>
               </div>
-              <div className="flex justify-between">
-                <span className="text-gray-400 w-20 shrink-0">좌석</span>
-                <span className="text-gray-800 font-semibold text-right">{state.data.seatNumber}</span>
+            </div>
+
+            <div className="mt-5 border-t border-gray-100 pt-4">
+              <p className="text-xs text-gray-400 mb-3 text-left">좌석별 유효 여부</p>
+              <div className="space-y-2">
+                {state.data.seats.map((seat) => (
+                  <div
+                    key={seat.seatNumber}
+                    className={`flex items-center justify-between px-4 py-2.5 rounded-xl text-sm font-semibold ${
+                      seat.isValid
+                        ? "bg-green-50 text-green-700"
+                        : "bg-gray-100 text-gray-400"
+                    }`}
+                  >
+                    <span>{seat.seatNumber}</span>
+                    <span>{seat.isValid ? "✅ 유효" : "❌ 취소됨"}</span>
+                  </div>
+                ))}
               </div>
             </div>
           </>
         )}
 
-        {state.status === "invalid" && (
+        {state.status === "notfound" && (
           <>
             <div className="text-5xl mb-4">❌</div>
             <h1 className="text-xl font-bold text-gray-800 mb-2">유효하지 않은 티켓입니다</h1>

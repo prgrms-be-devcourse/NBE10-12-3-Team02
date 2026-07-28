@@ -10,7 +10,7 @@ import { getLocalConcertPoster } from "@/lib/concertDetailImages";
 interface TicketSummary {
   ticketId: number;
   ticketNumber: string;
-  qrToken?: string;
+  groupToken?: string;
   seatNumber: string;
   gradeName: string;
   ticketPrice: number;
@@ -232,25 +232,16 @@ function TicketDetailContent() {
                 </span>
               </div>
 
-              {group.tickets.some((t) => t.qrToken) && origin && (
+              {origin && group.tickets.find((t) => t.groupToken)?.groupToken && (
                 <div className="border-t border-white/20 pt-3 mb-2">
                   <p className="text-blue-200 text-[10px] tracking-widest mb-2">QR CODE</p>
-                  <div className="flex gap-3 justify-center flex-wrap">
-                    {group.tickets.map((t, index) =>
-                      t.qrToken ? (
-                        <div key={t.ticketId} className="flex flex-col items-center gap-1">
-                          {group.tickets.length > 1 && (
-                            <span className="text-[9px] text-blue-200">No.{index + 1}</span>
-                          )}
-                          <div className="bg-white p-1.5 rounded">
-                            <QRCodeSVG
-                              value={`${origin}/verify/${t.qrToken}`}
-                              size={group.tickets.length === 1 ? 80 : 60}
-                            />
-                          </div>
-                        </div>
-                      ) : null
-                    )}
+                  <div className="flex justify-center">
+                    <div className="bg-white p-1.5 rounded">
+                      <QRCodeSVG
+                        value={`${origin}/verify/group/${group.tickets.find((t) => t.groupToken)!.groupToken}`}
+                        size={80}
+                      />
+                    </div>
                   </div>
                 </div>
               )}
