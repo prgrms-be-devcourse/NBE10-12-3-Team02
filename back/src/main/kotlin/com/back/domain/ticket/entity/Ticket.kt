@@ -56,7 +56,7 @@ class Ticket(
             scheduleSeat: ScheduleSeat,
             ticketNumber: String,
             ticketPrice: Int,
-            groupToken: String = ""
+            groupToken: String
         ): Ticket = Ticket(
             user = user,
             schedule = schedule,
