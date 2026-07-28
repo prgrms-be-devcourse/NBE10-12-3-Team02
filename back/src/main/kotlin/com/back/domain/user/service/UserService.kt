@@ -1,6 +1,5 @@
 package com.back.domain.user.service
 
-import com.back.domain.schedule.constant.SeatStatus
 import com.back.domain.ticket.event.TicketCancelledEvent
 import com.back.domain.ticket.repository.TicketRepository
 import com.back.domain.user.dto.*
@@ -127,9 +126,12 @@ class UserService(
         val user = userRepository.findByUserIdAndDeletedAtIsNull(userId)
             ?: throw ServiceException(ErrorCode.USER_NOT_FOUND)
 
-        user.profileImgUrl?.let { fileStorage.delete(it) }
+        val oldPath = user.profileImgUrl
+
         val storedPath = fileStorage.store(file, "profile")
         user.updateProfileImg(storedPath)
+
+        oldPath?.let { fileStorage.delete(it) }
 
         return user.redirectToProfileImgUrlOrDefault
     }
