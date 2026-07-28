@@ -89,7 +89,7 @@ export default function MyPage() {
       await apiFetch(`/users/withdraw`, { method: "PATCH" });
       setAccessToken(null);
       await showSuccess("회원 탈퇴가 완료되었습니다.");
-      router.push("/");
+      window.location.href = "/";
     } catch (e) {
       showError(e instanceof Error ? e.message : "탈퇴 처리 중 오류가 발생했습니다.");
     } finally {
