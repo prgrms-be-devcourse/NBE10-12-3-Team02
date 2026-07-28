@@ -2,8 +2,9 @@ package com.back.domain.auth.service
 
 import com.back.global.exception.ErrorCode
 import com.back.global.exception.ServiceException
-import com.back.global.security.email.constant.EmailVerificationConfirmResult
+import com.back.global.security.email.EmailVerificationProperties
 import com.back.global.security.email.EmailVerificationRepository
+import com.back.global.security.email.constant.EmailVerificationConfirmResult
 import com.back.global.security.jwt.TokenHashUtil
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
@@ -25,10 +26,13 @@ class EmailVerificationServiceTest {
     private val service = EmailVerificationService(
         mailSender = mailSender,
         emailVerificationRepository = repository,
-        codeExpirationSeconds = CODE_EXPIRATION_SECONDS,
-        verifiedExpirationSeconds = VERIFIED_EXPIRATION_SECONDS,
-        resendCooldownSeconds = RESEND_COOLDOWN_SECONDS,
-        maxAttempts = MAX_ATTEMPTS,
+        properties = EmailVerificationProperties(
+            codeExpirationSeconds = CODE_EXPIRATION_SECONDS,
+            verifiedExpirationSeconds = VERIFIED_EXPIRATION_SECONDS,
+            resendCooldownSeconds = RESEND_COOLDOWN_SECONDS,
+            maxAttempts = MAX_ATTEMPTS,
+            redisPrefix = REDIS_PREFIX,
+        ),
         senderEmail = SENDER_EMAIL,
     )
 
@@ -228,6 +232,7 @@ class EmailVerificationServiceTest {
     companion object {
         private const val EMAIL = "test@example.com"
         private const val SENDER_EMAIL = "sender@naver.com"
+        private const val REDIS_PREFIX = "auth:email-verification:"
         private const val VERIFICATION_TOKEN = "verification-token"
         private const val RESERVATION_ID = "reservation-id"
         private val EMAIL_HASH = TokenHashUtil.sha256(EMAIL)

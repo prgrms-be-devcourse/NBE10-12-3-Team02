@@ -2,6 +2,7 @@ package com.back.domain.auth.service
 
 import com.back.global.exception.ErrorCode
 import com.back.global.exception.ServiceException
+import com.back.global.security.email.EmailVerificationProperties
 import com.back.global.security.email.EmailVerificationRepository
 import com.back.global.security.email.constant.EmailVerificationConfirmResult
 import com.back.global.security.jwt.TokenHashUtil
@@ -20,14 +21,7 @@ import java.util.UUID
 class EmailVerificationService(
     private val mailSender: JavaMailSender,
     private val emailVerificationRepository: EmailVerificationRepository,
-    @Value("\${custom.auth.email-verification.code-expiration-seconds}")
-    private val codeExpirationSeconds: Long,
-    @Value("\${custom.auth.email-verification.verified-expiration-seconds}")
-    private val verifiedExpirationSeconds: Long,
-    @Value("\${custom.auth.email-verification.resend-cooldown-seconds}")
-    private val resendCooldownSeconds: Long,
-    @Value("\${custom.auth.email-verification.max-attempts}")
-    private val maxAttempts: Long,
+    private val properties: EmailVerificationProperties,
     @Value("\${spring.mail.username}")
     private val senderEmail: String,
 ) {
@@ -39,7 +33,7 @@ class EmailVerificationService(
             emailHash = emailHash,
             codeHash = hashCode(normalizedEmail, code),
             codeTtl = codeTtl(),
-            resendCooldown = Duration.ofSeconds(resendCooldownSeconds),
+            resendCooldown = Duration.ofSeconds(properties.resendCooldownSeconds),
         )
 
         if (!challengeSaved) {
@@ -67,8 +61,8 @@ class EmailVerificationService(
             emailHash = emailHash,
             requestCodeHash = hashCode(normalizedEmail, code),
             verificationTokenHash = TokenHashUtil.sha256(verificationToken),
-            maxAttempts = maxAttempts,
-            verificationTtl = Duration.ofSeconds(verifiedExpirationSeconds),
+            maxAttempts = properties.maxAttempts,
+            verificationTtl = Duration.ofSeconds(properties.verifiedExpirationSeconds),
         )
 
         return when (result) {
@@ -111,7 +105,7 @@ class EmailVerificationService(
             subject = "[Ticketing Go] 이메일 인증번호"
             text = """
                 회원가입 이메일 인증번호는 [$code]입니다.
-                인증번호는 ${codeExpirationSeconds / 60}분 동안 유효합니다.
+                인증번호는 ${properties.codeExpirationSeconds / 60}분 동안 유효합니다.
             """.trimIndent()
         }
 
@@ -127,7 +121,7 @@ class EmailVerificationService(
     private fun emailHash(email: String): String =
         TokenHashUtil.sha256(normalizeEmail(email))
 
-    private fun codeTtl(): Duration = Duration.ofSeconds(codeExpirationSeconds)
+    private fun codeTtl(): Duration = Duration.ofSeconds(properties.codeExpirationSeconds)
 
     companion object {
         private const val CODE_LENGTH = 6

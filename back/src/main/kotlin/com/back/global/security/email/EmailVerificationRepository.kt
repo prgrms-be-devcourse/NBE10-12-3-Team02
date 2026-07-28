@@ -4,15 +4,13 @@ import com.back.global.security.email.constant.EmailVerificationConfirmResult
 import org.redisson.api.RedissonClient
 import org.redisson.api.RScript
 import org.redisson.client.codec.StringCodec
-import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Repository
 import java.time.Duration
 
 @Repository
 class EmailVerificationRepository(
     private val redissonClient: RedissonClient,
-    @Value("\${custom.auth.email-verification.redis-prefix}")
-    private val prefix: String,
+    private val properties: EmailVerificationProperties,
 ) {
     fun saveChallenge(
         emailHash: String,
@@ -104,13 +102,13 @@ class EmailVerificationRepository(
         }
     }
 
-    private fun codeKey(emailHash: String): String = "${prefix}code:$emailHash"
+    private fun codeKey(emailHash: String): String = "${properties.redisPrefix}code:$emailHash"
 
-    private fun attemptKey(emailHash: String): String = "${prefix}attempt:$emailHash"
+    private fun attemptKey(emailHash: String): String = "${properties.redisPrefix}attempt:$emailHash"
 
-    private fun cooldownKey(emailHash: String): String = "${prefix}cooldown:$emailHash"
+    private fun cooldownKey(emailHash: String): String = "${properties.redisPrefix}cooldown:$emailHash"
 
-    private fun verifiedKey(tokenHash: String): String = "${prefix}verified:$tokenHash"
+    private fun verifiedKey(tokenHash: String): String = "${properties.redisPrefix}verified:$tokenHash"
 
     private fun availableValue(emailHash: String): String = "$AVAILABLE_PREFIX$emailHash"
 
