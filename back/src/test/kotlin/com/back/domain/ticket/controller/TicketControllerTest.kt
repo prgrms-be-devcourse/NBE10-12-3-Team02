@@ -205,7 +205,7 @@ class TicketControllerTest @Autowired constructor(
     fun cancelTicket() {
         seat.occupyHold()
         seat.sell()
-        val ticket = ticketRepository.save(Ticket.create(userEntity, schedule, seat, "ticket-number", seat.seatPrice))
+        val ticket = ticketRepository.save(Ticket.create(userEntity, schedule, seat, "ticket-number", seat.seatPrice, "test-group-token"))
 
         mockMvc.perform(
             patch("/api/v1/tickets/cancel/{ticketId}", ticket.ticketId)
