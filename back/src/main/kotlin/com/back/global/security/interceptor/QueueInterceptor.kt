@@ -6,15 +6,13 @@ import com.back.global.exception.ServiceException
 import com.back.global.requestcontext.RequestContext
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
-import org.redisson.api.RedissonClient
-import org.springframework.context.annotation.Lazy
 import org.springframework.stereotype.Component
 import org.springframework.web.servlet.HandlerInterceptor
 import org.springframework.web.servlet.HandlerMapping
 
 @Component
 class QueueInterceptor(
-    private val redissonClient: RedissonClient,
+    private val waitingQueueManager: WaitingQueueManager,
     private val requestContext: RequestContext,
 ) : HandlerInterceptor {
     override fun preHandle(
@@ -33,27 +31,17 @@ class QueueInterceptor(
         val userId = requestContext.actor?.id
             ?: throw ServiceException(ErrorCode.AUTH_LOGIN_REQUIRED)
 
-        if (!hasActiveSession(scheduleId, userId)) {
+        if (!waitingQueueManager.hasValidSession(scheduleId, userId)) {
             throw ServiceException(ErrorCode.QUEUE_SESSION_EXPIRED)
         }
 
-        val storedToken = redissonClient
-            .getBucket<String>(WaitingQueueManager.generateActiveTokenKey(scheduleId, userId))
-            .get()
+        val storedToken = waitingQueueManager.getStoredToken(scheduleId, userId)
 
         if (token != storedToken) {
             throw ServiceException(ErrorCode.QUEUE_SESSION_EXPIRED)
         }
 
         return true
-    }
-
-    private fun hasActiveSession(scheduleId: Long, userId: Long): Boolean {
-        val activeSet = redissonClient.getScoredSortedSet<String>(
-            WaitingQueueManager.generateQueueActiveKey(scheduleId),
-        )
-        val expiresAt = activeSet.getScore(userId.toString()) ?: return false
-        return expiresAt >= System.currentTimeMillis()
     }
 
     private fun HttpServletRequest.scheduleId(): Long {
