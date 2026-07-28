@@ -1,7 +1,7 @@
 package com.back.domain.schedule.repository
 
 import com.back.domain.schedule.entity.ScheduleSeat
-import com.back.domain.schedule.entity.SeatStatus
+import com.back.domain.schedule.constant.SeatStatus
 import jakarta.persistence.LockModeType
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.data.jpa.repository.Lock

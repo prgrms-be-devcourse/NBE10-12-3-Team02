@@ -1,6 +1,6 @@
 package com.back.domain.concert.dto
 
-import com.back.domain.schedule.entity.SeatStatus
+import com.back.domain.schedule.constant.SeatStatus
 
 data class SeatOccupyResponse(
     val occupyToken: String,

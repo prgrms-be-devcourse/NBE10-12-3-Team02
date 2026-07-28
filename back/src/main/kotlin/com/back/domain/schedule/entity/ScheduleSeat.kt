@@ -1,5 +1,7 @@
 package com.back.domain.schedule.entity
 
+import com.back.domain.schedule.constant.SeatStatus
+
 import com.back.global.exception.ErrorCode
 import com.back.global.exception.ServiceException
 import com.back.global.jpa.entity.BaseEntity

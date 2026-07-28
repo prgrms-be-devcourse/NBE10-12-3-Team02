@@ -2,9 +2,9 @@ package com.back.global.security.jwt.repository
 
 import com.back.global.exception.ErrorCode
 import com.back.global.exception.ServiceException
-import com.back.global.security.jwt.RefreshTokenKeyType
 import com.back.global.security.jwt.RefreshTokenLuaScripts
-import com.back.global.security.jwt.RefreshTokenValidationResult
+import com.back.global.security.jwt.constant.RefreshTokenKeyType
+import com.back.global.security.jwt.constant.RefreshTokenValidationResult
 import org.redisson.api.RScript
 import org.redisson.api.RedissonClient
 import org.redisson.client.codec.StringCodec

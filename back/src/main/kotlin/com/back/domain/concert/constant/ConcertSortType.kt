@@ -1,4 +1,4 @@
-package com.back.domain.concert.enums
+package com.back.domain.concert.constant
 
 enum class ConcertSortType {
     closingSoon,
