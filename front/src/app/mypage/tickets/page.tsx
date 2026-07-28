@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { ChevronLeft, Printer } from "lucide-react";
@@ -44,11 +44,7 @@ function TicketDetailContent() {
   const searchParams = useSearchParams();
   const [group] = useState<TicketGroupInfo | null>(() => parseGroup(searchParams.get("group")));
   const [isFlipped, setIsFlipped] = useState(false);
-  const [origin, setOrigin] = useState("");
-
-  useEffect(() => {
-    setOrigin(window.location.origin);
-  }, []);
+  const [origin] = useState(() => typeof window !== "undefined" ? window.location.origin : "");
 
   if (!group) {
     return (
