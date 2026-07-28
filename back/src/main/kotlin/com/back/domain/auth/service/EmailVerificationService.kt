@@ -3,12 +3,12 @@ package com.back.domain.auth.service
 import com.back.global.exception.ErrorCode
 import com.back.global.exception.ServiceException
 import com.back.global.security.email.EmailVerificationRepository
+import com.back.global.security.email.constant.EmailVerificationConfirmResult
 import com.back.global.security.jwt.TokenHashUtil
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.mail.SimpleMailMessage
 import org.springframework.mail.javamail.JavaMailSender
 import org.springframework.stereotype.Service
-import java.security.MessageDigest
 import java.security.SecureRandom
 import java.time.Duration
 import java.util.Locale
@@ -55,27 +55,22 @@ class EmailVerificationService(
     fun confirm(email: String, code: String): String {
         val normalizedEmail = normalizeEmail(email)
         val emailHash = TokenHashUtil.sha256(normalizedEmail)
-        val savedCodeHash = emailVerificationRepository.getCodeHash(emailHash)
-            ?: throw ServiceException(ErrorCode.AUTH_EMAIL_VERIFICATION_INVALID)
-
-        val attempts = emailVerificationRepository.incrementAttempts(emailHash, codeTtl())
-        if (attempts > maxAttempts) {
-            emailVerificationRepository.clearChallenge(emailHash)
-            throw ServiceException(ErrorCode.AUTH_EMAIL_VERIFICATION_TOO_MANY_ATTEMPTS)
-        }
-
-        if (!constantTimeEquals(savedCodeHash, hashCode(normalizedEmail, code))) {
-            throw ServiceException(ErrorCode.AUTH_EMAIL_VERIFICATION_INVALID)
-        }
-
         val verificationToken = UUID.randomUUID().toString()
-        emailVerificationRepository.saveVerification(
+        val result = emailVerificationRepository.confirm(
             emailHash = emailHash,
-            tokenHash = TokenHashUtil.sha256(verificationToken),
-            ttl = Duration.ofSeconds(verifiedExpirationSeconds),
+            requestCodeHash = hashCode(normalizedEmail, code),
+            verificationTokenHash = TokenHashUtil.sha256(verificationToken),
+            maxAttempts = maxAttempts,
+            verificationTtl = Duration.ofSeconds(verifiedExpirationSeconds),
         )
-        emailVerificationRepository.clearChallenge(emailHash)
-        return verificationToken
+
+        return when (result) {
+            EmailVerificationConfirmResult.SUCCESS -> verificationToken
+            EmailVerificationConfirmResult.INVALID ->
+                throw ServiceException(ErrorCode.AUTH_EMAIL_VERIFICATION_INVALID)
+            EmailVerificationConfirmResult.TOO_MANY_ATTEMPTS ->
+                throw ServiceException(ErrorCode.AUTH_EMAIL_VERIFICATION_TOO_MANY_ATTEMPTS)
+        }
     }
 
     fun consumeVerification(email: String, verificationToken: String): Boolean =
@@ -100,9 +95,6 @@ class EmailVerificationService(
 
     private fun hashCode(email: String, code: String): String =
         TokenHashUtil.sha256("$email:$code")
-
-    private fun constantTimeEquals(left: String, right: String): Boolean =
-        MessageDigest.isEqual(left.toByteArray(Charsets.UTF_8), right.toByteArray(Charsets.UTF_8))
 
     private fun normalizeEmail(email: String): String =
         email.trim().lowercase(Locale.ROOT)

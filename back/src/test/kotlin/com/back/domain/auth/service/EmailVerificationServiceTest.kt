@@ -2,6 +2,7 @@ package com.back.domain.auth.service
 
 import com.back.global.exception.ErrorCode
 import com.back.global.exception.ServiceException
+import com.back.global.security.email.constant.EmailVerificationConfirmResult
 import com.back.global.security.email.EmailVerificationRepository
 import com.back.global.security.jwt.TokenHashUtil
 import org.assertj.core.api.Assertions.assertThat
@@ -92,34 +93,38 @@ class EmailVerificationServiceTest {
     @Test
     @DisplayName("올바른 인증번호면 일회용 인증 토큰을 발급한다")
     fun t4() {
-        `when`(repository.getCodeHash(EMAIL_HASH)).thenReturn(TokenHashUtil.sha256("$EMAIL:$CODE"))
-        `when`(repository.incrementAttempts(EMAIL_HASH, Duration.ofSeconds(CODE_EXPIRATION_SECONDS)))
-            .thenReturn(1)
+        `when`(
+            repository.confirm(
+                eqValue(EMAIL_HASH),
+                eqValue(TokenHashUtil.sha256("$EMAIL:$CODE")),
+                anyValue(),
+                eqValue(MAX_ATTEMPTS),
+                eqValue(Duration.ofSeconds(VERIFIED_EXPIRATION_SECONDS)),
+            ),
+        ).thenReturn(EmailVerificationConfirmResult.SUCCESS)
 
         val verificationToken = service.confirm(EMAIL, CODE)
 
         assertThat(verificationToken).isNotBlank()
-        verify(repository).saveVerification(
-            eqValue(EMAIL_HASH),
-            anyValue(),
-            eqValue(Duration.ofSeconds(VERIFIED_EXPIRATION_SECONDS)),
-        )
-        verify(repository).clearChallenge(EMAIL_HASH)
     }
 
     @Test
     @DisplayName("인증 시도 횟수를 초과하면 인증정보를 삭제한다")
     fun t5() {
-        `when`(repository.getCodeHash(EMAIL_HASH)).thenReturn("saved-code-hash")
-        `when`(repository.incrementAttempts(EMAIL_HASH, Duration.ofSeconds(CODE_EXPIRATION_SECONDS)))
-            .thenReturn(MAX_ATTEMPTS + 1)
+        `when`(
+            repository.confirm(
+                eqValue(EMAIL_HASH),
+                anyValue(),
+                anyValue(),
+                eqValue(MAX_ATTEMPTS),
+                anyValue(),
+            ),
+        ).thenReturn(EmailVerificationConfirmResult.TOO_MANY_ATTEMPTS)
 
         assertThatThrownBy { service.confirm(EMAIL, CODE) }
             .isInstanceOfSatisfying(ServiceException::class.java) {
                 assertThat(it.errorCode).isEqualTo(ErrorCode.AUTH_EMAIL_VERIFICATION_TOO_MANY_ATTEMPTS)
             }
-
-        verify(repository).clearChallenge(EMAIL_HASH)
     }
 
     companion object {
