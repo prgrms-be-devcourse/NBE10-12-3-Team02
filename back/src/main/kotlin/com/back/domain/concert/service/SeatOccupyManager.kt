@@ -123,9 +123,9 @@ class SeatOccupyManager(
         return SeatSelectionResponse.of(concertId, scheduleId, pricesMap, seatResponses)
     }
 
-    fun cleanupRedis(redisKey: String, indexKey: String, seatNumber: String) {
-        redissonClient.getMap<String, String>(redisKey, StringCodec.INSTANCE).delete()
-        redissonClient.getScoredSortedSet<String>(indexKey, StringCodec.INSTANCE).remove(seatNumber)
+    fun cleanupRedis(redisKey: String, indexKey: String, seatNumber: String) = with(redissonClient) {
+        getMap<String, String>(redisKey, StringCodec.INSTANCE).delete()
+        getScoredSortedSet<String>(indexKey, StringCodec.INSTANCE).remove(seatNumber)
     }
 
     fun validateSeatHolds(userId: Long, concertId: Long, scheduleId: Long, seatHolds: List<SeatHoldInfo>) {

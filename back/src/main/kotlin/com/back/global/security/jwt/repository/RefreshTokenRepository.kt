@@ -91,15 +91,11 @@ class RefreshTokenRepository(
 
     fun deleteAllByUserId(userId: Long) {
         val index = redissonClient.getSet<String>(generateKey(RefreshTokenKeyType.INDEX, userId), StringCodec.INSTANCE)
-        val jtis = index.readAll()
+        val jtis = index.readAll().ifEmpty { return }
 
-        if (jtis.isEmpty()) {
-            return
+        jtis.forEach { jti ->
+            redissonClient.getBucket<String>(generateKey(RefreshTokenKeyType.TOKEN, userId, jti), StringCodec.INSTANCE).delete()
         }
-
-        jtis
-            .map { jti -> generateKey(RefreshTokenKeyType.TOKEN, userId, jti) }
-            .forEach { key -> redissonClient.getBucket<String>(key, StringCodec.INSTANCE).delete() }
 
         index.delete()
     }
