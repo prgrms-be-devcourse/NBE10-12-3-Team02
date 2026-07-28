@@ -7,7 +7,7 @@ import com.back.global.exception.ErrorCode
 import com.back.global.exception.ServiceException
 import com.back.global.security.filter.BearerTokenExtractor
 import com.back.global.security.jwt.JwtTokenProvider
-import com.back.global.security.jwt.RefreshTokenValidationResult
+import com.back.global.security.jwt.constant.RefreshTokenValidationResult
 import com.back.global.security.jwt.TokenHashUtil
 import com.back.global.security.jwt.repository.BlacklistRepository
 import com.back.global.security.jwt.repository.RefreshTokenRepository

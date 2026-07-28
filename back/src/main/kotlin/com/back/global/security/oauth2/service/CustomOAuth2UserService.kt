@@ -1,6 +1,6 @@
 package com.back.global.security.oauth2.service
 
-import com.back.domain.user.entity.LoginType
+import com.back.domain.user.constant.LoginType
 import com.back.domain.user.entity.User
 import com.back.domain.user.repository.UserRepository
 import com.back.global.security.oauth2.info.GoogleOAuth2UserInfo

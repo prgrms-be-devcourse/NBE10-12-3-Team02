@@ -2,7 +2,7 @@ package com.back.domain.auth.controller
 
 import com.back.domain.auth.dto.TokenResponse
 import com.back.domain.auth.service.AuthService
-import com.back.domain.user.entity.LoginType
+import com.back.domain.user.constant.LoginType
 import com.back.domain.user.entity.User
 import com.back.domain.user.repository.UserRepository
 import com.back.global.requestcontext.RequestContext

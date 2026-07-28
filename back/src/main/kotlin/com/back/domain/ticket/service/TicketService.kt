@@ -2,7 +2,7 @@ package com.back.domain.ticket.service
 
 import com.back.domain.concert.service.SeatOccupyManager
 import com.back.domain.concert.sse.SeatStatusSseEmitterRegistry
-import com.back.domain.schedule.entity.SeatStatus
+import com.back.domain.schedule.constant.SeatStatus
 import com.back.domain.schedule.repository.ScheduleRepository
 import com.back.domain.schedule.repository.ScheduleSeatRepository
 import com.back.domain.ticket.dto.PaymentTicketRequest
