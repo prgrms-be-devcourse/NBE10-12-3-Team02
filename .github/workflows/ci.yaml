@@ -1,0 +1,85 @@
+name: CI
+
+# - feat/**, fix/**, refactor/** 브랜치 push -> 바로 피드백
+# - main 대상 PR                        -> 머지 전 최종 검증 게이트
+# - main push 제외                       -> main push는 CD(배포) 스크립트가 담당
+on:
+  push:
+    branches:
+      - 'feat/**'
+      - 'fix/**'
+      - 'refactor/**'
+  pull_request:
+    branches:
+      - 'main'
+  workflow_dispatch:
+
+# 같은 브랜치에 연속 push 발생 시 이전 실행 중인 CI는 자동 취소 (자원 절약)
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ── 백엔드: 테스트 및 컴파일 검증 (Java 25) ──
+  backend-test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: back
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 25
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+          cache: gradle
+
+      - name: Run tests (unit/integration)
+        run: |
+          chmod +x gradlew
+          ./gradlew test --no-daemon
+
+      - name: Upload test report on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-test-report
+          path: back/build/reports/tests/test
+          retention-days: 7
+
+  # ── 프론트엔드: pnpm v9 + Node 22 기반 lint + build (Vercel 배포 전 CI 검증) ──
+  frontend-check:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: front
+    steps:
+      - uses: actions/checkout@v4
+
+      # 1. pnpm v9 설치
+      - name: Install pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 9
+
+      # 2. Node 22 설정 및 pnpm 패키지 캐시 활성화
+      - name: Set up Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: pnpm
+          cache-dependency-path: front/pnpm-lock.yaml
+
+      # 3. pnpm-lock.yaml 파일 변경 없이 설치
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # 4. 정적 코드 분석
+      - name: Lint check
+        run: pnpm run lint
+
+      # 5. TypeScript + Next.js 빌드 검증
+      - name: Build check
+        run: pnpm run build
