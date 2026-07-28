@@ -1,4 +1,4 @@
-package com.back.global.security.jwt
+package com.back.global.security.jwt.constant
 
 enum class RefreshTokenValidationResult {
     SUCCESS,

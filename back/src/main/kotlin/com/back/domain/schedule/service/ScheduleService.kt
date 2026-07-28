@@ -3,7 +3,7 @@ package com.back.domain.schedule.service
 import com.back.domain.concert.repository.ConcertRepository
 import com.back.domain.schedule.dto.ShowScheduleListResponse
 import com.back.domain.schedule.dto.ShowScheduleResponse
-import com.back.domain.schedule.entity.SeatStatus
+import com.back.domain.schedule.constant.SeatStatus
 import com.back.domain.schedule.repository.ScheduleRepository
 import com.back.domain.schedule.repository.ScheduleSeatRepository
 import com.back.global.exception.ErrorCode

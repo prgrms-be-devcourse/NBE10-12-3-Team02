@@ -5,7 +5,7 @@ import com.back.domain.concert.dto.SeatSelectionResponse
 import com.back.domain.concert.event.SeatOccupiedEvent
 import com.back.domain.concert.listener.SeatHoldExpiredHandler
 import com.back.domain.concert.listener.SeatOccupiedEventListener
-import com.back.domain.schedule.entity.SeatStatus
+import com.back.domain.schedule.constant.SeatStatus
 import com.back.domain.schedule.repository.ScheduleSeatRepository
 import com.back.domain.ticket.dto.SeatHoldInfo
 import com.back.domain.ticket.repository.TicketRepository

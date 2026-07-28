@@ -1,7 +1,7 @@
 package com.back.domain.concert.controller
 
 import com.back.domain.concert.dto.*
-import com.back.domain.concert.enums.ConcertSortType
+import com.back.domain.concert.constant.ConcertSortType
 import com.back.domain.concert.service.ConcertService
 import com.back.domain.concert.service.SeatOccupyManager
 import com.back.global.annotation.ApiV1

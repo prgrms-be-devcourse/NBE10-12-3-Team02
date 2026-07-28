@@ -1,10 +1,10 @@
 package com.back.domain.auth.controller
 
-import com.back.domain.user.entity.LoginType
+import com.back.domain.user.constant.LoginType
 import com.back.domain.user.entity.User
 import com.back.domain.user.repository.UserRepository
 import com.back.global.RedisTestConfig
-import com.back.global.security.jwt.RefreshTokenValidationResult
+import com.back.global.security.jwt.constant.RefreshTokenValidationResult
 import com.back.global.security.jwt.repository.BlacklistRepository
 import com.back.global.security.jwt.repository.RefreshTokenRepository
 import com.fasterxml.jackson.databind.ObjectMapper

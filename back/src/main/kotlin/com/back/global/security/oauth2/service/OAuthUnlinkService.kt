@@ -1,6 +1,6 @@
 package com.back.global.security.oauth2.service
 
-import com.back.domain.user.entity.LoginType
+import com.back.domain.user.constant.LoginType
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.http.HttpEntity

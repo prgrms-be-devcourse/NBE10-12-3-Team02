@@ -1,5 +1,7 @@
 package com.back.domain.user.entity
 
+import com.back.domain.user.constant.LoginType
+
 import com.back.global.exception.ErrorCode
 import com.back.global.exception.ServiceException
 import com.back.global.jpa.converter.EncryptedStringConverter
