@@ -50,7 +50,7 @@ class EmailVerificationServiceTest {
     }
 
     @Test
-    @DisplayName("재전송 대기 중이면 발송하지 않는다")
+    @DisplayName("재전송 대기 중이면 인증번호를 발송하지 않는다")
     fun t2() {
         `when`(
             repository.saveChallenge(
@@ -127,9 +127,85 @@ class EmailVerificationServiceTest {
             }
     }
 
+    @Test
+    @DisplayName("유효한 인증 토큰을 회원가입에 사용하도록 예약한다")
+    fun t6() {
+        `when`(
+            repository.reserveVerification(
+                eqValue(EMAIL_HASH),
+                eqValue(TokenHashUtil.sha256(VERIFICATION_TOKEN)),
+                anyValue(),
+            ),
+        ).thenReturn(true)
+
+        val reservationId = service.reserveVerification(EMAIL, VERIFICATION_TOKEN)
+
+        assertThat(reservationId).isNotBlank()
+    }
+
+    @Test
+    @DisplayName("유효하지 않거나 이미 예약된 인증 토큰은 예약하지 않는다")
+    fun t7() {
+        `when`(
+            repository.reserveVerification(
+                eqValue(EMAIL_HASH),
+                eqValue(TokenHashUtil.sha256(VERIFICATION_TOKEN)),
+                anyValue(),
+            ),
+        ).thenReturn(false)
+
+        val reservationId = service.reserveVerification(EMAIL, VERIFICATION_TOKEN)
+
+        assertThat(reservationId).isNull()
+    }
+
+    @Test
+    @DisplayName("회원가입 커밋 성공 시 예약된 인증 토큰을 최종 소비한다")
+    fun t8() {
+        `when`(
+            repository.completeVerification(
+                EMAIL_HASH,
+                TokenHashUtil.sha256(VERIFICATION_TOKEN),
+                RESERVATION_ID,
+            ),
+        ).thenReturn(true)
+
+        val completed = service.completeVerification(EMAIL, VERIFICATION_TOKEN, RESERVATION_ID)
+
+        assertThat(completed).isTrue()
+        verify(repository).completeVerification(
+            EMAIL_HASH,
+            TokenHashUtil.sha256(VERIFICATION_TOKEN),
+            RESERVATION_ID,
+        )
+    }
+
+    @Test
+    @DisplayName("회원가입 롤백 시 예약된 인증 토큰을 다시 사용 가능한 상태로 복구한다")
+    fun t9() {
+        `when`(
+            repository.restoreVerification(
+                EMAIL_HASH,
+                TokenHashUtil.sha256(VERIFICATION_TOKEN),
+                RESERVATION_ID,
+            ),
+        ).thenReturn(true)
+
+        val restored = service.restoreVerification(EMAIL, VERIFICATION_TOKEN, RESERVATION_ID)
+
+        assertThat(restored).isTrue()
+        verify(repository).restoreVerification(
+            EMAIL_HASH,
+            TokenHashUtil.sha256(VERIFICATION_TOKEN),
+            RESERVATION_ID,
+        )
+    }
+
     companion object {
         private const val EMAIL = "test@example.com"
         private const val SENDER_EMAIL = "sender@naver.com"
+        private const val VERIFICATION_TOKEN = "verification-token"
+        private const val RESERVATION_ID = "reservation-id"
         private val EMAIL_HASH = TokenHashUtil.sha256(EMAIL)
         private const val CODE = "123456"
         private const val CODE_EXPIRATION_SECONDS = 300L

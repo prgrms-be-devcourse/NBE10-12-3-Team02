@@ -49,9 +49,48 @@ object EmailVerificationLuaScripts {
         return 1
     """
 
+    const val RESERVE_SCRIPT = """
+        local value = redis.call('GET', KEYS[1])
+        if value ~= ARGV[1] then
+            return 0
+        end
+
+        redis.call('SET', KEYS[1], ARGV[2], 'KEEPTTL')
+        return 1
+    """
+
+    const val COMPLETE_RESERVATION_SCRIPT = """
+        local value = redis.call('GET', KEYS[1])
+        if value ~= ARGV[1] then
+            return 0
+        end
+
+        redis.call('DEL', KEYS[1])
+        return 1
+    """
+
+    const val RESTORE_RESERVATION_SCRIPT = """
+        local value = redis.call('GET', KEYS[1])
+        if value ~= ARGV[1] then
+            return 0
+        end
+
+        redis.call('SET', KEYS[1], ARGV[2], 'KEEPTTL')
+        return 1
+    """
+
     @JvmStatic
     fun saveChallengeScript(): String = SAVE_CHALLENGE_SCRIPT.trimIndent()
 
     @JvmStatic
     fun confirmScript(): String = CONFIRM_SCRIPT.trimIndent()
+
+    @JvmStatic
+    fun reserveScript(): String = RESERVE_SCRIPT.trimIndent()
+
+    @JvmStatic
+    fun completeReservationScript(): String = COMPLETE_RESERVATION_SCRIPT.trimIndent()
+
+    @JvmStatic
+    fun restoreReservationScript(): String = RESTORE_RESERVATION_SCRIPT.trimIndent()
 }

@@ -77,8 +77,8 @@ class UserControllerTest @Autowired constructor(
 
         `when`(jwtTokenProvider.getRemainingSeconds(anyString()))
             .thenReturn(600L)
-        `when`(emailVerificationService.consumeVerification(anyString(), anyString()))
-            .thenReturn(true)
+        `when`(emailVerificationService.reserveVerification(anyString(), anyString()))
+            .thenReturn("test-reservation-id")
     }
 
     @Test
@@ -438,11 +438,11 @@ class UserControllerTest @Autowired constructor(
     @DisplayName("회원가입 실패 - 이메일 인증 토큰이 유효하지 않음")
     fun t21() {
         `when`(
-            emailVerificationService.consumeVerification(
+            emailVerificationService.reserveVerification(
                 "unverified@example.com",
                 "invalid-verification-token",
             )
-        ).thenReturn(false)
+        ).thenReturn(null)
 
         mockMvc.perform(
             post("/api/v1/users/signup")

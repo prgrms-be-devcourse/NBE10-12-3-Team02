@@ -73,10 +73,28 @@ class EmailVerificationService(
         }
     }
 
-    fun consumeVerification(email: String, verificationToken: String): Boolean =
-        emailVerificationRepository.consumeVerification(
-            emailHash = TokenHashUtil.sha256(normalizeEmail(email)),
+    fun reserveVerification(email: String, verificationToken: String): String? {
+        val reservationId = UUID.randomUUID().toString()
+        val reserved = emailVerificationRepository.reserveVerification(
+            emailHash = emailHash(email),
             tokenHash = TokenHashUtil.sha256(verificationToken),
+            reservationId = reservationId,
+        )
+        return reservationId.takeIf { reserved }
+    }
+
+    fun completeVerification(email: String, verificationToken: String, reservationId: String): Boolean =
+        emailVerificationRepository.completeVerification(
+            emailHash = emailHash(email),
+            tokenHash = TokenHashUtil.sha256(verificationToken),
+            reservationId = reservationId,
+        )
+
+    fun restoreVerification(email: String, verificationToken: String, reservationId: String): Boolean =
+        emailVerificationRepository.restoreVerification(
+            emailHash = emailHash(email),
+            tokenHash = TokenHashUtil.sha256(verificationToken),
+            reservationId = reservationId,
         )
 
     private fun createMessage(email: String, code: String): SimpleMailMessage =
@@ -98,6 +116,9 @@ class EmailVerificationService(
 
     private fun normalizeEmail(email: String): String =
         email.trim().lowercase(Locale.ROOT)
+
+    private fun emailHash(email: String): String =
+        TokenHashUtil.sha256(normalizeEmail(email))
 
     private fun codeTtl(): Duration = Duration.ofSeconds(codeExpirationSeconds)
 

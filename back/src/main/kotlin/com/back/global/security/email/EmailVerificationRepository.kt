@@ -56,7 +56,7 @@ class EmailVerificationRepository(
             ),
             requestCodeHash,
             maxAttempts.toString(),
-            emailHash,
+            availableValue(emailHash),
             verificationTtl.toMillis().toString(),
         )
 
@@ -68,10 +68,28 @@ class EmailVerificationRepository(
         }
     }
 
-    fun consumeVerification(emailHash: String, tokenHash: String): Boolean =
-        redissonClient
-            .getBucket<String>(verifiedKey(tokenHash), StringCodec.INSTANCE)
-            .getAndDelete() == emailHash
+    fun reserveVerification(emailHash: String, tokenHash: String, reservationId: String): Boolean =
+        executeStateTransition(
+            script = EmailVerificationLuaScripts.reserveScript(),
+            tokenHash = tokenHash,
+            expectedValue = availableValue(emailHash),
+            newValue = reservedValue(emailHash, reservationId),
+        )
+
+    fun completeVerification(emailHash: String, tokenHash: String, reservationId: String): Boolean =
+        executeStateTransition(
+            script = EmailVerificationLuaScripts.completeReservationScript(),
+            tokenHash = tokenHash,
+            expectedValue = reservedValue(emailHash, reservationId),
+        )
+
+    fun restoreVerification(emailHash: String, tokenHash: String, reservationId: String): Boolean =
+        executeStateTransition(
+            script = EmailVerificationLuaScripts.restoreReservationScript(),
+            tokenHash = tokenHash,
+            expectedValue = reservedValue(emailHash, reservationId),
+            newValue = availableValue(emailHash),
+        )
 
     fun clearChallenge(emailHash: String, includeCooldown: Boolean = false) {
         redissonClient
@@ -94,7 +112,35 @@ class EmailVerificationRepository(
 
     private fun verifiedKey(tokenHash: String): String = "${prefix}verified:$tokenHash"
 
+    private fun availableValue(emailHash: String): String = "$AVAILABLE_PREFIX$emailHash"
+
+    private fun reservedValue(emailHash: String, reservationId: String): String =
+        "$RESERVED_PREFIX$reservationId:$emailHash"
+
+    private fun executeStateTransition(
+        script: String,
+        tokenHash: String,
+        expectedValue: String,
+        newValue: String? = null,
+    ): Boolean {
+        val arguments = if (newValue == null) {
+            arrayOf(expectedValue)
+        } else {
+            arrayOf(expectedValue, newValue)
+        }
+        val result = redissonClient.getScript(StringCodec.INSTANCE).eval<Long>(
+            RScript.Mode.READ_WRITE,
+            script,
+            RScript.ReturnType.LONG,
+            listOf(verifiedKey(tokenHash)),
+            *arguments,
+        )
+        return result == 1L
+    }
+
     companion object {
         private const val ACTIVE_VALUE = "1"
+        private const val AVAILABLE_PREFIX = "AVAILABLE:"
+        private const val RESERVED_PREFIX = "RESERVED:"
     }
 }
