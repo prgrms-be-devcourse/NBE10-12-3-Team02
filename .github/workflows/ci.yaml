@@ -40,8 +40,10 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
 
-      # 3. 단위 및 통합 테스트 실행
+      # 3. 단위 및 통합 테스트 실행 (SPRING_PROFILES_ACTIVE: test 적용)
       - name: Run tests (unit/integration)
+        env:
+          SPRING_PROFILES_ACTIVE: test
         run: |
           chmod +x gradlew
           ./gradlew test --no-daemon
