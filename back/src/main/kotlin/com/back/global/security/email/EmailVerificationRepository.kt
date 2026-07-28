@@ -1,7 +1,6 @@
 package com.back.global.security.email
 
 import com.back.global.security.email.constant.EmailVerificationConfirmResult
-import org.redisson.api.RBucket
 import org.redisson.api.RedissonClient
 import org.redisson.api.RScript
 import org.redisson.client.codec.StringCodec
@@ -21,16 +20,22 @@ class EmailVerificationRepository(
         codeTtl: Duration,
         resendCooldown: Duration,
     ): Boolean {
-        val cooldownStarted = stringBucket(cooldownKey(emailHash))
-            .setIfAbsent(ACTIVE_VALUE, resendCooldown)
+        val result = redissonClient.getScript(StringCodec.INSTANCE).eval<Long>(
+            RScript.Mode.READ_WRITE,
+            EmailVerificationLuaScripts.saveChallengeScript(),
+            RScript.ReturnType.LONG,
+            listOf(
+                cooldownKey(emailHash),
+                codeKey(emailHash),
+                attemptKey(emailHash),
+            ),
+            ACTIVE_VALUE,
+            resendCooldown.toMillis().toString(),
+            codeHash,
+            codeTtl.toMillis().toString(),
+        )
 
-        if (!cooldownStarted) {
-            return false
-        }
-
-        stringBucket(codeKey(emailHash)).set(codeHash, codeTtl)
-        redissonClient.getAtomicLong(attemptKey(emailHash)).delete()
-        return true
+        return result == 1L
     }
 
     fun confirm(
@@ -64,19 +69,22 @@ class EmailVerificationRepository(
     }
 
     fun consumeVerification(emailHash: String, tokenHash: String): Boolean =
-        stringBucket(verifiedKey(tokenHash)).getAndDelete() == emailHash
+        redissonClient
+            .getBucket<String>(verifiedKey(tokenHash), StringCodec.INSTANCE)
+            .getAndDelete() == emailHash
 
     fun clearChallenge(emailHash: String, includeCooldown: Boolean = false) {
-        stringBucket(codeKey(emailHash)).delete()
+        redissonClient
+            .getBucket<String>(codeKey(emailHash), StringCodec.INSTANCE)
+            .delete()
         redissonClient.getAtomicLong(attemptKey(emailHash)).delete()
 
         if (includeCooldown) {
-            stringBucket(cooldownKey(emailHash)).delete()
+            redissonClient
+                .getBucket<String>(cooldownKey(emailHash), StringCodec.INSTANCE)
+                .delete()
         }
     }
-
-    private fun stringBucket(key: String): RBucket<String> =
-        redissonClient.getBucket(key, StringCodec.INSTANCE)
 
     private fun codeKey(emailHash: String): String = "${prefix}code:$emailHash"
 
