@@ -7,6 +7,7 @@ data class MyPageResponse(
     val id: String,
     val email: String,
     val loginType: String,
+    val profileImageUrl: String,
     val ticketGroups: List<TicketGroupInfo>
 ) {
     companion object {
@@ -15,6 +16,7 @@ data class MyPageResponse(
             id = user.loginId,
             email = user.email,
             loginType = user.loginType.name,
+            profileImageUrl = user.redirectToProfileImgUrlOrDefault,
             ticketGroups = ticketGroups
         )
     }
