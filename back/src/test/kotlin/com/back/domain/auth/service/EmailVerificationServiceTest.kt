@@ -201,6 +201,30 @@ class EmailVerificationServiceTest {
         )
     }
 
+    @Test
+    @DisplayName("메일 발송과 인증정보 정리가 모두 실패해도 이메일 전송 실패 예외를 반환한다")
+    fun t10() {
+        `when`(
+            repository.saveChallenge(
+                eqValue(EMAIL_HASH),
+                anyValue(),
+                anyValue(),
+                anyValue(),
+            ),
+        ).thenReturn(true)
+        doThrow(MailSendException("send failed"))
+            .`when`(mailSender)
+            .send(anyValue<SimpleMailMessage>())
+        doThrow(IllegalStateException("cleanup failed"))
+            .`when`(repository)
+            .clearChallenge(EMAIL_HASH, includeCooldown = true)
+
+        assertThatThrownBy { service.sendVerificationCode(EMAIL) }
+            .isInstanceOfSatisfying(ServiceException::class.java) {
+                assertThat(it.errorCode).isEqualTo(ErrorCode.AUTH_EMAIL_SEND_FAILED)
+            }
+    }
+
     companion object {
         private const val EMAIL = "test@example.com"
         private const val SENDER_EMAIL = "sender@naver.com"

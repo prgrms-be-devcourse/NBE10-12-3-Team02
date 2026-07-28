@@ -5,7 +5,9 @@ import com.back.global.exception.ServiceException
 import com.back.global.security.email.EmailVerificationRepository
 import com.back.global.security.email.constant.EmailVerificationConfirmResult
 import com.back.global.security.jwt.TokenHashUtil
+import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
+import org.springframework.mail.MailException
 import org.springframework.mail.SimpleMailMessage
 import org.springframework.mail.javamail.JavaMailSender
 import org.springframework.stereotype.Service
@@ -46,8 +48,13 @@ class EmailVerificationService(
 
         try {
             mailSender.send(createMessage(normalizedEmail, code))
-        } catch (e: RuntimeException) {
-            emailVerificationRepository.clearChallenge(emailHash, includeCooldown = true)
+        } catch (e: MailException) {
+            log.error("인증 이메일 전송 실패: emailHash={}", emailHash, e)
+            try {
+                emailVerificationRepository.clearChallenge(emailHash, includeCooldown = true)
+            } catch (cleanupException: RuntimeException) {
+                log.error("이메일 인증정보 정리 실패: emailHash={}", emailHash, cleanupException)
+            }
             throw ServiceException(ErrorCode.AUTH_EMAIL_SEND_FAILED)
         }
     }
@@ -126,5 +133,6 @@ class EmailVerificationService(
         private const val CODE_LENGTH = 6
         private const val CODE_BOUND = 1_000_000
         private val secureRandom = SecureRandom()
+        private val log = LoggerFactory.getLogger(EmailVerificationService::class.java)
     }
 }
