@@ -62,8 +62,8 @@ jobs:
           context: ./back
           push: true
           tags: |
-            ${{ steps.ecr.outputs.registry }}/dongnemarket-app:latest
-            ${{ steps.ecr.outputs.registry }}/dongnemarket-app:${{ github.sha }}
+            ${{ steps.ecr.outputs.registry }}/NBE10-12-3-Team02:latest
+            ${{ steps.ecr.outputs.registry }}/NBE10-12-3-Team02:${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
