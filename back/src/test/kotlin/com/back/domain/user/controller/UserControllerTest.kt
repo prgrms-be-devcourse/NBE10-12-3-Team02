@@ -20,6 +20,7 @@ import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
 import org.springframework.context.annotation.Import
 import org.springframework.http.MediaType
+import org.springframework.mock.web.MockMultipartFile
 import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user
 import org.springframework.test.context.ActiveProfiles
@@ -27,6 +28,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*
 import org.springframework.test.web.servlet.result.MockMvcResultHandlers.print
+import org.springframework.test.web.servlet.result.MockMvcResultMatchers.header
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 import org.springframework.transaction.annotation.Transactional
@@ -317,5 +319,108 @@ class UserControllerTest @Autowired constructor(
             .andExpect(status().isConflict)
             .andExpect(jsonPath("$.resultCode").value("409-1"))
             .andExpect(jsonPath("$.msg").value("이미 사용 중인 아이디입니다."))
+    }
+
+    @Test
+    @DisplayName("프로필 사진 업로드 성공")
+    fun t15() {
+        val file = MockMultipartFile(
+            "file", "profile.png", "image/png", "dummy-image-bytes".toByteArray()
+        )
+
+        mockMvc.perform(
+            multipart("/api/v1/users/me/profile-image")
+                .file(file)
+                .with(user(securityUser))
+        )
+            .andDo(print())
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.resultCode").value("200-1"))
+            .andExpect(jsonPath("$.msg").value("프로필 사진이 변경되었습니다."))
+            .andExpect(jsonPath("$.data.profileImageUrl").exists())
+
+        val updated = userRepository.findById(userEntity.userId!!).orElseThrow()
+        assertThat(updated.profileImgUrl).isNotNull()
+    }
+
+    @Test
+    @DisplayName("프로필 사진 업로드 실패 - 허용되지 않는 확장자")
+    fun t16() {
+        val file = MockMultipartFile(
+            "file", "profile.txt", "text/plain", "not-an-image".toByteArray()
+        )
+
+        mockMvc.perform(
+            multipart("/api/v1/users/me/profile-image")
+                .file(file)
+                .with(user(securityUser))
+        )
+            .andDo(print())
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.resultCode").value("400-10"))
+    }
+
+    @Test
+    @DisplayName("프로필 사진 업로드 실패 - 빈 파일")
+    fun t17() {
+        val file = MockMultipartFile(
+            "file", "empty.png", "image/png", ByteArray(0)
+        )
+
+        mockMvc.perform(
+            multipart("/api/v1/users/me/profile-image")
+                .file(file)
+                .with(user(securityUser))
+        )
+            .andDo(print())
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.resultCode").value("400-7"))
+    }
+
+    @Test
+    @DisplayName("프로필 사진 삭제 성공")
+    fun t18() {
+        val file = MockMultipartFile(
+            "file", "profile.png", "image/png", "dummy-image-bytes".toByteArray()
+        )
+        mockMvc.perform(
+            multipart("/api/v1/users/me/profile-image")
+                .file(file)
+                .with(user(securityUser))
+        )
+
+        mockMvc.perform(
+            delete("/api/v1/users/me/profile-image")
+                .with(user(securityUser))
+        )
+            .andDo(print())
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.resultCode").value("200-1"))
+            .andExpect(jsonPath("$.msg").value("프로필 사진이 기본 이미지로 변경되었습니다."))
+
+        val updated = userRepository.findById(userEntity.userId!!).orElseThrow()
+        assertThat(updated.profileImgUrl).isNull()
+    }
+
+    @Test
+    @DisplayName("프로필 이미지 리다이렉트 - 사진 없으면 기본 이미지로 리다이렉트")
+    fun t19() {
+        mockMvc.perform(
+            get("/api/v1/users/${userEntity.userId}/redirectToProfileImg")
+        )
+            .andDo(print())
+            .andExpect(status().isFound)
+            .andExpect(header().exists("Location"))
+            .andExpect(header().string("Cache-Control", "max-age=1200, public, immutable"))
+    }
+
+    @Test
+    @DisplayName("프로필 이미지 리다이렉트 - 존재하지 않는 회원이면 404")
+    fun t20() {
+        mockMvc.perform(
+            get("/api/v1/users/999/redirectToProfileImg")
+        )
+            .andDo(print())
+            .andExpect(status().isNotFound)
     }
 }
