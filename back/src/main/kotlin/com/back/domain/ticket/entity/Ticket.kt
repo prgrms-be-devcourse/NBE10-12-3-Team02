@@ -7,7 +7,6 @@ import com.back.global.exception.ErrorCode
 import com.back.global.exception.ServiceException
 import com.back.global.jpa.entity.BaseEntity
 import jakarta.persistence.*
-import java.util.UUID
 
 @Entity
 class Ticket(
@@ -26,8 +25,8 @@ class Ticket(
     @Column(nullable = false, unique = true)
     val ticketNumber: String,
 
-    @Column(unique = true)
-    val qrToken: String? = null,
+    @Column
+    val groupToken: String? = null,
 
     @Column(nullable = false)
     val ticketPrice: Int = 0,
@@ -56,13 +55,14 @@ class Ticket(
             schedule: Schedule,
             scheduleSeat: ScheduleSeat,
             ticketNumber: String,
-            ticketPrice: Int
+            ticketPrice: Int,
+            groupToken: String
         ): Ticket = Ticket(
             user = user,
             schedule = schedule,
             scheduleSeat = scheduleSeat,
             ticketNumber = ticketNumber,
-            qrToken = UUID.randomUUID().toString(),
+            groupToken = groupToken,
             ticketPrice = ticketPrice,
             isValid = true
         )
