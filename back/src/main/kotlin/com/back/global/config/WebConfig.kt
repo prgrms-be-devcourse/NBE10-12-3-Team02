@@ -12,13 +12,15 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource
 import org.springframework.web.method.HandlerTypePredicate
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry
 import org.springframework.web.servlet.config.annotation.PathMatchConfigurer
+import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer
 
 @Configuration
 class WebConfig(
     @Value("\${custom.cors.allowed-origins:http://localhost:3000}") private val allowedOrigins: Array<String>,
     private val rateLimitInterceptor: RateLimitInterceptor,
-    private val queueInterceptor: QueueInterceptor
+    private val queueInterceptor: QueueInterceptor,
+    @Value("\${custom.upload.path}") private val uploadPath: String   // ← 추가
 ) : WebMvcConfigurer {
 
     override fun configurePathMatch(configurer: PathMatchConfigurer) {
@@ -50,5 +52,10 @@ class WebConfig(
                 "/api/v1/concerts/*/schedules/*/seats/occupy",
                 "/api/v1/tickets/reserve/schedule/*"
             )
+    }
+    //로컬 저장소 서빙용, S3로 옮기면 삭제 예정
+    override fun addResourceHandlers(registry: ResourceHandlerRegistry) {
+        registry.addResourceHandler("/uploads/**")
+            .addResourceLocations("file:$uploadPath/")
     }
 }
