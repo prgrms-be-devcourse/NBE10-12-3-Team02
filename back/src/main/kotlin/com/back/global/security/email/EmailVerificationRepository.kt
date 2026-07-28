@@ -89,17 +89,17 @@ class EmailVerificationRepository(
             newValue = availableValue(emailHash),
         )
 
-    fun clearChallenge(emailHash: String, includeCooldown: Boolean = false) {
-        redissonClient
-            .getBucket<String>(codeKey(emailHash), StringCodec.INSTANCE)
-            .delete()
-        redissonClient.getAtomicLong(attemptKey(emailHash)).delete()
-
-        if (includeCooldown) {
-            redissonClient
-                .getBucket<String>(cooldownKey(emailHash), StringCodec.INSTANCE)
-                .delete()
-        }
+    fun clearChallenge(emailHash: String) {
+        redissonClient.getScript(StringCodec.INSTANCE).eval<Long>(
+            RScript.Mode.READ_WRITE,
+            EmailVerificationLuaScripts.clearChallengeScript(),
+            RScript.ReturnType.LONG,
+            listOf(
+                codeKey(emailHash),
+                attemptKey(emailHash),
+                cooldownKey(emailHash),
+            ),
+        )
     }
 
     private fun codeKey(emailHash: String): String = "${properties.redisPrefix}code:$emailHash"

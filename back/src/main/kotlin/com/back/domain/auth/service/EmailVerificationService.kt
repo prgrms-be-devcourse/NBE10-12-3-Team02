@@ -45,7 +45,7 @@ class EmailVerificationService(
         } catch (e: MailException) {
             log.error("인증 이메일 전송 실패: emailHash={}", emailHash, e)
             try {
-                emailVerificationRepository.clearChallenge(emailHash, includeCooldown = true)
+                emailVerificationRepository.clearChallenge(emailHash)
             } catch (cleanupException: RuntimeException) {
                 log.error("이메일 인증정보 정리 실패: emailHash={}", emailHash, cleanupException)
             }

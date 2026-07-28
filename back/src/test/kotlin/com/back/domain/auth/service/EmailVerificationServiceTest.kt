@@ -91,7 +91,7 @@ class EmailVerificationServiceTest {
                 assertThat(it.errorCode).isEqualTo(ErrorCode.AUTH_EMAIL_SEND_FAILED)
             }
 
-        verify(repository).clearChallenge(EMAIL_HASH, includeCooldown = true)
+        verify(repository).clearChallenge(EMAIL_HASH)
     }
 
     @Test
@@ -221,7 +221,7 @@ class EmailVerificationServiceTest {
             .send(anyValue<SimpleMailMessage>())
         doThrow(IllegalStateException("cleanup failed"))
             .`when`(repository)
-            .clearChallenge(EMAIL_HASH, includeCooldown = true)
+            .clearChallenge(EMAIL_HASH)
 
         assertThatThrownBy { service.sendVerificationCode(EMAIL) }
             .isInstanceOfSatisfying(ServiceException::class.java) {

@@ -79,6 +79,11 @@ object EmailVerificationLuaScripts {
         return 1
     """
 
+    const val CLEAR_CHALLENGE_SCRIPT = """
+        redis.call('DEL', KEYS[1], KEYS[2], KEYS[3])
+        return 1
+    """
+
     @JvmStatic
     fun saveChallengeScript(): String = SAVE_CHALLENGE_SCRIPT.trimIndent()
 
@@ -93,4 +98,7 @@ object EmailVerificationLuaScripts {
 
     @JvmStatic
     fun restoreReservationScript(): String = RESTORE_RESERVATION_SCRIPT.trimIndent()
+
+    @JvmStatic
+    fun clearChallengeScript(): String = CLEAR_CHALLENGE_SCRIPT.trimIndent()
 }
