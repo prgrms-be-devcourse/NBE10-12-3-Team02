@@ -1,10 +1,7 @@
 package com.back.domain.ticket.service
 
-import com.back.domain.concert.listener.SeatHoldExpiredHandler
-import com.back.domain.concert.listener.SeatOccupiedEventListener
 import com.back.domain.concert.service.SeatOccupyManager
 import com.back.domain.concert.sse.SeatStatusSseEmitterRegistry
-import com.back.domain.schedule.entity.ScheduleSeat
 import com.back.domain.schedule.entity.SeatStatus
 import com.back.domain.schedule.repository.ScheduleRepository
 import com.back.domain.schedule.repository.ScheduleSeatRepository
@@ -19,7 +16,6 @@ import com.back.domain.ticket.repository.TicketRepository
 import com.back.domain.user.repository.UserRepository
 import com.back.global.exception.ErrorCode
 import com.back.global.exception.ServiceException
-import org.redisson.api.RedissonClient
 import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -32,7 +28,6 @@ class TicketService(
     private val userRepository: UserRepository,
     private val scheduleRepository: ScheduleRepository,
     private val scheduleSeatRepository: ScheduleSeatRepository,
-    private val redissonClient: RedissonClient,
     private val eventPublisher: ApplicationEventPublisher,
     private val seatOccupyManager: SeatOccupyManager,
     private val sseEmitterRegistry: SeatStatusSseEmitterRegistry
@@ -69,7 +64,7 @@ class TicketService(
             val redisKey = SeatOccupyManager.generateSeatOccupyKey(request.concertId, scheduleId, holdInfo.seatNumber)
             val indexKey = SeatOccupyManager.generateSeatOccupyIndexKey(request.concertId, scheduleId)
             seatOccupyManager.cleanupRedis(redisKey, indexKey, holdInfo.seatNumber)
-            cancelDelayedQueueMessage(request.concertId, scheduleId, holdInfo.seatNumber)
+            seatOccupyManager.cancelDelayedQueueMessage(request.concertId, scheduleId, holdInfo.seatNumber)
             sseEmitterRegistry.broadcast(scheduleId, holdInfo.seatNumber, SeatStatus.SOLD_OUT.name)
         }
 
@@ -103,7 +98,7 @@ class TicketService(
         val indexKey = SeatOccupyManager.generateSeatOccupyIndexKey(concertId, scheduleId)
         seatOccupyManager.cleanupRedis(redisKey, indexKey, seatNumber)
 
-        cancelDelayedQueueMessage(concertId, scheduleId, seatNumber)
+        seatOccupyManager.cancelDelayedQueueMessage(concertId, scheduleId, seatNumber)
         sseEmitterRegistry.broadcast(scheduleId, seatNumber, SeatStatus.AVAILABLE.name)
 
         eventPublisher.publishEvent(TicketCancelledEvent(concertId, scheduleId, userId))
@@ -116,33 +111,6 @@ class TicketService(
 
     fun createTicketNumber(): String = UUID.randomUUID().toString()
 
-    private fun validateSeatHold(userId: Long, concertId: Long, scheduleId: Long, seatHolds: List<SeatHoldInfo>) {
-        for (hold in seatHolds) {
-            val redisKey = SeatOccupyManager.generateSeatOccupyKey(concertId, scheduleId, hold.seatNumber)
-            val hashMap = redissonClient.getMap<String, String>(redisKey)
-
-            val holdUserId = hashMap["userId"]
-            val holdOccupyToken = hashMap["occupyToken"]
-
-            if (holdUserId == null || holdOccupyToken == null) {
-                throw ServiceException(ErrorCode.SEAT_HOLD_EXPIRED)
-            }
-            if (userId.toString() != holdUserId) {
-                throw ServiceException(ErrorCode.SEAT_HELD_BY_OTHER_USER)
-            }
-            if (hold.occupyToken != holdOccupyToken) {
-                throw ServiceException(ErrorCode.INVALID_OCCUPY_TOKEN)
-            }
-        }
-    }
-
-    private fun cancelDelayedQueueMessage(concertId: Long, scheduleId: Long, seatNumber: String) {
-        try {
-            val message = SeatOccupiedEventListener.buildMessage(concertId, scheduleId, seatNumber)
-            val blockingQueue = redissonClient.getBlockingQueue<String>(SeatHoldExpiredHandler.DELAYED_QUEUE_KEY)
-            val delayedQueue = redissonClient.getDelayedQueue(blockingQueue)
-            delayedQueue.remove(message)
-        } catch (ignored: Exception) {
-        }
-    }
+    private fun validateSeatHold(userId: Long, concertId: Long, scheduleId: Long, seatHolds: List<SeatHoldInfo>) =
+        seatOccupyManager.validateSeatHolds(userId, concertId, scheduleId, seatHolds)
 }

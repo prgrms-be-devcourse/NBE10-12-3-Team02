@@ -23,7 +23,7 @@ class WaitingQueueScheduler(
             val expired = waitingQueueManager.removeExpiredActiveUsers(scheduleId)
 
             if (expired > 0) {
-                val schedule = scheduleRepository.findById(scheduleId).orElse(null) ?: continue
+                val schedule = scheduleRepository.findByScheduleId(scheduleId) ?: continue
                 val concertId = schedule.concert.concertId ?: continue
                 waitingQueueService.allowEntry(concertId, scheduleId)
             }

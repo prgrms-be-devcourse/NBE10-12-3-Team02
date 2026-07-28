@@ -3,14 +3,18 @@ package com.back.domain.concert.service
 import com.back.domain.concert.dto.SeatOccupyResponse
 import com.back.domain.concert.dto.SeatSelectionResponse
 import com.back.domain.concert.event.SeatOccupiedEvent
+import com.back.domain.concert.listener.SeatHoldExpiredHandler
+import com.back.domain.concert.listener.SeatOccupiedEventListener
 import com.back.domain.schedule.entity.SeatStatus
 import com.back.domain.schedule.repository.ScheduleSeatRepository
+import com.back.domain.ticket.dto.SeatHoldInfo
 import com.back.domain.ticket.repository.TicketRepository
 import com.back.global.exception.ErrorCode
 import com.back.global.exception.ServiceException
 import org.redisson.api.RScript
 import org.redisson.api.RedissonClient
 import org.redisson.client.codec.StringCodec
+import org.slf4j.LoggerFactory
 import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Component
 import org.springframework.transaction.annotation.Transactional
@@ -24,6 +28,7 @@ class SeatOccupyManager(
     private val redissonClient: RedissonClient,
     private val eventPublisher: ApplicationEventPublisher
 ) {
+    private val log = LoggerFactory.getLogger(javaClass)
 
     @Transactional
     fun seatOccupy(concertId: Long, scheduleId: Long, seatNumber: String, userId: Long): SeatOccupyResponse {
@@ -121,6 +126,37 @@ class SeatOccupyManager(
     fun cleanupRedis(redisKey: String, indexKey: String, seatNumber: String) {
         redissonClient.getMap<String, String>(redisKey).delete()
         redissonClient.getScoredSortedSet<String>(indexKey).remove(seatNumber)
+    }
+
+    fun validateSeatHolds(userId: Long, concertId: Long, scheduleId: Long, seatHolds: List<SeatHoldInfo>) {
+        for (hold in seatHolds) {
+            val redisKey = generateSeatOccupyKey(concertId, scheduleId, hold.seatNumber)
+            val hashMap = redissonClient.getMap<String, String>(redisKey)
+
+            val holdUserId = hashMap["userId"]
+            val holdOccupyToken = hashMap["occupyToken"]
+
+            if (holdUserId == null || holdOccupyToken == null) {
+                throw ServiceException(ErrorCode.SEAT_HOLD_EXPIRED)
+            }
+            if (userId.toString() != holdUserId) {
+                throw ServiceException(ErrorCode.SEAT_HELD_BY_OTHER_USER)
+            }
+            if (hold.occupyToken != holdOccupyToken) {
+                throw ServiceException(ErrorCode.INVALID_OCCUPY_TOKEN)
+            }
+        }
+    }
+
+    fun cancelDelayedQueueMessage(concertId: Long, scheduleId: Long, seatNumber: String) {
+        try {
+            val message = SeatOccupiedEventListener.buildMessage(concertId, scheduleId, seatNumber)
+            val blockingQueue = redissonClient.getBlockingQueue<String>(SeatHoldExpiredHandler.DELAYED_QUEUE_KEY)
+            val delayedQueue = redissonClient.getDelayedQueue(blockingQueue)
+            delayedQueue.remove(message)
+        } catch (e: Exception) {
+            log.warn("Delayed Queue 메시지 제거 실패 (무시됨): {}", e.message)
+        }
     }
 
     companion object {
