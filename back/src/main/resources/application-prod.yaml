@@ -36,9 +36,10 @@ spring.redis.redisson.config: |
   threads: 32
   nettyThreads: 64
   codec: !<org.redisson.codec.JsonJacksonCodec> {}
-  security:
-    oauth2:
-      front-callback-url: "https://nbe-10-12-2-team02-fv1h.vercel.app"
+
+spring.security:
+  oauth2:
+    front-callback-url: "https://nbe-10-12-2-team02-fv1h.vercel.app"
       front-login-url: "https://nbe-10-12-2-team02-fv1h.vercel.app/login"
       client:
         registration:
