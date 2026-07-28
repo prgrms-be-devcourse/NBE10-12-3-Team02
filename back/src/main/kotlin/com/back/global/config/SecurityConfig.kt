@@ -77,7 +77,9 @@ class SecurityConfig(
                         "/api/*/auth/logout",
                         "/api/*/auth/refresh",
                         "/api/*/users/signup",
-                        "/api/*/auth/restore"
+                        "/api/*/auth/restore",
+                        "/api/*/auth/email-verifications",
+                        "/api/*/auth/email-verifications/confirm"
                     ).permitAll()
                     .requestMatchers("/api/*/**").authenticated()
                     .anyRequest().permitAll()

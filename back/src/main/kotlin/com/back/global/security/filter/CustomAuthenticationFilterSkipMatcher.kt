@@ -24,7 +24,9 @@ class CustomAuthenticationFilterSkipMatcher {
                                 path.matches(Regex("/api/[^/]+/auth/refresh")) ||
                                 path.matches(Regex("/api/[^/]+/auth/logout")) ||
                                 path.matches(Regex("/api/[^/]+/users/signup")) ||
-                                path.matches(Regex("/api/[^/]+/auth/restore"))
+                                path.matches(Regex("/api/[^/]+/auth/restore")) ||
+                                path.matches(Regex("/api/[^/]+/auth/email-verifications")) ||
+                                path.matches(Regex("/api/[^/]+/auth/email-verifications/confirm"))
                         ))
     }
 }

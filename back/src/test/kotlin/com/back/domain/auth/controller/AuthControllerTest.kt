@@ -3,6 +3,7 @@ package com.back.domain.auth.controller
 import com.back.domain.user.constant.LoginType
 import com.back.domain.user.entity.User
 import com.back.domain.user.repository.UserRepository
+import com.back.domain.auth.service.EmailVerificationService
 import com.back.global.RedisTestConfig
 import com.back.global.security.jwt.constant.RefreshTokenValidationResult
 import com.back.global.security.jwt.repository.BlacklistRepository
@@ -49,6 +50,9 @@ class AuthControllerTest @Autowired constructor(
 
     @MockitoBean
     private lateinit var blacklistRepository: BlacklistRepository
+
+    @MockitoBean
+    private lateinit var emailVerificationService: EmailVerificationService
 
     @BeforeEach
     fun setUp() {
@@ -164,6 +168,41 @@ class AuthControllerTest @Autowired constructor(
             .andExpect(jsonPath("$.resultCode").value("200-1"))
 
         verify(blacklistRepository).add(eq(accessToken) ?: "", anyNonNull())
+    }
+
+    @Test
+    @DisplayName("이메일 인증번호 발송 성공")
+    fun t7() {
+        mockMvc.perform(
+            post("/api/v1/auth/email-verifications")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(mapOf("email" to "test@example.com")))
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.resultCode").value("200-1"))
+            .andExpect(jsonPath("$.msg").value("이메일 인증번호를 발송했습니다."))
+
+        verify(emailVerificationService).sendVerificationCode("test@example.com")
+    }
+
+    @Test
+    @DisplayName("이메일 인증번호 확인 성공")
+    fun t8() {
+        `when`(emailVerificationService.confirm("test@example.com", "123456"))
+            .thenReturn("verification-token")
+
+        mockMvc.perform(
+            post("/api/v1/auth/email-verifications/confirm")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(
+                    objectMapper.writeValueAsString(
+                        mapOf("email" to "test@example.com", "code" to "123456")
+                    )
+                )
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.resultCode").value("200-1"))
+            .andExpect(jsonPath("$.data.verificationToken").value("verification-token"))
     }
 
     private fun loginAndGetRefreshTokenCookie(): Cookie {

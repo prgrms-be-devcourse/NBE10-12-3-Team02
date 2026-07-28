@@ -1,5 +1,6 @@
 package com.back.domain.user.service
 
+import com.back.domain.auth.service.EmailVerificationService
 import com.back.domain.ticket.event.TicketCancelledEvent
 import com.back.domain.ticket.repository.TicketRepository
 import com.back.domain.user.dto.*
@@ -28,6 +29,7 @@ class UserService(
     private val userRepository: UserRepository,
     private val ticketRepository: TicketRepository,
     private val passwordEncoder: PasswordEncoder,
+    private val emailVerificationService: EmailVerificationService,
     private val refreshTokenRepository: RefreshTokenRepository,
     private val blacklistRepository: BlacklistRepository,
     private val jwtTokenProvider: JwtTokenProvider,
@@ -40,13 +42,17 @@ class UserService(
 
     @Transactional
     fun signup(request: SignupRequest): SignupResponse {
-        val (id, email, password, name) = request
+        val (id, email, password, name, verificationToken) = request
 
         if (userRepository.existsByLoginIdAndDeletedAtIsNull(id)) {
             throw ServiceException(ErrorCode.USER_ID_ALREADY_EXISTS)
         }
         if (userRepository.existsByEmailAndDeletedAtIsNull(email)) {
             throw ServiceException(ErrorCode.USER_EMAIL_ALREADY_EXISTS)
+        }
+
+        if (!emailVerificationService.consumeVerification(email, verificationToken)) {
+            throw ServiceException(ErrorCode.AUTH_EMAIL_VERIFICATION_REQUIRED)
         }
 
         val encodedPassword = requireNotNull(passwordEncoder.encode(password)) { "Password encoding failed" }

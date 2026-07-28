@@ -79,6 +79,13 @@ spring:
 springdoc:
   default-produces-media-type: application/json;charset=UTF-8
 custom:
+  auth:
+    email-verification:
+      code-expiration-seconds: 300
+      verified-expiration-seconds: 1800
+      resend-cooldown-seconds: 60
+      max-attempts: 5
+      redis-prefix: "auth:email-verification:"
   jwt:
     accessToken:
       expirationSeconds: "#{60*10}"

@@ -1,6 +1,7 @@
 package com.back.domain.user.controller
 
 import com.back.domain.user.constant.LoginType
+import com.back.domain.auth.service.EmailVerificationService
 import com.back.domain.user.entity.User
 import com.back.domain.user.repository.UserRepository
 import com.back.global.RedisTestConfig
@@ -53,6 +54,9 @@ class UserControllerTest @Autowired constructor(
     @MockitoBean
     private lateinit var jwtTokenProvider: JwtTokenProvider
 
+    @MockitoBean
+    private lateinit var emailVerificationService: EmailVerificationService
+
     @BeforeEach
     fun setUp() {
         userEntity = userRepository.save(
@@ -73,6 +77,8 @@ class UserControllerTest @Autowired constructor(
 
         `when`(jwtTokenProvider.getRemainingSeconds(anyString()))
             .thenReturn(600L)
+        `when`(emailVerificationService.consumeVerification(anyString(), anyString()))
+            .thenReturn(true)
     }
 
     @Test
@@ -87,7 +93,8 @@ class UserControllerTest @Autowired constructor(
                             "id" to "testuser1",
                             "email" to "test1@naver.com",
                             "password" to "q1w2e3r4",
-                            "name" to "홍길동"
+                            "name" to "홍길동",
+                            "verificationToken" to "verification-token"
                         )
                     )
                 )
@@ -112,7 +119,8 @@ class UserControllerTest @Autowired constructor(
                             "id" to "testuser",
                             "email" to "other@naver.com",
                             "password" to "q1w2e3r4",
-                            "name" to "김철수"
+                            "name" to "김철수",
+                            "verificationToken" to "verification-token"
                         )
                     )
                 )
@@ -135,7 +143,8 @@ class UserControllerTest @Autowired constructor(
                             "id" to "otheruser",
                             "email" to "test@naver.com",
                             "password" to "q1w2e3r4",
-                            "name" to "김철수"
+                            "name" to "김철수",
+                            "verificationToken" to "verification-token"
                         )
                     )
                 )
@@ -158,7 +167,8 @@ class UserControllerTest @Autowired constructor(
                             "id" to "testuser",
                             "email" to "test@naver.com",
                             "password" to "q1w2e3",
-                            "name" to "홍길동"
+                            "name" to "홍길동",
+                            "verificationToken" to "verification-token"
                         )
                     )
                 )
@@ -422,5 +432,36 @@ class UserControllerTest @Autowired constructor(
         )
             .andDo(print())
             .andExpect(status().isNotFound)
+    }
+
+    @Test
+    @DisplayName("회원가입 실패 - 이메일 인증 토큰이 유효하지 않음")
+    fun t21() {
+        `when`(
+            emailVerificationService.consumeVerification(
+                "unverified@example.com",
+                "invalid-verification-token",
+            )
+        ).thenReturn(false)
+
+        mockMvc.perform(
+            post("/api/v1/users/signup")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(
+                    objectMapper.writeValueAsString(
+                        mapOf(
+                            "id" to "unverified-user",
+                            "email" to "unverified@example.com",
+                            "password" to "q1w2e3r4",
+                            "name" to "홍길동",
+                            "verificationToken" to "invalid-verification-token",
+                        )
+                    )
+                )
+        )
+            .andDo(print())
+            .andExpect(status().isUnauthorized)
+            .andExpect(jsonPath("$.resultCode").value("401-12"))
+            .andExpect(jsonPath("$.msg").value("이메일 인증이 필요합니다."))
     }
 }
