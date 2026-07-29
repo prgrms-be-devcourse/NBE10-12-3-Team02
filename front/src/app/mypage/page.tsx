@@ -192,19 +192,15 @@ export default function MyPage() {
   // 경우(예: 취소한 옛날 예매 + 새로 산 예매)까지 하나로 합쳐버릴 수 있다.
   // 그래서 그룹 안에서 다시 한번, "한 번의 결제로 생성된 티켓들은 ticketId가 바로 이어진다"는
   // 규칙으로 진짜 예매 단위로 쪼갠다.
+  // 결제 단위(groupToken)별로 개별 예매 그룹으로 쪼갠다.
   const splitIntoReservations = (group: TicketGroupInfo): TicketGroupInfo[] => {
-    const byIdAsc = [...group.tickets].sort((a, b) => a.ticketId - b.ticketId);
-    const chunks: TicketSummary[][] = [];
-    for (const ticket of byIdAsc) {
-      const last = chunks[chunks.length - 1];
-      const lastTicket = last?.[last.length - 1];
-      if (lastTicket && ticket.ticketId === lastTicket.ticketId + 1) {
-        last.push(ticket);
-      } else {
-        chunks.push([ticket]);
-      }
+    const map = new Map<string, TicketSummary[]>();
+    for (const ticket of group.tickets) {
+      const key = ticket.groupToken || `ticket-${ticket.ticketId}`;
+      if (!map.has(key)) map.set(key, []);
+      map.get(key)!.push(ticket);
     }
-    return chunks.map((tickets) => ({
+    return Array.from(map.values()).map((tickets) => ({
       ...group,
       tickets,
       totalPrice: tickets.reduce((sum, t) => sum + t.ticketPrice, 0),
