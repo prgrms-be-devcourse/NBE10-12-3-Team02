@@ -467,6 +467,7 @@ function SeatSelectContent({ params }: { params: Promise<{ id: string }> }) {
         queueToken: entryToken,
       });
       proceedingToPaymentRef.current = true;
+      sessionStorage.setItem("paymentActive", "1");
       router.push(`/payment?${params.toString()}`);
     } catch (e) {
       await Promise.all(
