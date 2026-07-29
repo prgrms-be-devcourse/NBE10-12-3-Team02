@@ -86,7 +86,9 @@ function SeatSelectContent({ params }: { params: Promise<{ id: string }> }) {
   // 2인 이상이면 "짝"(나란히 붙은 좌석 2개)을 먼저 채우고, 3인이면 그 뒤에 자유석 1개를 더 받는다.
   const [pairSeats, setPairSeats] = useState<[string, string] | null>(null);
   const [freeSeats, setFreeSeats] = useState<string[]>([]);
-  const selectedSeats = [...(pairSeats ?? []), ...freeSeats];
+  const selectedSeats = Array.from(
+    new Set([...(pairSeats ?? []), ...freeSeats]),
+  );
 
   // 인원수가 변경되면 선택되어 있던 좌석을 리셋합니다.
   useEffect(() => {
@@ -396,7 +398,7 @@ function SeatSelectContent({ params }: { params: Promise<{ id: string }> }) {
   };
 
   const needsPair = requiredSeatCount >= 2;
-  const totalSelected = (pairSeats ? 2 : 0) + freeSeats.length;
+  const totalSelected = selectedSeats.length;
   const isSelectionFull = totalSelected >= requiredSeatCount;
 
   const handleSeatClick = (seatNumber: string) => {
@@ -420,11 +422,19 @@ function SeatSelectContent({ params }: { params: Promise<{ id: string }> }) {
       const neighbor = getRightNeighborSeat(seatNumber);
       if (!neighbor || seatStatusMap.get(neighbor) !== "AVAILABLE") return;
       setPairSeats([seatNumber, neighbor]);
+      setFreeSeats((prev) =>
+        prev.filter((s) => s !== seatNumber && s !== neighbor),
+      );
       return;
     }
 
     // 짝을 다 채웠거나(혹은 1명이라 짝이 필요 없거나), 자유석 자리 — 아무 빈 좌석이나 선택.
-    setFreeSeats((prev) => [...prev, seatNumber]);
+    setFreeSeats((prev) => {
+      if (prev.includes(seatNumber) || pairSeats?.includes(seatNumber)) {
+        return prev;
+      }
+      return [...prev, seatNumber];
+    });
   };
 
   const totalPrice = selectedSeats.reduce((sum, seatNumber) => {
@@ -434,7 +444,14 @@ function SeatSelectContent({ params }: { params: Promise<{ id: string }> }) {
   }, 0);
 
   const handleProceedToPayment = async () => {
-    if (selectedSeats.length === 0 || !scheduleId || !entryToken) return;
+    if (
+      selectedSeats.length < requiredSeatCount ||
+      !scheduleId ||
+      !entryToken
+    ) {
+      showAlert(`좌석 ${requiredSeatCount}매를 모두 선택해주세요.`);
+      return;
+    }
 
     setIsReserving(true);
     const occupied: {
