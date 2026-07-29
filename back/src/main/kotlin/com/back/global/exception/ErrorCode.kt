@@ -56,6 +56,13 @@ enum class ErrorCode(
     TICKET_ALREADY_CANCELLED("400-3", "이미 취소된 티켓입니다."),
     EXCEED_TICKET_LIMIT("400-2", "회차당 최대 3매까지 예매 가능합니다."),
 
+    // Review
+    REVIEW_NOT_FOUND("404-9", "존재하지 않는 리뷰입니다."),
+    REVIEW_FORBIDDEN("403-2", "리뷰를 수정/삭제할 권한이 없습니다."),
+    REVIEW_NOT_ELIGIBLE("403-4", "해당 콘서트에 대한 유효한 티켓이 없어 리뷰를 작성할 수 없습니다."),
+    REVIEW_PERIOD_EXPIRED("403-5", "리뷰 작성 가능 기간이 지났습니다. (콘서트 종료 후 6개월 이내)"),
+    REVIEW_ALREADY_EXISTS("409-4", "이미 해당 콘서트에 리뷰를 작성했습니다."),
+
     // bucket4j
     TOO_MANY_REQUESTS("429-1", "요청이 너무 많습니다."),
 

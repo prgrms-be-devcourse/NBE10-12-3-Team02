@@ -65,6 +65,8 @@ class SecurityConfig(
                         HttpMethod.GET,
                         "/api/*/concerts",
                         "/api/*/concerts/*",
+                        "/api/*/concerts/*/reviews",
+                        "/api/*/concerts/*/reviews/*",
                         "/api/*/schedules/**",
                         "/api/*/users/check-id",
                         "/api/*/tickets/verify/*",
