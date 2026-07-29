@@ -99,8 +99,8 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      # 5. CI 검증 (Prettier Check + TypeScript Type Check + ESLint)
-      - name: Run CI checks (Prettier, TSC, ESLint)
+      # 5. CI 검증 (TypeScript Type Check + ESLint)
+      - name: Run CI checks (TSC, ESLint)
         run: pnpm run ci:check
 
       # 6. Next.js 빌드 검증
