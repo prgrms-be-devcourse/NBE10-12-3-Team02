@@ -157,17 +157,14 @@ class ConcertControllerTest @Autowired constructor(
         scheduleSeatRepository.save(seat)
 
         val rScript = mock(RScript::class.java)
-        doReturn(rScript).`when`(redissonClient).getScript()
         doReturn(rScript).`when`(redissonClient).getScript(any(Codec::class.java))
         `when`(rScript.eval<Any>(any(), anyString(), any(), anyList<Any>(), any(), any(), any(), any(), any())).thenReturn(1L)
 
         val rMap = mock(RMap::class.java) as RMap<String, String>
-        doReturn(rMap).`when`(redissonClient).getMap<String, String>(anyString())
         doReturn(rMap).`when`(redissonClient).getMap<String, String>(anyString(), any(Codec::class.java))
 
         val blockingQueue = mock(RBlockingQueue::class.java) as RBlockingQueue<String>
         val delayedQueue = mock(RDelayedQueue::class.java) as RDelayedQueue<String>
-        doReturn(blockingQueue).`when`(redissonClient).getBlockingQueue<String>(anyString())
         doReturn(blockingQueue).`when`(redissonClient).getBlockingQueue<String>(anyString(), any(Codec::class.java))
         doReturn(delayedQueue).`when`(redissonClient).getDelayedQueue<String>(any())
 
@@ -205,9 +202,7 @@ class ConcertControllerTest @Autowired constructor(
 
         val rMap = mock(RMap::class.java) as RMap<String, String>
         val rSet = mock(RScoredSortedSet::class.java) as RScoredSortedSet<String>
-        doReturn(rMap).`when`(redissonClient).getMap<String, String>(anyString())
         doReturn(rMap).`when`(redissonClient).getMap<String, String>(anyString(), any(Codec::class.java))
-        doReturn(rSet).`when`(redissonClient).getScoredSortedSet<String>(anyString())
         doReturn(rSet).`when`(redissonClient).getScoredSortedSet<String>(anyString(), any(Codec::class.java))
         `when`(rMap["userId"]).thenReturn(userId.toString())
 
