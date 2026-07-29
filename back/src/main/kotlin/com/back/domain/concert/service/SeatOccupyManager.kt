@@ -36,21 +36,16 @@ class SeatOccupyManager(
         concertService.validateScheduleBookable(scheduleId)
 
         val redisKey = generateSeatOccupyKey(concertId, scheduleId, seatNumber)
-        val indexKey = generateSeatOccupyIndexKey(concertId, scheduleId)
         val occupyToken = UUID.randomUUID().toString()
-        val now = System.currentTimeMillis()
-        val expireAt = now + (OCCUPY_TTL_SECONDS * 1000)
 
         val result: Long? = redissonClient.getScript(StringCodec.INSTANCE).eval(
             RScript.Mode.READ_WRITE,
             OCCUPY_SCRIPT,
             RScript.ReturnType.LONG,
-            listOf(redisKey, indexKey),
+            listOf(redisKey),
             userId.toString(),
             occupyToken,
-            OCCUPY_TTL_SECONDS.toString(),
-            seatNumber,
-            expireAt.toString()
+            OCCUPY_TTL_SECONDS.toString()
         )
 
         if (result == null || result == 0L) {
@@ -65,11 +60,11 @@ class SeatOccupyManager(
             seat.occupyHold()
         } catch (e: ServiceException) {
             if (e.errorCode != ErrorCode.SEAT_ALREADY_SOLD) {
-                cleanupRedis(redisKey, indexKey, seatNumber)
+                cleanupRedis(redisKey)
             }
             throw e
         } catch (e: Exception) {
-            cleanupRedis(redisKey, indexKey, seatNumber)
+            cleanupRedis(redisKey)
             throw e
         }
 
@@ -92,7 +87,7 @@ class SeatOccupyManager(
             throw ServiceException(ErrorCode.SEAT_HELD_BY_OTHER_USER)
         }
 
-        cleanupRedis(redisKey, generateSeatOccupyIndexKey(concertId, scheduleId), seatNumber)
+        cleanupRedis(redisKey)
 
         val seat = scheduleSeatRepository.findWithLockByScheduleIdAndSeatNumber(scheduleId, seatNumber)
         seat?.releaseToAvailable()
@@ -123,10 +118,7 @@ class SeatOccupyManager(
         return SeatSelectionResponse.of(concertId, scheduleId, pricesMap, seatResponses)
     }
 
-    fun cleanupRedis(redisKey: String, indexKey: String, seatNumber: String) = with(redissonClient) {
-        getMap<String, String>(redisKey, StringCodec.INSTANCE).delete()
-        getScoredSortedSet<String>(indexKey, StringCodec.INSTANCE).remove(seatNumber)
-    }
+    fun cleanupRedis(redisKey: String) = redissonClient.getMap<String, String>(redisKey, StringCodec.INSTANCE).delete()
 
     fun validateSeatHolds(userId: Long, concertId: Long, scheduleId: Long, seatHolds: List<SeatHoldInfo>) {
         for (hold in seatHolds) {
@@ -167,7 +159,6 @@ class SeatOccupyManager(
               if redis.call('HGET', KEYS[1], 'userId') == ARGV[1] then
                 redis.call('HSET', KEYS[1], 'occupyToken', ARGV[2])
                 redis.call('EXPIRE', KEYS[1], tonumber(ARGV[3]))
-                redis.call('ZADD', KEYS[2], tonumber(ARGV[5]), ARGV[4])
                 return 1
               else
                 return 0
@@ -175,7 +166,6 @@ class SeatOccupyManager(
             else
               redis.call('HSET', KEYS[1], 'userId', ARGV[1], 'occupyToken', ARGV[2])
               redis.call('EXPIRE', KEYS[1], tonumber(ARGV[3]))
-              redis.call('ZADD', KEYS[2], tonumber(ARGV[5]), ARGV[4])
               return 1
             end
         """.trimIndent()
@@ -183,9 +173,5 @@ class SeatOccupyManager(
         @JvmStatic
         fun generateSeatOccupyKey(concertId: Long, scheduleId: Long, seatNumber: String): String =
             "seat:occupy:$concertId:$scheduleId:$seatNumber"
-
-        @JvmStatic
-        fun generateSeatOccupyIndexKey(concertId: Long, scheduleId: Long): String =
-            "seat:occupy:index:$concertId:$scheduleId"
     }
 }
