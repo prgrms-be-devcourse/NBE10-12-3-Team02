@@ -1,10 +1,13 @@
 "use client";
 
-import { useState, useEffect, use } from "react";
-import { useRouter } from "next/navigation";
-import { apiFetch, decodeToken } from "@/lib/api";
 import { showAlert } from "@/lib/alert";
-import { getConcertDetailImages, getLocalConcertPoster } from "@/lib/concertDetailImages";
+import { apiFetch, decodeToken } from "@/lib/api";
+import {
+  getConcertDetailImages,
+  getLocalConcertPoster,
+} from "@/lib/concertDetailImages";
+import { useRouter } from "next/navigation";
+import { use, useEffect, useState } from "react";
 
 interface ConcertDetail {
   concertId: number;
@@ -27,7 +30,8 @@ interface ScheduleItem {
 
 const GRADE_ORDER = ["VIP", "R", "S", "A"];
 
-const stripVenuePrefix = (name: string) => name.replace(/^\(.*?\)\s*/, "").trim();
+const stripVenuePrefix = (name: string) =>
+  name.replace(/^\(.*?\)\s*/, "").trim();
 
 export default function ConcertDetailPage({
   params,
@@ -51,7 +55,9 @@ export default function ConcertDetailPage({
         const res = await apiFetch<ConcertDetail>(`/concerts/${id}`);
         setConcert(res.data);
       } catch (e) {
-        setError(e instanceof Error ? e.message : "콘서트 정보를 불러오지 못했습니다.");
+        setError(
+          e instanceof Error ? e.message : "콘서트 정보를 불러오지 못했습니다.",
+        );
       } finally {
         setLoading(false);
       }
@@ -92,7 +98,9 @@ export default function ConcertDetailPage({
 
   const posterUrl = getLocalConcertPoster(concert.urlPoster);
   const detailImages = getConcertDetailImages(concert.urlPoster);
-  const mapQuery = encodeURIComponent(`${stripVenuePrefix(concert.venueName)} ${concert.location}`);
+  const mapQuery = encodeURIComponent(
+    `${stripVenuePrefix(concert.venueName)} ${concert.location}`,
+  );
   const mapUrl = `https://map.kakao.com/link/search/${mapQuery}`;
 
   return (
@@ -118,50 +126,72 @@ export default function ConcertDetailPage({
                 <div className="flex items-start gap-2">
                   <span className="text-blue-500 text-sm mt-0.5">⏰</span>
                   <div className="text-left">
-                    <p className="text-xs font-semibold text-slate-700">예매 가능 시간</p>
-                    <p className="text-[11px] text-slate-500 mt-0.5">관람일 전일 17시까지</p>
+                    <p className="text-xs font-semibold text-slate-700">
+                      예매 가능 시간
+                    </p>
+                    <p className="text-[11px] text-slate-500 mt-0.5">
+                      관람일 전일 17시까지
+                    </p>
                   </div>
                 </div>
                 <div className="h-px bg-slate-200/50"></div>
                 <div className="flex items-start gap-2">
                   <span className="text-amber-500 text-sm mt-0.5">🎟️</span>
                   <div className="text-left">
-                    <p className="text-xs font-semibold text-slate-700">매수 제한</p>
-                    <p className="text-[11px] text-slate-500 mt-0.5">회차당 최대 3매까지 예매 가능</p>
+                    <p className="text-xs font-semibold text-slate-700">
+                      매수 제한
+                    </p>
+                    <p className="text-[11px] text-slate-500 mt-0.5">
+                      회차당 최대 3매까지 예매 가능
+                    </p>
                   </div>
                 </div>
               </div>
             </div>
 
             <div className="p-8 flex-1">
-              <h1 className="text-2xl font-bold text-gray-800 mb-4">{concert.concertName}</h1>
+              <h1 className="text-2xl font-bold text-gray-800 mb-4">
+                {concert.concertName}
+              </h1>
 
               <div className="mb-4">
                 <h2 className="font-bold text-gray-700 mb-2">공연 장소</h2>
 
-                <a href={mapUrl}
+                <a
+                  href={mapUrl}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="block group"
                 >
                   <p className="text-gray-600 text-sm group-hover:text-blue-600 transition">
                     📍 {concert.venueName}
-                    <span className="ml-1 text-xs text-blue-500 underline">지도 보기</span>
+                    <span className="ml-1 text-xs text-blue-500 underline">
+                      지도 보기
+                    </span>
                   </p>
-                  <p className="text-gray-400 text-sm mt-1">{concert.location}</p>
+                  <p className="text-gray-400 text-sm mt-1">
+                    {concert.location}
+                  </p>
                 </a>
               </div>
 
               <div className="mb-6">
                 <h2 className="font-bold text-gray-700 mb-2">공연 소개</h2>
-                <p className="text-gray-600 text-sm leading-6">{concert.description}</p>
+                <p className="text-gray-600 text-sm leading-6">
+                  {concert.description}
+                </p>
               </div>
 
               <div className="mb-6">
-                <h2 className="font-bold text-gray-700 mb-2">좌석 등급별 가격</h2>
+                <h2 className="font-bold text-gray-700 mb-2">
+                  좌석 등급별 가격
+                </h2>
                 <div className="space-y-1 text-sm text-gray-600">
                   {Object.entries(concert.prices)
-                    .sort(([a], [b]) => GRADE_ORDER.indexOf(a) - GRADE_ORDER.indexOf(b))
+                    .sort(
+                      ([a], [b]) =>
+                        GRADE_ORDER.indexOf(a) - GRADE_ORDER.indexOf(b),
+                    )
                     .map(([grade, price]) => (
                       <p key={grade}>
                         {grade}석 — {price.toLocaleString()}원
@@ -173,29 +203,39 @@ export default function ConcertDetailPage({
               <div className="mb-6">
                 <h2 className="font-bold text-gray-700 mb-3">회차 선택</h2>
                 {schedules.length === 0 ? (
-                  <p className="text-sm text-gray-400">등록된 회차가 없습니다.</p>
+                  <p className="text-sm text-gray-400">
+                    등록된 회차가 없습니다.
+                  </p>
                 ) : (
                   <div className="flex flex-wrap gap-2">
                     {schedules.map((schedule) => (
                       <button
                         key={schedule.scheduleId}
                         onClick={() => setSelectedSchedule(schedule.scheduleId)}
-                        className={`px-4 py-2 rounded-lg text-sm font-semibold border transition ${selectedSchedule === schedule.scheduleId
+                        className={`px-4 py-2 rounded-lg text-sm font-semibold border transition ${
+                          selectedSchedule === schedule.scheduleId
                             ? "bg-blue-600 text-white border-blue-600"
                             : "bg-white text-gray-600 border-gray-200 hover:border-blue-400"
-                          }`}
+                        }`}
                       >
                         {schedule.round}회차
                         <br />
                         <span className="text-xs font-normal">
-                          {schedule.scheduleDate?.slice(0, 16).replace("T", " ")}
+                          {schedule.scheduleDate
+                            ?.slice(0, 16)
+                            .replace("T", " ")}
                         </span>
                         <br />
                         <span
-                          className={`text-xs font-normal ${schedule.remainingSeats === 0 ? "text-red-500" : "text-gray-400"
-                            }`}
+                          className={`text-xs font-normal ${
+                            schedule.remainingSeats === 0
+                              ? "text-red-500"
+                              : "text-gray-400"
+                          }`}
                         >
-                          {schedule.remainingSeats === 0 ? "매진" : `잔여 ${schedule.remainingSeats}석`}
+                          {schedule.remainingSeats === 0
+                            ? "매진"
+                            : `잔여 ${schedule.remainingSeats}석`}
                         </span>
                       </button>
                     ))}
@@ -205,7 +245,7 @@ export default function ConcertDetailPage({
 
               {(() => {
                 const selectedScheduleData = schedules.find(
-                  (s) => s.scheduleId === selectedSchedule
+                  (s) => s.scheduleId === selectedSchedule,
                 );
                 // 회차 자체는 살아있어도(콘서트 전체 기간 안이어도), 그 회차의 공연 날짜가
                 // 이미 지났으면 예매할 수 없다 — 콘서트 전체 bookable 여부와는 별개로 확인한다.
@@ -213,7 +253,11 @@ export default function ConcertDetailPage({
                   !!selectedScheduleData &&
                   new Date(selectedScheduleData.scheduleDate) < new Date();
 
-                if (selectedSchedule && concert.bookable && !isSelectedSchedulePast) {
+                if (
+                  selectedSchedule &&
+                  concert.bookable &&
+                  !isSelectedSchedulePast
+                ) {
                   return (
                     <button
                       onClick={handleBookingClick}
@@ -248,11 +292,17 @@ export default function ConcertDetailPage({
             {detailImages.length > 0 ? (
               detailImages.map((url) => (
                 <div key={url} className="w-full max-w-3xl mx-auto mb-4">
-                  <img src={url} alt="공연 상세 설명" className="w-full h-auto rounded-xl border border-gray-200" />
+                  <img
+                    src={url}
+                    alt="공연 상세 설명"
+                    className="w-full h-auto rounded-xl border border-gray-200"
+                  />
                 </div>
               ))
             ) : (
-              <p className="text-sm text-gray-400">등록된 상세 이미지가 없습니다.</p>
+              <p className="text-sm text-gray-400">
+                등록된 상세 이미지가 없습니다.
+              </p>
             )}
           </div>
         </section>

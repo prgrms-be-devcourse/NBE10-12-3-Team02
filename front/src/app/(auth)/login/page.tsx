@@ -42,7 +42,10 @@ function LoginContent() {
   useEffect(() => {
     const errorCode = searchParams.get("error");
     if (errorCode) {
-      showAlert(OAUTH_ERROR_MESSAGES[errorCode] ?? "소셜 로그인 중 오류가 발생했습니다.");
+      showAlert(
+        OAUTH_ERROR_MESSAGES[errorCode] ??
+          "소셜 로그인 중 오류가 발생했습니다.",
+      );
     }
   }, [searchParams]);
 
@@ -66,7 +69,9 @@ function LoginContent() {
       });
       router.push("/");
     } catch (err) {
-      showError(err instanceof Error ? err.message : "로그인 중 오류가 발생했습니다.");
+      showError(
+        err instanceof Error ? err.message : "로그인 중 오류가 발생했습니다.",
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -82,7 +87,10 @@ function LoginContent() {
 
   return (
     <div className="h-screen overflow-hidden flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
-      <form onSubmit={handleLogin} className="w-96 p-10 bg-white rounded-2xl shadow-xl">
+      <form
+        onSubmit={handleLogin}
+        className="w-96 p-10 bg-white rounded-2xl shadow-xl"
+      >
         <Link href="/" className="flex justify-center mb-8">
           <img src="/images/logo.svg" alt="티케팅고" className="h-28 w-28" />
         </Link>
@@ -141,7 +149,10 @@ function LoginContent() {
 
         <p className="text-center text-sm text-gray-500 mt-6">
           아직 회원이 아니신가요?{" "}
-          <Link href="/signup" className="text-blue-600 font-semibold hover:underline">
+          <Link
+            href="/signup"
+            className="text-blue-600 font-semibold hover:underline"
+          >
             회원가입
           </Link>
         </p>
