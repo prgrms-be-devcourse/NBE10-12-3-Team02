@@ -122,7 +122,7 @@ class UserService(
             ?: throw ServiceException(ErrorCode.USER_NOT_FOUND)
 
         val ticketGroups = ticketRepository.findAllByUserWithConcert(user)
-            .groupBy { it.schedule.scheduleId }
+            .groupBy { it.groupToken ?: it.ticketId.toString() }
             .values
             .map { TicketGroupInfo.from(it) }
 
