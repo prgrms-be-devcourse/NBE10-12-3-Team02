@@ -62,12 +62,10 @@ class ConcertControllerTest @Autowired constructor(
     @Suppress("UNCHECKED_CAST")
     fun setUp() {
         val activeSet = mock(RScoredSortedSet::class.java) as RScoredSortedSet<String>
-        doReturn(activeSet).`when`(redissonClient).getScoredSortedSet<String>(anyString())
         doReturn(activeSet).`when`(redissonClient).getScoredSortedSet<String>(anyString(), any(Codec::class.java))
         `when`(activeSet.getScore(anyString())).thenReturn((System.currentTimeMillis() + 600000).toDouble())
 
         val tokenBucket = mock(RBucket::class.java) as RBucket<String>
-        doReturn(tokenBucket).`when`(redissonClient).getBucket<String>(anyString())
         doReturn(tokenBucket).`when`(redissonClient).getBucket<String>(anyString(), any(Codec::class.java))
         `when`(tokenBucket.get()).thenReturn("test-queue-token")
 
