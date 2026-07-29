@@ -44,7 +44,11 @@ class UserService(
 
     @Transactional
     fun signup(request: SignupRequest): SignupResponse {
-        val (id, email, password, name, verificationToken) = request
+        val id = checkNotNull(request.id) { "Id is required" }
+        val email = checkNotNull(request.email) { "Email is required" }
+        val password = checkNotNull(request.password) { "Password is required" }
+        val name = checkNotNull(request.name) { "Name is required" }
+        val verificationToken = checkNotNull(request.verificationToken) { "Verification token is required" }
 
         if (userRepository.existsByLoginIdAndDeletedAtIsNull(id)) {
             throw ServiceException(ErrorCode.USER_ID_ALREADY_EXISTS)
