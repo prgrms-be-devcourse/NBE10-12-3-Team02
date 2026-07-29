@@ -37,14 +37,18 @@ class SeatStatusSseEmitterRegistry {
 
         for (emitter in list) {
             try {
-                emitter.send(
-                    SseEmitter.event()
-                        .name("seat_status_changed")
-                        .data(data)
-                )
-            } catch (e: IOException) {
-                log.debug("SSE 전송 실패 (연결 끊김): scheduleId={}, seat={}", scheduleId, seatNumber)
-                emitter.complete()
+                synchronized(emitter) {
+                    emitter.send(
+                        SseEmitter.event()
+                            .name("seat_status_changed")
+                            .data(data)
+                    )
+                }
+            } catch (e: Exception) {
+                log.debug("SSE 전송 실패 (연결 끊김/오류): scheduleId={}, seat={}, err={}", scheduleId, seatNumber, e.message)
+                try {
+                    emitter.complete()
+                } catch (_: Exception) {}
             }
         }
     }

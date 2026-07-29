@@ -52,12 +52,14 @@ class SeatStatusSseController(
             }
             snapshot.append("]")
 
-            emitter.send(
-                SseEmitter.event()
-                    .name("seat_snapshot")
-                    .data(snapshot.toString())
-            )
-        } catch (e: IOException) {
+            synchronized(emitter) {
+                emitter.send(
+                    SseEmitter.event()
+                        .name("seat_snapshot")
+                        .data(snapshot.toString())
+                )
+            }
+        } catch (e: Exception) {
             log.warn("SSE 스냅샷 전송 실패: scheduleId={}", scheduleId, e)
             emitter.complete()
         }
