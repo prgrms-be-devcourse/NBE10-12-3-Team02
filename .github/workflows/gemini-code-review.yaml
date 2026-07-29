@@ -63,7 +63,7 @@ jobs:
 
           if not diff.strip():
               print("검토할 주요 변경 사항이 없습니다.")
-              sys.exit(0)
+              exit(0)
 
           # Diff 분량이 너무 클 경우 잘라내기 (토큰 절약 및 속도 향상)
           if len(diff) > 40000:
@@ -116,8 +116,8 @@ jobs:
               print(f"Gemini API 호출 중 오류 발생: {e}")
               sys.exit(1)
 
-          # 3. 접기/펼치기 HTML formatting 적용 및 기존 댓글 덮어쓰기/신규 작성
-          formatted_review = f"<details>\n<summary>🤖 <b>Gemini AI 코드 리뷰 (클릭하여 최신 리뷰 보기)</b></summary>\n\n{review_body}\n</details>"
+          # 3. 기본적으로 펼쳐진(<details open>) 접기/펼치기 HTML formatting 적용
+          formatted_review = f"<details open>\n<summary>🤖 <b>Gemini AI 코드 리뷰 (클릭하여 접기/펼치기)</b></summary>\n\n{review_body}\n</details>"
 
           review_file = "review.txt"
           repo = os.environ["REPO"]
