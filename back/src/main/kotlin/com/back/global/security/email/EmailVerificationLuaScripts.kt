@@ -1,7 +1,7 @@
 package com.back.global.security.email
 
 object EmailVerificationLuaScripts {
-    const val SAVE_CHALLENGE_SCRIPT = """
+    val SAVE_CHALLENGE_SCRIPT = """
         local cooldownCreated = redis.call(
             'SET',
             KEYS[1],
@@ -18,9 +18,9 @@ object EmailVerificationLuaScripts {
         redis.call('SET', KEYS[2], ARGV[3], 'PX', ARGV[4])
         redis.call('DEL', KEYS[3])
         return 1
-    """
+    """.trimIndent()
 
-    const val CONFIRM_SCRIPT = """
+    val CONFIRM_SCRIPT = """
         local savedCodeHash = redis.call('GET', KEYS[1])
 
         if not savedCodeHash then
@@ -47,9 +47,9 @@ object EmailVerificationLuaScripts {
         redis.call('SET', KEYS[3], ARGV[3], 'PX', ARGV[4])
         redis.call('DEL', KEYS[1], KEYS[2])
         return 1
-    """
+    """.trimIndent()
 
-    const val RESERVE_SCRIPT = """
+    val RESERVE_SCRIPT = """
         local value = redis.call('GET', KEYS[1])
         if value ~= ARGV[1] then
             return 0
@@ -57,9 +57,9 @@ object EmailVerificationLuaScripts {
 
         redis.call('SET', KEYS[1], ARGV[2], 'KEEPTTL')
         return 1
-    """
+    """.trimIndent()
 
-    const val COMPLETE_RESERVATION_SCRIPT = """
+    val COMPLETE_RESERVATION_SCRIPT = """
         local value = redis.call('GET', KEYS[1])
         if value ~= ARGV[1] then
             return 0
@@ -67,9 +67,9 @@ object EmailVerificationLuaScripts {
 
         redis.call('DEL', KEYS[1])
         return 1
-    """
+    """.trimIndent()
 
-    const val RESTORE_RESERVATION_SCRIPT = """
+    val RESTORE_RESERVATION_SCRIPT = """
         local value = redis.call('GET', KEYS[1])
         if value ~= ARGV[1] then
             return 0
@@ -77,28 +77,28 @@ object EmailVerificationLuaScripts {
 
         redis.call('SET', KEYS[1], ARGV[2], 'KEEPTTL')
         return 1
-    """
+    """.trimIndent()
 
-    const val CLEAR_CHALLENGE_SCRIPT = """
+    val CLEAR_CHALLENGE_SCRIPT = """
         redis.call('DEL', KEYS[1], KEYS[2], KEYS[3])
         return 1
-    """
+    """.trimIndent()
 
     @JvmStatic
-    fun saveChallengeScript(): String = SAVE_CHALLENGE_SCRIPT.trimIndent()
+    fun saveChallengeScript(): String = SAVE_CHALLENGE_SCRIPT
 
     @JvmStatic
-    fun confirmScript(): String = CONFIRM_SCRIPT.trimIndent()
+    fun confirmScript(): String = CONFIRM_SCRIPT
 
     @JvmStatic
-    fun reserveScript(): String = RESERVE_SCRIPT.trimIndent()
+    fun reserveScript(): String = RESERVE_SCRIPT
 
     @JvmStatic
-    fun completeReservationScript(): String = COMPLETE_RESERVATION_SCRIPT.trimIndent()
+    fun completeReservationScript(): String = COMPLETE_RESERVATION_SCRIPT
 
     @JvmStatic
-    fun restoreReservationScript(): String = RESTORE_RESERVATION_SCRIPT.trimIndent()
+    fun restoreReservationScript(): String = RESTORE_RESERVATION_SCRIPT
 
     @JvmStatic
-    fun clearChallengeScript(): String = CLEAR_CHALLENGE_SCRIPT.trimIndent()
+    fun clearChallengeScript(): String = CLEAR_CHALLENGE_SCRIPT
 }
