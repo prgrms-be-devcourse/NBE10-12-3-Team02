@@ -8,6 +8,10 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
+interface ConfirmResponseData {
+  verificationToken: string;
+}
+
 export default function SignupPage() {
   const router = useRouter();
   const [name, setName] = useState("");
@@ -20,9 +24,25 @@ export default function SignupPage() {
   const [isIdChecked, setIsIdChecked] = useState(false);
   const [isChecking, setIsChecking] = useState(false);
 
+  // 이메일 인증 관련 state
+  const [verificationCode, setVerificationCode] = useState("");
+  const [verificationToken, setVerificationToken] = useState("");
+  const [isEmailSent, setIsEmailSent] = useState(false);
+  const [isEmailVerified, setIsEmailVerified] = useState(false);
+  const [isSendingEmail, setIsSendingEmail] = useState(false);
+  const [isVerifyingCode, setIsVerifyingCode] = useState(false);
+
   const handleLoginIdChange = (value: string) => {
     setLoginId(value);
     setIsIdChecked(false);
+  };
+
+  const handleEmailChange = (value: string) => {
+    setEmail(value);
+    setIsEmailSent(false);
+    setIsEmailVerified(false);
+    setVerificationCode("");
+    setVerificationToken("");
   };
 
   const handleCheckId = async () => {
@@ -43,6 +63,69 @@ export default function SignupPage() {
     }
   };
 
+  const handleSendEmailVerification = async () => {
+    if (email.trim() === "") {
+      showAlert("이메일을 입력해주세요.");
+      return;
+    }
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      showAlert("올바른 이메일 형식을 입력해주세요.");
+      return;
+    }
+
+    setIsSendingEmail(true);
+    try {
+      await apiFetch("/auth/email-verifications", {
+        method: "POST",
+        body: JSON.stringify({ email }),
+      });
+      showSuccess("이메일로 인증번호가 발송되었습니다.");
+      setIsEmailSent(true);
+      setIsEmailVerified(false);
+    } catch (e) {
+      showError(
+        e instanceof Error ? e.message : "인증번호 발송에 실패했습니다.",
+      );
+    } finally {
+      setIsSendingEmail(false);
+    }
+  };
+
+  const handleConfirmEmailVerification = async () => {
+    if (verificationCode.trim().length !== 6) {
+      showAlert("6자리 인증번호를 정확히 입력해주세요.");
+      return;
+    }
+
+    setIsVerifyingCode(true);
+    try {
+      const res = await apiFetch<ConfirmResponseData>(
+        "/auth/email-verifications/confirm",
+        {
+          method: "POST",
+          body: JSON.stringify({ email, code: verificationCode }),
+        },
+      );
+
+      if (res.data?.verificationToken) {
+        setVerificationToken(res.data.verificationToken);
+        setIsEmailVerified(true);
+        showSuccess("이메일 인증이 완료되었습니다.");
+      } else {
+        throw new Error("인증 토큰을 전달받지 못했습니다.");
+      }
+    } catch (e) {
+      showError(
+        e instanceof Error
+          ? e.message
+          : "인증번호가 일치하지 않거나 만료되었습니다.",
+      );
+    } finally {
+      setIsVerifyingCode(false);
+    }
+  };
+
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -54,8 +137,16 @@ export default function SignupPage() {
       showAlert("이메일을 입력해주세요.");
       return;
     }
+    if (!isEmailVerified || !verificationToken) {
+      showAlert("이메일 인증을 진행해주세요.");
+      return;
+    }
     if (loginId.trim() === "") {
       showAlert("아이디를 입력해주세요.");
+      return;
+    }
+    if (!isIdChecked) {
+      showAlert("아이디 중복확인을 먼저 진행해주세요.");
       return;
     }
     if (password.trim() === "") {
@@ -70,16 +161,18 @@ export default function SignupPage() {
       showAlert("비밀번호가 일치하지 않습니다.");
       return;
     }
-    if (!isIdChecked) {
-      showAlert("아이디 중복확인을 먼저 진행해주세요.");
-      return;
-    }
 
     setIsSubmitting(true);
     try {
       await apiFetch("/users/signup", {
         method: "POST",
-        body: JSON.stringify({ id: loginId, email, password, name }),
+        body: JSON.stringify({
+          id: loginId,
+          email,
+          password,
+          name,
+          verificationToken,
+        }),
       });
       await showSuccess("회원가입이 완료되었습니다. 로그인해주세요.");
       router.push("/login");
@@ -112,13 +205,58 @@ export default function SignupPage() {
           onChange={(e) => setName(e.target.value)}
           className="w-full p-3 mb-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
         />
-        <input
-          type="email"
-          placeholder="이메일"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          className="w-full p-3 mb-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
-        />
+
+        {/* 이메일 입력 + 인증번호 발송 버튼 */}
+        <div className="flex gap-2 mb-3">
+          <input
+            type="email"
+            placeholder="이메일"
+            value={email}
+            onChange={(e) => handleEmailChange(e.target.value)}
+            disabled={isEmailVerified}
+            className="flex-1 p-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 disabled:bg-gray-50 disabled:text-gray-500"
+          />
+          <button
+            type="button"
+            onClick={handleSendEmailVerification}
+            disabled={isSendingEmail || isEmailVerified}
+            className={`px-4 rounded-lg text-sm font-semibold whitespace-nowrap transition ${
+              isEmailVerified
+                ? "bg-green-100 text-green-700"
+                : "bg-gray-100 hover:bg-gray-200 text-gray-700"
+            } disabled:opacity-50`}
+          >
+            {isSendingEmail
+              ? "발송 중..."
+              : isEmailVerified
+                ? "인증완료"
+                : isEmailSent
+                  ? "재발송"
+                  : "인증발송"}
+          </button>
+        </div>
+
+        {/* 인증번호 6자리 입력 + 인증확인 버튼 */}
+        {isEmailSent && !isEmailVerified && (
+          <div className="flex gap-2 mb-3">
+            <input
+              type="text"
+              placeholder="인증번호 6자리"
+              maxLength={6}
+              value={verificationCode}
+              onChange={(e) => setVerificationCode(e.target.value)}
+              className="flex-1 p-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
+            />
+            <button
+              type="button"
+              onClick={handleConfirmEmailVerification}
+              disabled={isVerifyingCode}
+              className="px-4 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-semibold whitespace-nowrap transition disabled:opacity-50"
+            >
+              {isVerifyingCode ? "확인 중..." : "인증확인"}
+            </button>
+          </div>
+        )}
 
         <div className="flex gap-2 mb-3">
           <input
