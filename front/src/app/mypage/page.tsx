@@ -23,6 +23,10 @@ interface TicketSummary {
   createdAt: string;
 }
 
+interface LegacyTicketSummary extends TicketSummary {
+  valid?: boolean;
+}
+
 interface TicketGroupInfo {
   scheduleId: number;
   concertName: string;
@@ -216,10 +220,9 @@ export default function MyPage() {
   });
 
   const isTicketValid = (t: TicketSummary): boolean => {
+    const legacyTicket = t as LegacyTicketSummary;
     if (t.isValid !== undefined) return t.isValid;
-    if ((t as unknown as { valid?: boolean }).valid !== undefined) {
-      return (t as unknown as { valid: boolean }).valid;
-    }
+    if (legacyTicket.valid !== undefined) return legacyTicket.valid;
     return true;
   };
 
