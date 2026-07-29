@@ -36,6 +36,7 @@ dependencies {
     // Security
     implementation("org.springframework.boot:spring-boot-starter-security")
     implementation("org.springframework.security:spring-security-crypto")
+    implementation("org.springframework.boot:spring-boot-starter-mail")
 
     // OAuth2
     implementation("org.springframework.boot:spring-boot-starter-oauth2-client")
@@ -70,6 +71,8 @@ dependencies {
     testImplementation("org.springframework.boot:spring-boot-starter-security-test")
     testImplementation("org.springframework.boot:spring-boot-starter-websocket-test")
     testImplementation("com.github.codemonstur:embedded-redis:1.4.3")
+    testImplementation("org.testcontainers:testcontainers")
+    testImplementation("org.testcontainers:testcontainers-junit-jupiter")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
 

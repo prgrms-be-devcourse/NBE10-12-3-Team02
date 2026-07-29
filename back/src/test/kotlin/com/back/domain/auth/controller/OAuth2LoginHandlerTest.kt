@@ -8,6 +8,7 @@ import com.back.domain.user.repository.UserRepository
 import com.back.global.requestcontext.RequestContext
 import com.back.global.security.oauth2.info.GoogleOAuth2UserInfo
 import com.back.global.security.oauth2.info.KakaoOAuth2UserInfo
+import com.back.global.security.oauth2.info.NaverOAuth2UserInfo
 import com.back.global.security.oauth2.loginhandler.OAuth2LoginFailureHandler
 import com.back.global.security.oauth2.loginhandler.OAuth2LoginSuccessHandler
 import com.back.global.security.oauth2.loginhandler.OAuth2RedirectHandler
@@ -209,6 +210,24 @@ class OAuth2LoginHandlerTest {
 
         assertThat(response.status).isEqualTo(302)
         assertThat(response.redirectedUrl).isEqualTo("http://localhost:3000/login?error=oauth2_email_already_exists")
+    }
+
+    @Test
+    @DisplayName("네이버 OAuth2 사용자 정보 파싱")
+    fun t9() {
+        val userInfo = NaverOAuth2UserInfo(
+            mapOf(
+                "response" to mapOf(
+                    "id" to "naver-id",
+                    "email" to "naver@test.com",
+                    "name" to "네이버유저",
+                ),
+            ),
+        )
+
+        assertThat(userInfo.providerId).isEqualTo("naver-id")
+        assertThat(userInfo.email).isEqualTo("naver@test.com")
+        assertThat(userInfo.name).isEqualTo("네이버유저")
     }
 
     private fun successHandler(
