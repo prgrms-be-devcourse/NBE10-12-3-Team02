@@ -50,7 +50,7 @@ class ConcertReviewService(
             throw ServiceException(ErrorCode.REVIEW_ALREADY_EXISTS)
         }
 
-        val review = ConcertReview.create(concert, user, request.title, request.content, request.rating)
+        val review = ConcertReview.create(concert, user, request.title, request.content)
         val saved = concertReviewRepository.save(review)
         return ConcertReviewResponse.of(saved, userId)
     }
@@ -78,7 +78,7 @@ class ConcertReviewService(
         if (review.user.userId != userId) {
             throw ServiceException(ErrorCode.REVIEW_FORBIDDEN)
         }
-        review.update(request.title, request.content, request.rating)
+        review.update(request.title, request.content)
         return ConcertReviewResponse.of(review, userId)
     }
 

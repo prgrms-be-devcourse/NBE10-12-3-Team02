@@ -10,7 +10,6 @@ data class ConcertReviewResponse(
     val userName: String,
     val title: String,
     val content: String,
-    val rating: Int,
     val isMine: Boolean,
     val createdAt: LocalDateTime?,
     val updatedAt: LocalDateTime?
@@ -24,7 +23,6 @@ data class ConcertReviewResponse(
                 userName = review.user.name,
                 title = review.title,
                 content = review.content,
-                rating = review.rating,
                 isMine = currentUserId != null && review.user.userId == currentUserId,
                 createdAt = review.createDate,
                 updatedAt = review.modifyDate

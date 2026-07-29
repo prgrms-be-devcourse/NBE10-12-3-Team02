@@ -100,8 +100,7 @@ class ConcertReviewControllerTest @Autowired constructor(
         val requestBody = """
             {
               "title": "정말 좋은 공연이었어요",
-              "content": "감동적인 무대였습니다. 다음에도 꼭 보러 가고 싶네요.",
-              "rating": 5
+              "content": "감동적인 무대였습니다. 다음에도 꼭 보러 가고 싶네요."
             }
         """.trimIndent()
 
@@ -116,7 +115,6 @@ class ConcertReviewControllerTest @Autowired constructor(
             .andExpect(jsonPath("$.resultCode").value("201-1"))
             .andExpect(jsonPath("$.msg").value("리뷰가 작성되었습니다."))
             .andExpect(jsonPath("$.data.title").value("정말 좋은 공연이었어요"))
-            .andExpect(jsonPath("$.data.rating").value(5))
             .andExpect(jsonPath("$.data.isMine").value(true))
     }
 
@@ -129,8 +127,7 @@ class ConcertReviewControllerTest @Autowired constructor(
         val requestBody = """
             {
               "title": "제목",
-              "content": "내용",
-              "rating": 3
+              "content": "내용"
             }
         """.trimIndent()
 
@@ -161,8 +158,7 @@ class ConcertReviewControllerTest @Autowired constructor(
         val requestBody = """
             {
               "title": "제목",
-              "content": "내용",
-              "rating": 3
+              "content": "내용"
             }
         """.trimIndent()
 
@@ -181,7 +177,7 @@ class ConcertReviewControllerTest @Autowired constructor(
     @DisplayName("리뷰 목록 조회 성공 (비로그인)")
     fun getReviews() {
         val review = concertReviewRepository.save(
-            ConcertReview.create(concert, userEntity, "좋았어요", "좋은 공연이었습니다.", 4)
+            ConcertReview.create(concert, userEntity, "좋았어요", "좋은 공연이었습니다.")
         )
 
         mockMvc.perform(
@@ -200,7 +196,7 @@ class ConcertReviewControllerTest @Autowired constructor(
     @DisplayName("리뷰 상세 조회 성공")
     fun getReview() {
         val review = concertReviewRepository.save(
-            ConcertReview.create(concert, userEntity, "좋았어요", "좋은 공연이었습니다.", 4)
+            ConcertReview.create(concert, userEntity, "좋았어요", "좋은 공연이었습니다.")
         )
 
         mockMvc.perform(
@@ -219,14 +215,13 @@ class ConcertReviewControllerTest @Autowired constructor(
     @DisplayName("리뷰 수정 성공")
     fun updateReview() {
         val review = concertReviewRepository.save(
-            ConcertReview.create(concert, userEntity, "제목", "내용", 3)
+            ConcertReview.create(concert, userEntity, "제목", "내용")
         )
 
         val requestBody = """
             {
               "title": "수정된 제목",
-              "content": "수정된 내용입니다.",
-              "rating": 4
+              "content": "수정된 내용입니다."
             }
         """.trimIndent()
 
@@ -240,7 +235,6 @@ class ConcertReviewControllerTest @Autowired constructor(
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.resultCode").value("200-1"))
             .andExpect(jsonPath("$.data.title").value("수정된 제목"))
-            .andExpect(jsonPath("$.data.rating").value(4))
     }
 
     @Test
@@ -248,14 +242,13 @@ class ConcertReviewControllerTest @Autowired constructor(
     fun updateReviewForbidden() {
         val otherUser = userRepository.save(User.create("other2", "other2@test.com", "0000", "타인", LoginType.NORMAL))
         val review = concertReviewRepository.save(
-            ConcertReview.create(concert, userEntity, "제목", "내용", 3)
+            ConcertReview.create(concert, userEntity, "제목", "내용")
         )
 
         val requestBody = """
             {
               "title": "해킹 제목",
-              "content": "해킹 내용",
-              "rating": 1
+              "content": "해킹 내용"
             }
         """.trimIndent()
 
@@ -274,7 +267,7 @@ class ConcertReviewControllerTest @Autowired constructor(
     @DisplayName("리뷰 삭제 성공")
     fun deleteReview() {
         val review = concertReviewRepository.save(
-            ConcertReview.create(concert, userEntity, "제목", "내용", 3)
+            ConcertReview.create(concert, userEntity, "제목", "내용")
         )
 
         mockMvc.perform(
@@ -294,7 +287,7 @@ class ConcertReviewControllerTest @Autowired constructor(
     fun deleteReviewForbidden() {
         val otherUser = userRepository.save(User.create("other3", "other3@test.com", "0000", "타인3", LoginType.NORMAL))
         val review = concertReviewRepository.save(
-            ConcertReview.create(concert, userEntity, "제목", "내용", 3)
+            ConcertReview.create(concert, userEntity, "제목", "내용")
         )
 
         mockMvc.perform(
@@ -312,14 +305,13 @@ class ConcertReviewControllerTest @Autowired constructor(
     @DisplayName("리뷰 중복 작성 실패")
     fun createDuplicateReview() {
         concertReviewRepository.save(
-            ConcertReview.create(concert, userEntity, "첫 번째 리뷰", "내용", 5)
+            ConcertReview.create(concert, userEntity, "첫 번째 리뷰", "내용")
         )
 
         val requestBody = """
             {
               "title": "두 번째 리뷰",
-              "content": "내용",
-              "rating": 4
+              "content": "내용"
             }
         """.trimIndent()
 

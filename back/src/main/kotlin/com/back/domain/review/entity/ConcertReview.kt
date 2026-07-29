@@ -30,33 +30,26 @@ open class ConcertReview protected constructor() : BaseEntity() {
     lateinit var content: String
         protected set
 
-    @Column(nullable = false)
-    var rating: Int = 0
-        protected set
-
     private constructor(
         concert: Concert,
         user: User,
         title: String,
-        content: String,
-        rating: Int
+        content: String
     ) : this() {
         this.concert = concert
         this.user = user
         this.title = title
         this.content = content
-        this.rating = rating
     }
 
-    fun update(title: String, content: String, rating: Int) {
+    fun update(title: String, content: String) {
         this.title = title
         this.content = content
-        this.rating = rating
     }
 
     companion object {
         @JvmStatic
-        fun create(concert: Concert, user: User, title: String, content: String, rating: Int): ConcertReview =
-            ConcertReview(concert, user, title, content, rating)
+        fun create(concert: Concert, user: User, title: String, content: String): ConcertReview =
+            ConcertReview(concert, user, title, content)
     }
 }

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { apiFetch, decodeToken } from "@/lib/api";
 import { showAlert } from "@/lib/alert";
 import { getConcertDetailImages, getLocalConcertPoster } from "@/lib/concertDetailImages";
+import ConcertReviewSection from "./ConcertReviewSection";
 
 interface ConcertDetail {
   concertId: number;
@@ -256,6 +257,8 @@ export default function ConcertDetailPage({
             )}
           </div>
         </section>
+
+        <ConcertReviewSection concertId={concert.concertId} />
       </div>
     </div>
   );
