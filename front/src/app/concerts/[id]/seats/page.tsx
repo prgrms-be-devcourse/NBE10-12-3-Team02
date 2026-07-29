@@ -1,6 +1,6 @@
 "use client";
 
-import { apiFetch, ApiError, decodeToken, restoreSession } from "@/lib/api";
+import { apiFetch, ApiError, BASE_URL, decodeToken, restoreSession } from "@/lib/api";
 import { showAlert, showError } from "@/lib/alert";
 import { connectQueueSocket } from "@/lib/queueSocket";
 import type { Client } from "@stomp/stompjs";
@@ -211,10 +211,61 @@ function SeatSelectContent({ params }: { params: Promise<{ id: string }> }) {
     if (!scheduleId || !entryToken) return;
 
     let active = true;
-    let intervalId: NodeJS.Timeout;
-    let stopPolling = false;
+    let sse: EventSource | null = null;
+    let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
 
-    const fetchSeats = async () => {
+    const connectSse = () => {
+      if (!active) return;
+      sse = new EventSource(
+        `${BASE_URL}/api/v1/concerts/${id}/schedules/${scheduleId}/seats/status`,
+      );
+
+      sse.addEventListener("seat_snapshot", (e) => {
+        if (!active) return;
+        try {
+          const snapshot: { seatNumber: string; status: string }[] = JSON.parse(e.data);
+          const statusMap = new Map(snapshot.map((s) => [s.seatNumber, s.status]));
+          setSeatData((prev) => {
+            if (!prev) return prev;
+            return {
+              ...prev,
+              seats: prev.seats.map((s) => ({
+                ...s,
+                seatStatus: (statusMap.get(s.seatNumber) ?? s.seatStatus) as SeatDetail["seatStatus"],
+              })),
+            };
+          });
+        } catch { /* snapshot 파싱 실패 시 무시 */ }
+      });
+
+      sse.addEventListener("seat_status_changed", (e) => {
+        if (!active) return;
+        try {
+          const { seatNumber, status } = JSON.parse(e.data) as { seatNumber: string; status: string };
+          setSeatData((prev) => {
+            if (!prev) return prev;
+            return {
+              ...prev,
+              seats: prev.seats.map((s) =>
+                s.seatNumber === seatNumber
+                  ? { ...s, seatStatus: status as SeatDetail["seatStatus"] }
+                  : s,
+              ),
+            };
+          });
+        } catch { /* 개별 이벤트 파싱 실패 시 무시 */ }
+      });
+
+      sse.onerror = () => {
+        sse?.close();
+        sse = null;
+        if (active) {
+          reconnectTimer = setTimeout(connectSse, 3000);
+        }
+      };
+    };
+
+    const fetchInitialSeats = async () => {
       try {
         const res = await apiFetch<SeatSelectionData>(
           `/concerts/${id}/schedules/${scheduleId}/seats`,
@@ -223,13 +274,11 @@ function SeatSelectContent({ params }: { params: Promise<{ id: string }> }) {
         if (active) {
           setSeatData(res.data);
           setError("");
+          connectSse();
         }
       } catch (e) {
-        // 이 회차에서 이미 3매를 구매한 경우: 계속 재요청해봐야 결과가 안 바뀌니
-        // 폴링을 멈추고, 안내 후 콘서트 상세 페이지로 돌려보낸다.
+        // 이 회차에서 이미 3매를 구매한 경우: 재시도해봐야 결과가 안 바뀌니 안내 후 돌려보낸다.
         if (e instanceof ApiError && e.resultCode === "400-2") {
-          stopPolling = true;
-          if (intervalId) clearInterval(intervalId);
           if (active) {
             await showAlert(e.message);
             router.replace(`/concerts/${id}`);
@@ -237,11 +286,8 @@ function SeatSelectContent({ params }: { params: Promise<{ id: string }> }) {
           return;
         }
 
-        // 대기열 토큰 문제(누락/만료)도 재요청해봐야 똑같이 실패하니, 폴링을 멈추고
-        // 대기열 화면으로 되돌려서 처음부터 다시 등록하게 한다.
+        // 대기열 토큰 문제(누락/만료): 대기열 화면으로 돌려서 처음부터 다시 등록하게 한다.
         if (e instanceof ApiError && (e.resultCode === "401-11" || e.resultCode === "403-3")) {
-          stopPolling = true;
-          if (intervalId) clearInterval(intervalId);
           if (active) {
             setEntryToken(null);
             setQueueError(e.message);
@@ -250,28 +296,19 @@ function SeatSelectContent({ params }: { params: Promise<{ id: string }> }) {
         }
 
         if (active) {
-          setError(
-            e instanceof Error
-              ? e.message
-              : "좌석 정보를 불러오지 못했습니다.",
-          );
+          setError(e instanceof Error ? e.message : "좌석 정보를 불러오지 못했습니다.");
         }
       } finally {
         if (active) setLoading(false);
       }
     };
 
-    fetchSeats().then(() => {
-      if (active && !stopPolling) {
-        intervalId = setInterval(fetchSeats, 1000);
-      }
-    });
+    fetchInitialSeats();
 
     return () => {
       active = false;
-      if (intervalId) {
-        clearInterval(intervalId);
-      }
+      if (reconnectTimer) clearTimeout(reconnectTimer);
+      sse?.close();
     };
   }, [id, scheduleId, entryToken, router]);
 
