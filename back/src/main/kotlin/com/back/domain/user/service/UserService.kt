@@ -1,5 +1,6 @@
 package com.back.domain.user.service
 
+import com.back.domain.auth.service.EmailVerificationService
 import com.back.domain.ticket.event.TicketCancelledEvent
 import com.back.domain.ticket.repository.TicketRepository
 import com.back.domain.user.dto.*
@@ -20,6 +21,8 @@ import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import org.springframework.web.multipart.MultipartFile
+import org.springframework.transaction.support.TransactionSynchronization
+import org.springframework.transaction.support.TransactionSynchronizationManager
 import java.time.Duration
 
 @Service
@@ -28,6 +31,7 @@ class UserService(
     private val userRepository: UserRepository,
     private val ticketRepository: TicketRepository,
     private val passwordEncoder: PasswordEncoder,
+    private val emailVerificationService: EmailVerificationService,
     private val refreshTokenRepository: RefreshTokenRepository,
     private val blacklistRepository: BlacklistRepository,
     private val jwtTokenProvider: JwtTokenProvider,
@@ -40,7 +44,7 @@ class UserService(
 
     @Transactional
     fun signup(request: SignupRequest): SignupResponse {
-        val (id, email, password, name) = request
+        val (id, email, password, name, verificationToken) = request
 
         if (userRepository.existsByLoginIdAndDeletedAtIsNull(id)) {
             throw ServiceException(ErrorCode.USER_ID_ALREADY_EXISTS)
@@ -49,11 +53,35 @@ class UserService(
             throw ServiceException(ErrorCode.USER_EMAIL_ALREADY_EXISTS)
         }
 
+        val reservationId = emailVerificationService.reserveVerification(email, verificationToken)
+            ?: throw ServiceException(ErrorCode.AUTH_EMAIL_VERIFICATION_REQUIRED)
+        registerVerificationCompletion(email, verificationToken, reservationId)
+
         val encodedPassword = requireNotNull(passwordEncoder.encode(password)) { "Password encoding failed" }
         val user = userRepository.save(
             User.create(loginId = id, email = email, password = encodedPassword, name = name, loginType = LoginType.NORMAL)
         )
         return SignupResponse.from(user)
+    }
+
+    private fun registerVerificationCompletion(
+        email: String,
+        verificationToken: String,
+        reservationId: String,
+    ) {
+        TransactionSynchronizationManager.registerSynchronization(
+            object : TransactionSynchronization {
+                override fun afterCommit() {
+                    emailVerificationService.completeVerification(email, verificationToken, reservationId)
+                }
+
+                override fun afterCompletion(status: Int) {
+                    if (status != TransactionSynchronization.STATUS_COMMITTED) {
+                        emailVerificationService.restoreVerification(email, verificationToken, reservationId)
+                    }
+                }
+            },
+        )
     }
 
     @Transactional

@@ -19,5 +19,8 @@ data class SignupRequest(
 
     @field:NotBlank
     @field:Pattern(regexp = "^\\S+$", message = "이름에 공백을 포함할 수 없습니다.")
-    val name: String
+    val name: String,
+
+    @field:NotBlank(message = "이메일 인증 토큰이 필요합니다.")
+    val verificationToken: String,
 )
