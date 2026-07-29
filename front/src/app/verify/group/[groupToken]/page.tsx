@@ -27,7 +27,7 @@ export default function GroupVerifyPage() {
   const params = useParams();
   const groupToken = params.groupToken as string;
   const [state, setState] = useState<VerifyState>(() =>
-    groupToken ? { status: "loading" } : { status: "notfound" }
+    groupToken ? { status: "loading" } : { status: "notfound" },
   );
 
   useEffect(() => {
@@ -64,11 +64,15 @@ export default function GroupVerifyPage() {
             <div className="space-y-3 text-sm text-left border-t border-gray-100 pt-5 mt-4">
               <div className="flex justify-between">
                 <span className="text-gray-400 w-20 shrink-0">콘서트</span>
-                <span className="text-gray-800 font-semibold text-right">{state.data.concertName}</span>
+                <span className="text-gray-800 font-semibold text-right">
+                  {state.data.concertName}
+                </span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-400 w-20 shrink-0">공연장</span>
-                <span className="text-gray-800 font-semibold text-right">{state.data.venueName}</span>
+                <span className="text-gray-800 font-semibold text-right">
+                  {state.data.venueName}
+                </span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-400 w-20 shrink-0">일시</span>
@@ -85,7 +89,9 @@ export default function GroupVerifyPage() {
             </div>
 
             <div className="mt-5 border-t border-gray-100 pt-4">
-              <p className="text-xs text-gray-400 mb-3 text-left">좌석별 유효 여부</p>
+              <p className="text-xs text-gray-400 mb-3 text-left">
+                좌석별 유효 여부
+              </p>
               <div className="space-y-2">
                 {state.data.seats.map((seat) => (
                   <div
@@ -108,15 +114,21 @@ export default function GroupVerifyPage() {
         {state.status === "notfound" && (
           <>
             <div className="text-5xl mb-4">❌</div>
-            <h1 className="text-xl font-bold text-gray-800 mb-2">유효하지 않은 티켓입니다</h1>
-            <p className="text-sm text-gray-400">QR 코드를 다시 확인해주세요.</p>
+            <h1 className="text-xl font-bold text-gray-800 mb-2">
+              유효하지 않은 티켓입니다
+            </h1>
+            <p className="text-sm text-gray-400">
+              QR 코드를 다시 확인해주세요.
+            </p>
           </>
         )}
 
         {state.status === "error" && (
           <>
             <div className="text-5xl mb-4">⚠️</div>
-            <h1 className="text-xl font-bold text-gray-800 mb-2">오류가 발생했습니다</h1>
+            <h1 className="text-xl font-bold text-gray-800 mb-2">
+              오류가 발생했습니다
+            </h1>
             <p className="text-sm text-gray-400">잠시 후 다시 시도해주세요.</p>
           </>
         )}

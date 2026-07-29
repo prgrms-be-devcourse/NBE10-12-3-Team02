@@ -3,7 +3,12 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { User } from "lucide-react";
-import { apiFetch, decodeToken, setAccessToken, restoreSession } from "@/lib/api";
+import {
+  apiFetch,
+  decodeToken,
+  setAccessToken,
+  restoreSession,
+} from "@/lib/api";
 import { showConfirm } from "@/lib/alert";
 
 export default function Navbar() {
@@ -29,7 +34,9 @@ export default function Navbar() {
   };
 
   const handleLogout = async () => {
-    const confirmed = await showConfirm("로그아웃 하시겠습니까?", { danger: true });
+    const confirmed = await showConfirm("로그아웃 하시겠습니까?", {
+      danger: true,
+    });
     if (!confirmed) return;
 
     try {
@@ -47,10 +54,17 @@ export default function Navbar() {
     <nav className="print:hidden sticky top-0 z-50 bg-white border-b border-gray-100 shadow-sm">
       <div className="max-w-5xl mx-auto px-6 h-16 flex items-center justify-between">
         <Link href="/" onClick={handleLogoClick} className="flex items-center">
-          <img src="/images/logo-horizontal.svg" alt="티케팅고" className="h-12 w-auto object-contain block" />
+          <img
+            src="/images/logo-horizontal.svg"
+            alt="티케팅고"
+            className="h-12 w-auto object-contain block"
+          />
         </Link>
         <div className="flex items-center gap-6 text-sm font-semibold text-gray-600">
-          <Link href="/mypage" className="flex items-center gap-1 hover:text-blue-600 transition">
+          <Link
+            href="/mypage"
+            className="flex items-center gap-1 hover:text-blue-600 transition"
+          >
             <User size={18} />
             마이페이지
           </Link>

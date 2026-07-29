@@ -6,29 +6,35 @@
     "dev": "next dev",
     "build": "next build --webpack",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "tsc": "tsc --noEmit",
+    "check": "pnpm format && pnpm tsc && pnpm lint"
   },
   "dependencies": {
+    "@stomp/stompjs": "^7.3.0",
     "lucide-react": "^1.21.0",
     "next": "16.2.9",
     "qrcode.react": "^4.2.0",
     "react": "19.2.4",
     "react-dom": "19.2.4",
-    "swiper": "^11.2.10",
+    "sockjs-client": "^1.6.1",
     "sweetalert2": "^11.26.25",
-    "@stomp/stompjs": "^7.3.0",
-    "sockjs-client": "^1.6.1"
+    "swiper": "^11.2.10"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
+    "@trivago/prettier-plugin-sort-imports": "^6.0.2",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@types/sockjs-client": "^1.5.4",
     "babel-plugin-react-compiler": "1.0.0",
     "eslint": "^9",
     "eslint-config-next": "16.2.9",
+    "prettier": "^3.8.4",
     "tailwindcss": "^4",
-    "typescript": "^5",
-    "@types/sockjs-client": "^1.5.4"
+    "typescript": "^5"
   }
 }

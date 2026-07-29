@@ -8,10 +8,15 @@ export default function Footer() {
           {/* 로고 + 소개 */}
           <div>
             <Link href="/" className="flex items-center mb-3">
-              <img src="/images/logo-horizontal.svg" alt="티케팅고" className="h-8 w-auto object-contain block" />
+              <img
+                src="/images/logo-horizontal.svg"
+                alt="티케팅고"
+                className="h-8 w-auto object-contain block"
+              />
             </Link>
             <p className="text-sm text-gray-400 leading-relaxed">
-              콘서트부터 페스티벌까지,<br />
+              콘서트부터 페스티벌까지,
+              <br />
               원하는 공연을 가장 빠르게 예매하세요.
             </p>
           </div>
@@ -21,19 +26,50 @@ export default function Footer() {
             <div>
               <h3 className="font-bold text-gray-700 mb-3 text-sm">서비스</h3>
               <ul className="space-y-2 text-sm text-gray-400">
-                <li><Link href="/" className="hover:text-blue-600 transition">공연 목록</Link></li>
-                <li><Link href="/login" className="hover:text-blue-600 transition">로그인</Link></li>
-                <li><Link href="/signup" className="hover:text-blue-600 transition">회원가입</Link></li>
-                <li><Link href="/mypage" className="hover:text-blue-600 transition">마이페이지</Link></li>
+                <li>
+                  <Link href="/" className="hover:text-blue-600 transition">
+                    공연 목록
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    href="/login"
+                    className="hover:text-blue-600 transition"
+                  >
+                    로그인
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    href="/signup"
+                    className="hover:text-blue-600 transition"
+                  >
+                    회원가입
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    href="/mypage"
+                    className="hover:text-blue-600 transition"
+                  >
+                    마이페이지
+                  </Link>
+                </li>
               </ul>
             </div>
 
             <div>
               <h3 className="font-bold text-gray-700 mb-3 text-sm">정보</h3>
               <ul className="space-y-2 text-sm text-gray-400">
-                <li><span className="cursor-default">이용약관</span></li>
-                <li><span className="cursor-default">개인정보처리방침</span></li>
-                <li><span className="cursor-default">고객센터</span></li>
+                <li>
+                  <span className="cursor-default">이용약관</span>
+                </li>
+                <li>
+                  <span className="cursor-default">개인정보처리방침</span>
+                </li>
+                <li>
+                  <span className="cursor-default">고객센터</span>
+                </li>
               </ul>
             </div>
           </div>

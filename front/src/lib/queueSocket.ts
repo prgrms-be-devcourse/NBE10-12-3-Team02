@@ -60,31 +60,40 @@ export function connectQueueSocket({
     },
     reconnectDelay: 3000,
     onConnect: () => {
-      client.subscribe(`/queue/schedules/${scheduleId}/status`, (message: IMessage) => {
-        try {
-          const body: QueueEventResponse<QueueStatusEvent | QueueErrorEvent> = JSON.parse(message.body);
-          if (body.eventType === "QUEUE_ERROR") {
-            onQueueError?.(body.data as QueueErrorEvent);
-          } else {
-            onStatusUpdated(body.data as QueueStatusEvent);
+      client.subscribe(
+        `/queue/schedules/${scheduleId}/status`,
+        (message: IMessage) => {
+          try {
+            const body: QueueEventResponse<QueueStatusEvent | QueueErrorEvent> =
+              JSON.parse(message.body);
+            if (body.eventType === "QUEUE_ERROR") {
+              onQueueError?.(body.data as QueueErrorEvent);
+            } else {
+              onStatusUpdated(body.data as QueueStatusEvent);
+            }
+          } catch (e) {
+            onError?.(e);
           }
-        } catch (e) {
-          onError?.(e);
-        }
-      });
+        },
+      );
 
-      client.subscribe(`/user/queue/schedules/${scheduleId}/entry`, (message: IMessage) => {
-        try {
-          const body: QueueEventResponse<EntryAllowedEvent | QueueErrorEvent> = JSON.parse(message.body);
-          if (body.eventType === "QUEUE_ERROR") {
-            onQueueError?.(body.data as QueueErrorEvent);
-          } else {
-            onEntryAllowed(body.data as EntryAllowedEvent);
+      client.subscribe(
+        `/user/queue/schedules/${scheduleId}/entry`,
+        (message: IMessage) => {
+          try {
+            const body: QueueEventResponse<
+              EntryAllowedEvent | QueueErrorEvent
+            > = JSON.parse(message.body);
+            if (body.eventType === "QUEUE_ERROR") {
+              onQueueError?.(body.data as QueueErrorEvent);
+            } else {
+              onEntryAllowed(body.data as EntryAllowedEvent);
+            }
+          } catch (e) {
+            onError?.(e);
           }
-        } catch (e) {
-          onError?.(e);
-        }
-      });
+        },
+      );
 
       onConnected();
     },
