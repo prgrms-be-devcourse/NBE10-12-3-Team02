@@ -53,6 +53,8 @@ function PaymentContent() {
   const isMountedRef = useRef(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const releasedRef = useRef(false);
+  // React Strict Mode의 이중 실행에서 재진입 체크가 중복 발동하지 않도록 보호
+  const entryValidatedRef = useRef(false);
 
   // 선점해뒀던 좌석들을 전부 풀어준다. 결제 실패/이탈 등 여러 상황에서 재사용한다.
   const releaseSeats = () => {
@@ -85,6 +87,9 @@ function PaymentContent() {
   // 결제 페이지 재진입 감지: 좌석 선택 페이지에서 정상 진입 시 'paymentActive' 플래그가 존재한다.
   // 뒤로가기 후 앞으로 가기(또는 직접 URL 입력)로 재진입하면 플래그가 없어 좌석 선택 페이지로 리다이렉트한다.
   useEffect(() => {
+    // React Strict Mode에서 useEffect가 두 번 실행되므로 첫 번째 통과 후 플래그를 ref로 기억한다.
+    if (entryValidatedRef.current) return;
+
     const isValidEntry = sessionStorage.getItem("paymentActive") === "1";
     if (!isValidEntry) {
       // 스테일 토큰으로 결제를 시도하지 못하도록 좌석 선택 페이지로 보낸다.
@@ -95,7 +100,8 @@ function PaymentContent() {
       }
       return;
     }
-    // 정상 최초 진입 — 플래그 즉시 제거 (새로고침 방지)
+    // 정상 최초 진입 — 통과 표시 후 플래그 제거
+    entryValidatedRef.current = true;
     sessionStorage.removeItem("paymentActive");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
