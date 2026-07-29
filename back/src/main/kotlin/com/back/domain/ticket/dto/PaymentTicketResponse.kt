@@ -1,9 +1,10 @@
 package com.back.domain.ticket.dto
 
+import com.back.domain.schedule.constant.SeatStatus
 import com.back.domain.schedule.entity.Schedule
 import com.back.domain.schedule.entity.ScheduleSeat
-import com.back.domain.schedule.constant.SeatStatus
 import com.back.domain.ticket.entity.Ticket
+import com.fasterxml.jackson.annotation.JsonProperty
 import java.time.LocalDateTime
 
 data class PaymentTicketResponse(
@@ -13,7 +14,7 @@ data class PaymentTicketResponse(
     val seatNumber: String,
     val scheduleDate: LocalDateTime,
     val seatStatus: SeatStatus,
-    val isValid: Boolean
+    @get:JsonProperty("isValid") val isValid: Boolean
 ) {
     companion object {
         fun from(scheduleSeat: ScheduleSeat, schedule: Schedule, ticket: Ticket): PaymentTicketResponse {
