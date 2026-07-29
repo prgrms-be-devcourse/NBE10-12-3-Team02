@@ -2,6 +2,7 @@ package com.back.domain.concert.sse
 
 import com.back.domain.concert.event.SeatExpiredEvent
 import com.back.domain.concert.event.SeatOccupiedEvent
+import com.back.domain.concert.event.SeatReleasedEvent
 import com.back.domain.schedule.constant.SeatStatus
 import com.back.domain.ticket.event.PaymentCompletedEvent
 import org.slf4j.LoggerFactory
@@ -11,20 +12,44 @@ import org.springframework.stereotype.Component
 import org.springframework.transaction.event.TransactionPhase
 import org.springframework.transaction.event.TransactionalEventListener
 
-@Async
 @Component
 class SeatStatusSseBroadcaster(
     private val registry: SeatStatusSseEmitterRegistry
 ) {
     private val log = LoggerFactory.getLogger(javaClass)
 
+    /**
+     * 좌석 선점(HOLD) 시 실시간 SSE 브로드캐스트.
+     * @Async: 별도 스레드에서 SSE 전송 (응답 블로킹 방지)
+     * @TransactionalEventListener(AFTER_COMMIT): DB 커밋 완료 후 발송 보장
+     *
+     * ⚠️ @Async는 메서드 레벨에 적용해야 @TransactionalEventListener와 정상 동작한다.
+     *   클래스 레벨 @Async + @TransactionalEventListener 조합은 Spring이
+     *   트랜잭션 동기화 컨텍스트를 찾지 못해 이벤트가 무시(drop)되는 버그가 있다.
+     */
+    @Async
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     fun onSeatOccupied(event: SeatOccupiedEvent) {
         log.debug("SSE 브로드캐스트 (선점): scheduleId={}, seat={}", event.scheduleId, event.seatNumber)
         registry.broadcast(event.scheduleId, event.seatNumber, SeatStatus.HOLD.name)
     }
 
-    @EventListener
+    /**
+     * 좌석 선점 취소(AVAILABLE 복구) 시 실시간 SSE 브로드캐스트.
+     */
+    @Async
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    fun onSeatReleased(event: SeatReleasedEvent) {
+        log.debug("SSE 브로드캐스트 (선점 취소): scheduleId={}, seat={}", event.scheduleId, event.seatNumber)
+        registry.broadcast(event.scheduleId, event.seatNumber, SeatStatus.AVAILABLE.name)
+    }
+
+    /**
+     * 선점 TTL 만료(AVAILABLE 복구) 시 SSE 브로드캐스트.
+     * SeatHoldExpiredProcessor 트랜잭션 커밋 후 발송.
+     */
+    @Async
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     fun onSeatExpired(event: SeatExpiredEvent) {
         log.debug("SSE 브로드캐스트 (만료 복구): scheduleId={}, seat={}", event.scheduleId, event.seatNumber)
         registry.broadcast(event.scheduleId, event.seatNumber, SeatStatus.AVAILABLE.name)
@@ -35,3 +60,4 @@ class SeatStatusSseBroadcaster(
         log.debug("SSE 브로드캐스트 (결제 완료): scheduleId={}", event.scheduleId)
     }
 }
+
