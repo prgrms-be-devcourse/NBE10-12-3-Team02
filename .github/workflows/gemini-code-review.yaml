@@ -47,8 +47,8 @@ jobs:
               "':!*.png' ':!*.jpg' ':!*.jpeg' ':!*.svg' ':!*.ico' ':!*.pdf' "
               # 백엔드(Kotlin/Spring Boot) 빌드 및 캐시 제외
               "':!back/build/*' ':!back/target/*' ':!back/.gradle/*' ':!back/out/*' ':!back/.idea/*' "
-              # 프론트엔드(pnpm/Node.js) 모듈 및 빌드 결과물 제외
-              "':!back/node_modules/*' ':!front/node_modules/*' ':!front/.pnpm-store/*' "
+              # 모노레포 루트 및 프론트엔드/백엔드 모듈, 빌드 결과물 제외
+              "':!node_modules/*' ':!.pnpm-store/*' ':!back/node_modules/*' ':!front/node_modules/*' ':!front/.pnpm-store/*' "
               "':!front/dist/*' ':!front/build/*' ':!front/.next/*' ':!front/.turbo/*'"
           )
 
