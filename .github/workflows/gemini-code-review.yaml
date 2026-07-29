@@ -64,7 +64,7 @@ jobs:
           if len(diff) > 40000:
               diff = diff[:40000] + "\n... (Diff truncated due to size)"
 
-          # 2. Gemini API 호출 (도메인 맞춤형 수석 엔지니어 프롬프트)
+          # 2. Gemini API 호출 (최신 gemini-3.6-flash 모델 적용)
           client = genai.Client(api_key=os.environ["GEMINI_API_KEY"])
           prompt = f"""
           너는 꼼꼼하고 친절한 대용량 트래픽 대기열/티켓팅 시스템 전문 수석 소프트웨어 엔지니어야.
@@ -102,7 +102,7 @@ jobs:
           """
 
           response = client.models.generate_content(
-              model="gemini-2.0-flash",
+              model="gemini-3.6-flash",
               contents=prompt,
           )
 
