@@ -17,14 +17,6 @@ class SeatStatusSseBroadcaster(
 ) {
     private val log = LoggerFactory.getLogger(javaClass)
 
-    /**
-     * 좌석 선점(HOLD) 시 실시간 SSE 브로드캐스트.
-     * @TransactionalEventListener(AFTER_COMMIT): DB 커밋 완료 후 발송 보장.
-     *
-     * ⚠️ @Async + @TransactionalEventListener 조합은 AsyncConfigurer 없이 사용 시
-     *   Spring이 트랜잭션 동기화 컨텍스트를 잃어 이벤트가 무시(drop)된다.
-     *   SseEmitter.send()는 in-memory write이므로 async 불필요.
-     */
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
     fun onSeatOccupied(event: SeatOccupiedEvent) {
         log.info("SSE 브로드캐스트 (선점): scheduleId={}, seat={}", event.scheduleId, event.seatNumber)
