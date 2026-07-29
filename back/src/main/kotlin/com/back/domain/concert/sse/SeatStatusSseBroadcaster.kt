@@ -1,12 +1,15 @@
 package com.back.domain.concert.sse
 
 import com.back.domain.concert.event.SeatExpiredEvent
+import com.back.domain.concert.event.SeatOccupiedEvent
 import com.back.domain.schedule.constant.SeatStatus
 import com.back.domain.ticket.event.PaymentCompletedEvent
 import org.slf4j.LoggerFactory
 import org.springframework.context.event.EventListener
 import org.springframework.scheduling.annotation.Async
 import org.springframework.stereotype.Component
+import org.springframework.transaction.event.TransactionPhase
+import org.springframework.transaction.event.TransactionalEventListener
 
 @Async
 @Component
@@ -14,6 +17,12 @@ class SeatStatusSseBroadcaster(
     private val registry: SeatStatusSseEmitterRegistry
 ) {
     private val log = LoggerFactory.getLogger(javaClass)
+
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    fun onSeatOccupied(event: SeatOccupiedEvent) {
+        log.debug("SSE 브로드캐스트 (선점): scheduleId={}, seat={}", event.scheduleId, event.seatNumber)
+        registry.broadcast(event.scheduleId, event.seatNumber, SeatStatus.HOLD.name)
+    }
 
     @EventListener
     fun onSeatExpired(event: SeatExpiredEvent) {

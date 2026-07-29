@@ -5,6 +5,7 @@ import com.back.domain.concert.dto.SeatSelectionResponse
 import com.back.domain.concert.event.SeatOccupiedEvent
 import com.back.domain.concert.listener.SeatHoldExpiredHandler
 import com.back.domain.concert.listener.SeatOccupiedEventListener
+import com.back.domain.concert.sse.SeatStatusSseEmitterRegistry
 import com.back.domain.schedule.constant.SeatStatus
 import com.back.domain.schedule.repository.ScheduleSeatRepository
 import com.back.domain.ticket.dto.SeatHoldInfo
@@ -26,7 +27,8 @@ class SeatOccupyManager(
     private val ticketRepository: TicketRepository,
     private val scheduleSeatRepository: ScheduleSeatRepository,
     private val redissonClient: RedissonClient,
-    private val eventPublisher: ApplicationEventPublisher
+    private val eventPublisher: ApplicationEventPublisher,
+    private val sseEmitterRegistry: SeatStatusSseEmitterRegistry
 ) {
     private val log = LoggerFactory.getLogger(javaClass)
 
@@ -91,6 +93,8 @@ class SeatOccupyManager(
 
         val seat = scheduleSeatRepository.findWithLockByScheduleIdAndSeatNumber(scheduleId, seatNumber)
         seat?.releaseToAvailable()
+
+        sseEmitterRegistry.broadcast(scheduleId, seatNumber, SeatStatus.AVAILABLE.name)
     }
 
     @Transactional(readOnly = true)
