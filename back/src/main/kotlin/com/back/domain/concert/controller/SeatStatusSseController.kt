@@ -36,7 +36,7 @@ class SeatStatusSseController(
         @PathVariable scheduleId: Long
     ): SseEmitter {
         val emitter = SseEmitter(SSE_TIMEOUT_MS)
-        registry.register(scheduleId, emitter)
+        val wrapper = registry.register(scheduleId, emitter)
 
         try {
             val seats = scheduleSeatRepository.findByScheduleScheduleId(scheduleId)
@@ -52,13 +52,11 @@ class SeatStatusSseController(
             }
             snapshot.append("]")
 
-            synchronized(emitter) {
-                emitter.send(
-                    SseEmitter.event()
-                        .name("seat_snapshot")
-                        .data(snapshot.toString())
-                )
-            }
+            wrapper.send(
+                SseEmitter.event()
+                    .name("seat_snapshot")
+                    .data(snapshot.toString())
+            )
         } catch (e: Exception) {
             log.warn("SSE 스냅샷 전송 실패: scheduleId={}", scheduleId, e)
             emitter.complete()

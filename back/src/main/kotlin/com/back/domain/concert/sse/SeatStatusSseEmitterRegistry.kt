@@ -3,22 +3,35 @@ package com.back.domain.concert.sse
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter
-import java.io.IOException
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CopyOnWriteArrayList
+import java.util.concurrent.locks.ReentrantLock
+import kotlin.concurrent.withLock
 
 @Component
 class SeatStatusSseEmitterRegistry {
     private val log = LoggerFactory.getLogger(javaClass)
 
-    private val emitters = ConcurrentHashMap<Long, MutableList<SseEmitter>>()
+    class SynchronizedEmitter(
+        val emitter: SseEmitter,
+        val lock: ReentrantLock = ReentrantLock()
+    ) {
+        fun send(event: SseEmitter.SseEventBuilder) {
+            lock.withLock {
+                emitter.send(event)
+            }
+        }
+    }
 
-    fun register(scheduleId: Long, emitter: SseEmitter): SseEmitter {
-        emitters.computeIfAbsent(scheduleId) { CopyOnWriteArrayList() }.add(emitter)
+    private val emitters = ConcurrentHashMap<Long, MutableList<SynchronizedEmitter>>()
+
+    fun register(scheduleId: Long, emitter: SseEmitter): SynchronizedEmitter {
+        val wrapper = SynchronizedEmitter(emitter)
+        emitters.computeIfAbsent(scheduleId) { CopyOnWriteArrayList() }.add(wrapper)
 
         val cleanup = Runnable {
             val list = emitters[scheduleId]
-            list?.remove(emitter)
+            list?.remove(wrapper)
         }
         emitter.onCompletion(cleanup)
         emitter.onTimeout(cleanup)
@@ -26,7 +39,7 @@ class SeatStatusSseEmitterRegistry {
 
         log.debug("SSE 구독 등록: scheduleId={}, 총 구독자={}", scheduleId, emitters[scheduleId]?.size ?: 0)
 
-        return emitter
+        return wrapper
     }
 
     fun broadcast(scheduleId: Long, seatNumber: String, status: String) {
@@ -35,19 +48,17 @@ class SeatStatusSseEmitterRegistry {
 
         val data = "{\"seatNumber\":\"$seatNumber\",\"status\":\"$status\"}"
 
-        for (emitter in list) {
+        for (wrapper in list) {
             try {
-                synchronized(emitter) {
-                    emitter.send(
-                        SseEmitter.event()
-                            .name("seat_status_changed")
-                            .data(data)
-                    )
-                }
+                wrapper.send(
+                    SseEmitter.event()
+                        .name("seat_status_changed")
+                        .data(data)
+                )
             } catch (e: Exception) {
                 log.debug("SSE 전송 실패 (연결 끊김/오류): scheduleId={}, seat={}, err={}", scheduleId, seatNumber, e.message)
                 try {
-                    emitter.complete()
+                    wrapper.emitter.complete()
                 } catch (_: Exception) {}
             }
         }
