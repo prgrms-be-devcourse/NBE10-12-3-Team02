@@ -1,5 +1,6 @@
 package com.back.domain.auth.service
 
+import com.back.domain.user.repository.UserRepository
 import com.back.global.exception.ErrorCode
 import com.back.global.exception.ServiceException
 import com.back.global.security.email.EmailVerificationProperties
@@ -23,9 +24,11 @@ import java.time.Duration
 class EmailVerificationServiceTest {
     private val mailSender = mock(JavaMailSender::class.java)
     private val repository = mock(EmailVerificationRepository::class.java)
+    private val userRepository = mock(UserRepository::class.java)
     private val service = EmailVerificationService(
         mailSender = mailSender,
         emailVerificationRepository = repository,
+        userRepository = userRepository,
         properties = EmailVerificationProperties(
             codeExpirationSeconds = CODE_EXPIRATION_SECONDS,
             verifiedExpirationSeconds = VERIFIED_EXPIRATION_SECONDS,
