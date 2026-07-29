@@ -44,7 +44,7 @@ class WebConfig(
 
     override fun addInterceptors(registry: InterceptorRegistry) {
         registry.addInterceptor(rateLimitInterceptor)
-            .addPathPatterns("/api/v1/schedules/*/seats/status")
+            .addPathPatterns("/api/v1/concerts/*/schedules/*/seats/status")
 
         registry.addInterceptor(queueInterceptor)
             .addPathPatterns(
