@@ -1,12 +1,12 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
-import Link from "next/link";
-import { Eye, EyeOff } from "lucide-react";
-import { apiFetch } from "@/lib/api";
-import { showAlert, showSuccess, showError } from "@/lib/alert";
 import PasswordStrengthMeter from "@/app/components/PasswordStrengthMeter";
+import { showAlert, showError, showSuccess } from "@/lib/alert";
+import { apiFetch } from "@/lib/api";
+import { Eye, EyeOff } from "lucide-react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
 
 export default function SignupPage() {
   const router = useRouter();
@@ -84,7 +84,9 @@ export default function SignupPage() {
       await showSuccess("회원가입이 완료되었습니다. 로그인해주세요.");
       router.push("/login");
     } catch (err) {
-      showError(err instanceof Error ? err.message : "회원가입 중 오류가 발생했습니다.");
+      showError(
+        err instanceof Error ? err.message : "회원가입 중 오류가 발생했습니다.",
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -92,7 +94,10 @@ export default function SignupPage() {
 
   return (
     <div className="h-screen overflow-hidden flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
-      <form onSubmit={handleSignup} className="w-96 p-10 bg-white rounded-2xl shadow-xl">
+      <form
+        onSubmit={handleSignup}
+        className="w-96 p-10 bg-white rounded-2xl shadow-xl"
+      >
         <div className="text-center">
           <Link href="/" className="flex justify-center">
             <img src="/images/logo.svg" alt="티케팅고" className="h-24 w-24" />
@@ -174,7 +179,10 @@ export default function SignupPage() {
 
         <p className="text-center text-sm text-gray-500 mt-6">
           이미 계정이 있으신가요?{" "}
-          <Link href="/login" className="text-blue-600 font-semibold hover:underline">
+          <Link
+            href="/login"
+            className="text-blue-600 font-semibold hover:underline"
+          >
             로그인
           </Link>
         </p>
