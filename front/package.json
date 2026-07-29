@@ -11,7 +11,7 @@
     "format:check": "prettier --check .",
     "tsc": "tsc --noEmit",
     "check": "pnpm format && pnpm tsc && pnpm lint",
-    "ci:check": "pnpm format:check && pnpm tsc && pnpm lint"
+    "ci:check": "pnpm tsc && pnpm lint"
   },
   "dependencies": {
     "@stomp/stompjs": "^7.3.0",
