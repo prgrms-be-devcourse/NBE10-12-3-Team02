@@ -38,22 +38,22 @@ jobs:
           import subprocess
           from google import genai
 
-          # 1. PR의 Git Diff 추출 (Command Injection 방지: os.environ 참조)
+          # 1. PR의 Git Diff 추출 (Command Injection 방지: shell=True 제거 및 인자 리스트 전달)
           base_ref = os.environ.get("BASE_REF", "main")
-          diff_cmd = (
-              f"git diff origin/{base_ref}...HEAD -- . "
+          diff_cmd = [
+              "git", "diff", f"origin/{base_ref}...HEAD", "--", ".",
               # 공통 / 락 파일 / 미디어 제외
-              "':!*.lock' ':!package-lock.json' ':!yarn.lock' ':!pnpm-lock.yaml' "
-              "':!*.png' ':!*.jpg' ':!*.jpeg' ':!*.svg' ':!*.ico' ':!*.pdf' "
+              ":!*.lock", ":!package-lock.json", ":!yarn.lock", ":!pnpm-lock.yaml",
+              ":!*.png", ":!*.jpg", ":!*.jpeg", ":!*.svg", ":!*.ico", ":!*.pdf",
               # 백엔드(Kotlin/Spring Boot) 빌드 및 캐시 제외
-              "':!back/build/*' ':!back/target/*' ':!back/.gradle/*' ':!back/out/*' ':!back/.idea/*' "
+              ":!back/build/*", ":!back/target/*", ":!back/.gradle/*", ":!back/out/*", ":!back/.idea/*",
               # 모노레포 루트 및 프론트엔드/백엔드 모듈, 빌드 결과물 제외
-              "':!node_modules/*' ':!.pnpm-store/*' ':!back/node_modules/*' ':!front/node_modules/*' ':!front/.pnpm-store/*' "
-              "':!front/dist/*' ':!front/build/*' ':!front/.next/*' ':!front/.turbo/*'"
-          )
+              ":!node_modules/*", ":!.pnpm-store/*", ":!back/node_modules/*", ":!front/node_modules/*", ":!front/.pnpm-store/*",
+              ":!front/dist/*", ":!front/build/*", ":!front/.next/*", ":!front/.turbo/*"
+          ]
 
           try:
-              diff = subprocess.check_output(diff_cmd, shell=True, text=True)
+              diff = subprocess.check_output(diff_cmd, text=True)
           except subprocess.CalledProcessError:
               diff = ""
 
