@@ -89,8 +89,8 @@ class AuthControllerTest @Autowired constructor(
                 .content(objectMapper.writeValueAsString(mapOf("id" to LOGIN_ID, "password" to "wrongpassword")))
         )
             .andExpect(status().isUnauthorized)
-            .andExpect(jsonPath("$.resultCode").value("401-2"))
-            .andExpect(jsonPath("$.msg").value("비밀번호가 일치하지 않습니다."))
+            .andExpect(jsonPath("$.resultCode").value("401-1"))
+            .andExpect(jsonPath("$.msg").value("아이디 또는 비밀번호가 일치하지 않습니다."))
     }
 
     @Test

@@ -8,6 +8,7 @@ enum class ErrorCode(
     BAD_REQUEST("400-4", "잘못된 요청입니다."),
 
     // Auth
+    AUTH_LOGIN_FAILED("401-1", "아이디 또는 비밀번호가 일치하지 않습니다."),
     AUTH_PASSWORD_MISMATCH("401-2", "비밀번호가 일치하지 않습니다."),
     AUTH_INVALID_BEARER_HEADER("401-3", "Authorization 헤더가 Bearer 형식이 아닙니다."),
     AUTH_INVALID_REFRESH_TOKEN("401-5", "유효하지 않은 리프레시 토큰입니다."),

@@ -30,10 +30,10 @@ class AuthService(
 
     fun login(id: String, password: String): TokenResponse {
         val user = userRepository.findByLoginIdAndDeletedAtIsNull(id)
-            ?: throw ServiceException(ErrorCode.USER_NOT_FOUND)
+            ?: throw ServiceException(ErrorCode.AUTH_LOGIN_FAILED)
 
         if (!passwordEncoder.matches(password, user.password)) {
-            throw ServiceException(ErrorCode.AUTH_PASSWORD_MISMATCH)
+            throw ServiceException(ErrorCode.AUTH_LOGIN_FAILED)
         }
 
         return issueTokens(user)
