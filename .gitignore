@@ -64,3 +64,4 @@ yarn-error.log*
 # AI
 back/docs
 back/AGENTS.md
+back/uploads/

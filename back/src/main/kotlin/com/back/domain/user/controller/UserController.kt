@@ -1,6 +1,7 @@
 package com.back.domain.user.controller
 
 import com.back.domain.user.dto.MyPageResponse
+import com.back.domain.user.dto.ProfileImageResponse
 import com.back.domain.user.dto.SignupRequest
 import com.back.domain.user.dto.SignupResponse
 import com.back.domain.user.dto.UpdateMyPageRequest
@@ -11,7 +12,14 @@ import com.back.global.rsData.RsData
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.Valid
+import org.springframework.http.CacheControl
+import org.springframework.http.HttpStatus
+import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
+import org.springframework.http.MediaType
+import org.springframework.web.multipart.MultipartFile
+import java.net.URI
+import java.util.concurrent.TimeUnit
 
 @ApiV1
 @RestController
@@ -57,5 +65,33 @@ class UserController(
     fun checkId(@RequestParam id: String): RsData<Void> {
         userService.checkId(id)
         return RsData("200-1", "사용 가능한 아이디입니다.", null)
+    }
+
+    @PostMapping("/me/profile-image", consumes = [MediaType.MULTIPART_FORM_DATA_VALUE])
+    @Operation(summary = "프로필 사진 업로드/변경", description = "프로필 사진 업로드/변경 API")
+    fun uploadProfileImage(@RequestParam file: MultipartFile): RsData<ProfileImageResponse> {
+        val actor = requestContext.actor ?: throw IllegalStateException("Actor must not be null")
+        val url = userService.updateProfileImg(actor.id, file)
+        return RsData("200-1", "프로필 사진이 변경되었습니다.", ProfileImageResponse(url))
+    }
+
+    @DeleteMapping("/me/profile-image")
+    @Operation(summary = "프로필 사진 삭제", description = "프로필 사진을 기본 이미지로 되돌리는 API")
+    fun deleteProfileImage(): RsData<Void> {
+        val actor = requestContext.actor ?: throw IllegalStateException("Actor must not be null")
+        userService.deleteProfileImg(actor.id)
+        return RsData("200-1", "프로필 사진이 기본 이미지로 변경되었습니다.", null)
+    }
+
+    @GetMapping("/{id}/redirectToProfileImg")
+    @ResponseStatus(HttpStatus.FOUND)
+    @Operation(summary = "프로필 이미지 리다이렉트(브라우저 캐시 20분)")
+    fun redirectToProfileImg(@PathVariable id: Long): ResponseEntity<Void> {
+        val redirectUrl = userService.getProfileImgRedirectUrl(id)
+        val cacheControl = CacheControl.maxAge(20, TimeUnit.MINUTES).cachePublic().immutable()
+        return ResponseEntity.status(HttpStatus.FOUND)
+            .location(URI.create(redirectUrl))
+            .cacheControl(cacheControl)
+            .build()
     }
 }

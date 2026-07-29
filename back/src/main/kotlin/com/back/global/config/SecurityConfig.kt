@@ -67,7 +67,9 @@ class SecurityConfig(
                         "/api/*/concerts/*",
                         "/api/*/schedules/**",
                         "/api/*/users/check-id",
-                        "/api/*/tickets/verify/group/*"
+                        "/api/*/tickets/verify/*",
+                        "/api/*/tickets/verify/group/*",
+                        "/api/*/users/*/redirectToProfileImg"
                     ).permitAll()
                     .requestMatchers(
                         HttpMethod.POST,

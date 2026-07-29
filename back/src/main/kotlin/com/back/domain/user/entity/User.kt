@@ -53,6 +53,20 @@ class User(
     var deletedAt: LocalDate? = null
         protected set
 
+    @Column(name = "profile_img_url")
+    var profileImgUrl: String? = null
+        protected set
+
+    val profileImgUrlOrDefault: String
+        get() = profileImgUrl?.let { "$UPLOAD_BASE_URL/$it" } ?: DEFAULT_PROFILE_IMG_URL
+
+    val redirectToProfileImgUrlOrDefault: String
+        get() = "$BASE_URL/api/v1/users/$userId/redirectToProfileImg"
+
+    fun updateProfileImg(url: String?) {
+        this.profileImgUrl = url
+    }
+
     val isDeleted: Boolean
         get() = deletedAt != null
 
@@ -62,6 +76,7 @@ class User(
         this.loginId = uuid
         this.email = "$uuid@deleted.local"
         this.oauthRefreshToken = null
+        this.profileImgUrl = null
     }
 
     fun updateOauthRefreshToken(oauthRefreshToken: String?) {
@@ -85,35 +100,18 @@ class User(
     }
 
     companion object {
+        // TODO: 배포 도메인 확정되면 application.yaml 설정값으로 옮기기
+        private const val BASE_URL = "http://localhost:8080"
+        private const val UPLOAD_BASE_URL = "$BASE_URL/uploads"
+        private const val DEFAULT_PROFILE_IMG_URL = "$BASE_URL/static/default-profile.png"
+
         fun create(
-            loginId: String,
-            email: String,
-            password: String,
-            name: String,
-            loginType: LoginType
-        ): User = User(
-            loginId = loginId,
-            email = email,
-            password = password,
-            name = name,
-            loginType = loginType,
-            oauthRefreshToken = null
-        )
+            loginId: String, email: String, password: String, name: String, loginType: LoginType
+        ): User = User(loginId, email, password, name, loginType, null)
 
         fun createOAuth(
-            loginId: String,
-            email: String,
-            password: String,
-            name: String,
-            loginType: LoginType,
-            oauthRefreshToken: String?
-        ): User = User(
-            loginId = loginId,
-            email = email,
-            password = password,
-            name = name,
-            loginType = loginType,
-            oauthRefreshToken = oauthRefreshToken
-        )
+            loginId: String, email: String, password: String, name: String,
+            loginType: LoginType, oauthRefreshToken: String?
+        ): User = User(loginId, email, password, name, loginType, oauthRefreshToken)
     }
 }
