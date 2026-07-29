@@ -63,10 +63,12 @@ class ConcertControllerTest @Autowired constructor(
     fun setUp() {
         val activeSet = mock(RScoredSortedSet::class.java) as RScoredSortedSet<String>
         doReturn(activeSet).`when`(redissonClient).getScoredSortedSet<String>(anyString())
+        doReturn(activeSet).`when`(redissonClient).getScoredSortedSet<String>(anyString(), any(Codec::class.java))
         `when`(activeSet.getScore(anyString())).thenReturn((System.currentTimeMillis() + 600000).toDouble())
 
         val tokenBucket = mock(RBucket::class.java) as RBucket<String>
         doReturn(tokenBucket).`when`(redissonClient).getBucket<String>(anyString())
+        doReturn(tokenBucket).`when`(redissonClient).getBucket<String>(anyString(), any(Codec::class.java))
         `when`(tokenBucket.get()).thenReturn("test-queue-token")
 
         concert = Concert.create("아이유 콘서트", "설명", LocalDateTime.now(), LocalDateTime.now().plusDays(1), "poster.jpg")
