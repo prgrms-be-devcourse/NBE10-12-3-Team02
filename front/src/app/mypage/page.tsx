@@ -215,8 +215,16 @@ export default function MyPage() {
     return maxB - maxA;
   });
 
+  const isTicketValid = (t: TicketSummary): boolean => {
+    if (t.isValid !== undefined) return t.isValid;
+    if ((t as unknown as { valid?: boolean }).valid !== undefined) {
+      return (t as unknown as { valid: boolean }).valid;
+    }
+    return true;
+  };
+
   const ticketGroups = sortedGroups.filter((group) => {
-    const allInvalid = group.tickets.every((t) => !t.isValid);
+    const allInvalid = group.tickets.every((t) => !isTicketValid(t));
     if (statusFilter === "valid") return !allInvalid;
     if (statusFilter === "canceled") return allInvalid;
     return true;
@@ -446,7 +454,7 @@ export default function MyPage() {
           <div className="space-y-6">
             {pagedGroups.map((group) => {
               // "일부 취소"는 두지 않는다 — 한 장이라도 유효하면 "예매완료", 전부 취소됐을 때만 "취소됨".
-              const allInvalid = group.tickets.every((t) => !t.isValid);
+              const allInvalid = group.tickets.every((t) => !isTicketValid(t));
               const statusLabel = allInvalid ? "취소됨" : "예매완료";
               const statusClass = allInvalid
                 ? "bg-gray-100 text-gray-400"

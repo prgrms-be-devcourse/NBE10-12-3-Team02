@@ -64,7 +64,15 @@ function TicketDetailContent() {
     );
   }
 
-  const allInvalid = group.tickets.every((t) => !t.isValid);
+  const isTicketValid = (t: TicketSummary): boolean => {
+    if (t.isValid !== undefined) return t.isValid;
+    if ((t as unknown as { valid?: boolean }).valid !== undefined) {
+      return (t as unknown as { valid: boolean }).valid;
+    }
+    return true;
+  };
+
+  const allInvalid = group.tickets.every((t) => !isTicketValid(t));
   const statusLabel = allInvalid ? "취소됨" : "예매완료";
 
   return (
@@ -230,7 +238,7 @@ function TicketDetailContent() {
                       </span>
                       <span
                         className={
-                          t.isValid
+                          isTicketValid(t)
                             ? "text-blue-100"
                             : "text-blue-300 line-through"
                         }
