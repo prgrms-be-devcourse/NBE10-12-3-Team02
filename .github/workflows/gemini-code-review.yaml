@@ -35,6 +35,7 @@ jobs:
         run: |
           python - << 'EOF'
           import os
+          import sys
           import subprocess
           from google import genai
 
@@ -54,19 +55,19 @@ jobs:
 
           try:
               diff = subprocess.check_output(diff_cmd, text=True)
-          except subprocess.CalledProcessError:
-              diff = ""
+          except subprocess.CalledProcessError as e:
+              print(f"Git diff 추출 실패: {e}")
+              sys.exit(1)
 
           if not diff.strip():
               print("검토할 주요 변경 사항이 없습니다.")
-              exit(0)
+              sys.exit(0)
 
           # Diff 분량이 너무 클 경우 잘라내기 (토큰 절약 및 속도 향상)
           if len(diff) > 40000:
               diff = diff[:40000] + "\n... (Diff truncated due to size)"
 
-          # 2. Gemini API 호출 (최신 gemini-3.6-flash 모델 적용)
-          client = genai.Client(api_key=os.environ["GEMINI_API_KEY"])
+          # 2. Gemini API 호출 (도메인 맞춤형 수석 엔지니어 프롬프트)
           prompt = f"""
           너는 꼼꼼하고 친절한 대용량 트래픽 대기열/티켓팅 시스템 전문 수석 소프트웨어 엔지니어야.
           현재 프로젝트는 백엔드(`back/`)와 프론트엔드(`front/`)가 함께 있는 모노레포(Monorepo) 구조야.
@@ -102,17 +103,27 @@ jobs:
           ```
           """
 
-          response = client.models.generate_content(
-              model="gemini-3.6-flash",
-              contents=prompt,
-          )
+          try:
+              client = genai.Client(api_key=os.environ["GEMINI_API_KEY"])
+              response = client.models.generate_content(
+                  model="gemini-3.6-flash",
+                  contents=prompt,
+              )
+              review_text = f"🤖 **Gemini AI 코드 리뷰**\n\n{response.text}"
+          except Exception as e:
+              print(f"Gemini API 호출 중 오류 발생: {e}")
+              sys.exit(1)
 
-          review_text = f"🤖 **Gemini AI 코드 리뷰**\n\n{response.text}"
+          # 3. GitHub CLI를 활용해 PR에 댓글 작성 (finally로 임시파일 review.txt 자동 삭제)
+          review_file = "review.txt"
+          try:
+              with open(review_file, "w", encoding="utf-8") as f:
+                  f.write(review_text)
 
-          # 3. GitHub CLI를 활용해 PR에 댓글 작성 (shell=True 없이 인자 리스트로 안전하게 호출)
-          with open("review.txt", "w", encoding="utf-8") as f:
-              f.write(review_text)
-
-          pr_number = os.environ["PR_NUMBER"]
-          subprocess.run(["gh", "pr", "comment", pr_number, "--body-file", "review.txt"], check=True)
+              pr_number = os.environ["PR_NUMBER"]
+              subprocess.run(["gh", "pr", "comment", pr_number, "--body-file", review_file], check=True)
+          finally:
+              if os.path.exists(review_file):
+                  os.remove(review_file)
           EOF
+
