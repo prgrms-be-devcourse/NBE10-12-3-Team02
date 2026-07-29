@@ -19,7 +19,7 @@ class WaitingQueueManager(
         val seqKey = generateSequenceKey(scheduleId)
         val user = userId.toString()
 
-        val activeSchedules = redissonClient.getSet<String>(ACTIVE_SCHEDULES_KEY)
+        val activeSchedules = redissonClient.getSet<String>(ACTIVE_SCHEDULES_KEY, StringCodec.INSTANCE)
         activeSchedules.add(scheduleId.toString())
 
         val script = redissonClient.getScript(StringCodec.INSTANCE)
@@ -49,13 +49,13 @@ class WaitingQueueManager(
     }
 
     fun showWaitingRank(scheduleId: Long, userId: Long): Long =
-        redissonClient.getScoredSortedSet<String>(generateWaitKey(scheduleId))
+        redissonClient.getScoredSortedSet<String>(generateWaitKey(scheduleId), StringCodec.INSTANCE)
             .rank(userId.toString())
             ?.let { it + 1L }
             ?: throw ServiceException(ErrorCode.WAITING_QUEUE_NOT_FOUND)
 
     fun cancelWaiting(scheduleId: Long, userId: Long): Boolean =
-        redissonClient.getScoredSortedSet<String>(generateWaitKey(scheduleId))
+        redissonClient.getScoredSortedSet<String>(generateWaitKey(scheduleId), StringCodec.INSTANCE)
             .remove(userId.toString())
 
     fun cancelActiveUser(scheduleId: Long, userId: Long): Boolean =
@@ -66,24 +66,24 @@ class WaitingQueueManager(
     }
 
     private fun deleteActiveUser(scheduleId: Long, userId: Long): Boolean {
-        val activeSet = redissonClient.getScoredSortedSet<String>(generateQueueActiveKey(scheduleId))
+        val activeSet = redissonClient.getScoredSortedSet<String>(generateQueueActiveKey(scheduleId), StringCodec.INSTANCE)
         val removed = activeSet.remove(userId.toString())
-        redissonClient.getBucket<String>(generateActiveTokenKey(scheduleId, userId)).delete()
+        redissonClient.getBucket<String>(generateActiveTokenKey(scheduleId, userId), StringCodec.INSTANCE).delete()
         return removed
     }
 
     fun hasValidSession(scheduleId: Long, userId: Long): Boolean {
         val expiresAt = redissonClient
-            .getScoredSortedSet<String>(generateQueueActiveKey(scheduleId))
+            .getScoredSortedSet<String>(generateQueueActiveKey(scheduleId), StringCodec.INSTANCE)
             .getScore(userId.toString()) ?: return false
         return expiresAt >= System.currentTimeMillis()
     }
 
     fun getStoredToken(scheduleId: Long, userId: Long): String? =
-        redissonClient.getBucket<String>(generateActiveTokenKey(scheduleId, userId)).get()
+        redissonClient.getBucket<String>(generateActiveTokenKey(scheduleId, userId), StringCodec.INSTANCE).get()
 
     fun removeExpiredActiveUsers(scheduleId: Long): Long {
-        val activeSet = redissonClient.getScoredSortedSet<String>(generateQueueActiveKey(scheduleId))
+        val activeSet = redissonClient.getScoredSortedSet<String>(generateQueueActiveKey(scheduleId), StringCodec.INSTANCE)
         val removed = activeSet.removeRangeByScore(0.0, true, System.currentTimeMillis().toDouble(), true)
         return removed.toLong()
     }
@@ -131,23 +131,23 @@ class WaitingQueueManager(
 
     fun issueToken(scheduleId: Long, userId: Long, ttl: Duration): String {
         val entryToken = java.util.UUID.randomUUID().toString()
-        val bucket = redissonClient.getBucket<String>(generateActiveTokenKey(scheduleId, userId))
+        val bucket = redissonClient.getBucket<String>(generateActiveTokenKey(scheduleId, userId), StringCodec.INSTANCE)
         bucket.set(entryToken, ttl)
         return entryToken
     }
 
     fun getActiveToken(scheduleId: Long, userId: Long): String? {
-        val activeSet = redissonClient.getScoredSortedSet<String>(generateQueueActiveKey(scheduleId))
+        val activeSet = redissonClient.getScoredSortedSet<String>(generateQueueActiveKey(scheduleId), StringCodec.INSTANCE)
         val score = activeSet.getScore(userId.toString())
         if (score == null || score <= System.currentTimeMillis()) {
             return null
         }
-        val bucket = redissonClient.getBucket<String>(generateActiveTokenKey(scheduleId, userId))
+        val bucket = redissonClient.getBucket<String>(generateActiveTokenKey(scheduleId, userId), StringCodec.INSTANCE)
         return bucket.get()
     }
 
     fun getQueueStatus(scheduleId: Long): QueueStatusDto {
-        val waitSet = redissonClient.getScoredSortedSet<String>(generateWaitKey(scheduleId))
+        val waitSet = redissonClient.getScoredSortedSet<String>(generateWaitKey(scheduleId), StringCodec.INSTANCE)
         val totalWaitingCount = waitSet.size().toLong()
         if (totalWaitingCount == 0L) {
             return QueueStatusDto(0L, 0L)
@@ -159,28 +159,28 @@ class WaitingQueueManager(
     }
 
     fun getQueueSequence(scheduleId: Long, userId: Long): Long {
-        val waitSet = redissonClient.getScoredSortedSet<String>(generateWaitKey(scheduleId))
+        val waitSet = redissonClient.getScoredSortedSet<String>(generateWaitKey(scheduleId), StringCodec.INSTANCE)
         val score = waitSet.getScore(userId.toString())
         return score?.toLong() ?: 0L
     }
 
     fun isQueueEmpty(scheduleId: Long): Boolean {
-        val waitSet = redissonClient.getScoredSortedSet<String>(generateWaitKey(scheduleId))
-        val activeSet = redissonClient.getScoredSortedSet<String>(generateQueueActiveKey(scheduleId))
+        val waitSet = redissonClient.getScoredSortedSet<String>(generateWaitKey(scheduleId), StringCodec.INSTANCE)
+        val activeSet = redissonClient.getScoredSortedSet<String>(generateQueueActiveKey(scheduleId), StringCodec.INSTANCE)
         return waitSet.isEmpty && activeSet.isEmpty
     }
 
     fun clearWaitingQueue(scheduleId: Long) {
-        redissonClient.getScoredSortedSet<String>(generateWaitKey(scheduleId)).delete()
+        redissonClient.getScoredSortedSet<String>(generateWaitKey(scheduleId), StringCodec.INSTANCE).delete()
     }
 
     fun getActiveScheduleIds(): Set<String> {
-        val activeSchedules = redissonClient.getSet<String>(ACTIVE_SCHEDULES_KEY)
+        val activeSchedules = redissonClient.getSet<String>(ACTIVE_SCHEDULES_KEY, StringCodec.INSTANCE)
         return activeSchedules.readAll() ?: emptySet()
     }
 
     fun removeFromActiveSchedules(scheduleIdStr: String) {
-        val activeSchedules = redissonClient.getSet<String>(ACTIVE_SCHEDULES_KEY)
+        val activeSchedules = redissonClient.getSet<String>(ACTIVE_SCHEDULES_KEY, StringCodec.INSTANCE)
         activeSchedules.remove(scheduleIdStr)
     }
 
