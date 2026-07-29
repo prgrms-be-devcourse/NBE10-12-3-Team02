@@ -24,6 +24,9 @@ enum class ErrorCode(
     USER_EMAIL_ALREADY_EXISTS("409-2", "이미 사용 중인 이메일입니다."),
     USER_NOT_FOUND_OR_DELETED("404-2", "존재하지 않거나 이미 탈퇴한 회원입니다."),
     USER_NAME_INVALID("400-6", "이름에 공백을 포함할 수 없습니다."),
+    FILE_EMPTY("400-7", "업로드할 파일이 비어있습니다."),
+    FILE_TOO_LARGE("400-8", "파일 크기가 5MB를 초과합니다."),
+    FILE_INVALID_TYPE("400-10", "허용되지 않는 파일 형식입니다. (jpg, jpeg, png, webp만 가능)"),
 
     // Concert
     CONCERT_NOT_FOUND("404-3", "존재하지 않는 콘서트입니다."),
