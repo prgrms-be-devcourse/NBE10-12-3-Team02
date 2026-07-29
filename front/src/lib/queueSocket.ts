@@ -62,11 +62,11 @@ export function connectQueueSocket({
     onConnect: () => {
       client.subscribe(`/queue/schedules/${scheduleId}/status`, (message: IMessage) => {
         try {
-          const body: QueueEventResponse<any> = JSON.parse(message.body);
+          const body: QueueEventResponse<QueueStatusEvent | QueueErrorEvent> = JSON.parse(message.body);
           if (body.eventType === "QUEUE_ERROR") {
-            onQueueError?.(body.data);
+            onQueueError?.(body.data as QueueErrorEvent);
           } else {
-            onStatusUpdated(body.data);
+            onStatusUpdated(body.data as QueueStatusEvent);
           }
         } catch (e) {
           onError?.(e);
@@ -75,11 +75,11 @@ export function connectQueueSocket({
 
       client.subscribe(`/user/queue/schedules/${scheduleId}/entry`, (message: IMessage) => {
         try {
-          const body: QueueEventResponse<any> = JSON.parse(message.body);
+          const body: QueueEventResponse<EntryAllowedEvent | QueueErrorEvent> = JSON.parse(message.body);
           if (body.eventType === "QUEUE_ERROR") {
-            onQueueError?.(body.data);
+            onQueueError?.(body.data as QueueErrorEvent);
           } else {
-            onEntryAllowed(body.data);
+            onEntryAllowed(body.data as EntryAllowedEvent);
           }
         } catch (e) {
           onError?.(e);
