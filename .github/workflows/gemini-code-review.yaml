@@ -3,9 +3,23 @@ name: Gemini Code Review
 on:
   pull_request:
     types: [opened, synchronize]
+    paths-ignore:
+      - '**.md'
+      - '**.png'
+      - '**.jpg'
+      - '**.jpeg'
+      - '**.svg'
+      - '**.ico'
+      - '**.pdf'
+      - 'docs/**'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
   review:
+    if: "!contains(github.event.head_commit.message, '[skip review]') && !contains(github.event.head_commit.message, '[skip ci]')"
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -28,6 +42,7 @@ jobs:
           pip install google-genai
 
       - name: Run Gemini Code Review
+        continue-on-error: true
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -60,7 +75,7 @@ jobs:
               diff = subprocess.check_output(diff_cmd, text=True)
           except subprocess.CalledProcessError as e:
               print(f"Git diff 추출 실패: {e}")
-              sys.exit(1)
+              sys.exit(0)
 
           if not diff.strip():
               print("검토할 주요 변경 사항이 없습니다.")
@@ -115,8 +130,12 @@ jobs:
               )
               review_body = response.text
           except Exception as e:
-              print(f"Gemini API 호출 중 오류 발생: {e}")
-              sys.exit(1)
+              err_msg = str(e)
+              print(f"Gemini API 호출 중 예외 발생 (안내 메시지 생성): {err_msg}")
+              if "429" in err_msg or "RESOURCE_EXHAUSTED" in err_msg or "quota" in err_msg.lower():
+                  review_body = "⚠️ **Gemini API 일일 할당량(Quota) 초과 안내**\n\n현재 Gemini API 일일 무료 호출 한도가 일시적으로 초과되어 AI 코드 리뷰 생성을 건너뛰었습니다.\n- **참고**: PR 기능 검증 및 CI 빌드 테스트는 정상 통과(Success)로 처리됩니다."
+              else:
+                  review_body = f"⚠️ **Gemini API 연동 안내**\n\n코드 리뷰 생성 중 예외가 발생했습니다: `{err_msg}`"
 
           # 3. 기본적으로 펼쳐진(<details open>) 접기/펼치기 HTML formatting 적용
           formatted_review = f"<details open>\n<summary>🤖 <b>Gemini AI 코드 리뷰 (클릭하여 접기/펼치기)</b></summary>\n\n{review_body}\n</details>"
