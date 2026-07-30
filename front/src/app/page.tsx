@@ -277,13 +277,14 @@ function HomeContent() {
                     {/* 배너 전체에 깔리는 흐린 포스터 배경 (왼쪽/오른쪽이 하나로 이어져 보이도록) */}
                     {concert.imageUrl && (
                       <Image
+                        fill
                         unoptimized
+                        priority
+                        loading="eager"
                         src={concert.imageUrl}
                         alt=""
                         aria-hidden="true"
-                        width={600}
-                        height={400}
-                        className="absolute inset-0 w-full h-full object-cover scale-110 blur-3xl opacity-60"
+                        className="object-cover scale-110 blur-3xl opacity-60"
                       />
                     )}
                     {/* 글자 가독성을 위해 어둡게 한 겹 덮는다 */}
@@ -299,12 +300,13 @@ function HomeContent() {
                     >
                       {concert.imageUrl ? (
                         <Image
+                          fill
                           unoptimized
+                          priority
+                          loading="eager"
                           src={concert.imageUrl}
                           alt={concert.concertName}
-                          width={448}
-                          height={448}
-                          className="absolute inset-0 w-full h-full object-contain"
+                          className="object-contain"
                         />
                       ) : (
                         <div className="absolute inset-0 bg-gradient-to-br from-blue-500 to-indigo-600" />
@@ -456,12 +458,12 @@ function HomeContent() {
                   <div className="h-48 bg-gradient-to-br from-blue-200 to-indigo-300 flex items-center justify-center text-white font-bold relative overflow-hidden">
                     {concert.imageUrl ? (
                       <Image
+                        fill
                         unoptimized
                         src={concert.imageUrl}
                         alt={concert.concertName}
-                        width={300}
-                        height={200}
-                        className="w-full h-full object-cover"
+                        sizes="(max-width: 768px) 100vw, 25vw"
+                        className="object-cover"
                       />
                     ) : (
                       "포스터"

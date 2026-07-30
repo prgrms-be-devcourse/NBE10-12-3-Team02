@@ -165,12 +165,12 @@ function TicketDetailContent() {
             >
               {group.urlPoster ? (
                 <Image
+                  fill
                   unoptimized
                   src={getLocalConcertPoster(group.urlPoster)}
                   alt={group.concertName}
-                  width={320}
-                  height={400}
-                  className="w-full h-full object-cover"
+                  sizes="320px"
+                  className="object-cover"
                 />
               ) : (
                 <div className="w-full h-full flex items-center justify-center text-white/60 text-sm">

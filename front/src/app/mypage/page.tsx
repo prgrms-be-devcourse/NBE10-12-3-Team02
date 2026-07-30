@@ -473,15 +473,15 @@ export default function MyPage() {
                   tabIndex={0}
                   className="w-full flex shadow-md rounded-2xl overflow-hidden text-left hover:shadow-lg transition cursor-pointer"
                 >
-                  <div className="flex-shrink-0 w-36 bg-gradient-to-br from-blue-200 to-indigo-300 flex items-center justify-center text-white font-bold text-sm overflow-hidden">
+                  <div className="flex-shrink-0 w-36 relative aspect-[3/4] bg-gradient-to-br from-blue-200 to-indigo-300 flex items-center justify-center text-white font-bold text-sm overflow-hidden">
                     {group.urlPoster ? (
                       <Image
+                        fill
                         unoptimized
                         src={getLocalConcertPoster(group.urlPoster)}
                         alt={group.concertName}
-                        width={144}
-                        height={192}
-                        className="w-full h-full object-cover"
+                        sizes="144px"
+                        className="object-cover"
                       />
                     ) : (
                       "포스터"

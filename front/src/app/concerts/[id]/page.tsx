@@ -110,16 +110,17 @@ export default function ConcertDetailPage({
         <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
           <div className="flex flex-col md:flex-row">
             <div className="md:w-1/3 flex flex-col">
-              <div className="self-start bg-gradient-to-br from-blue-200 to-indigo-300 flex items-center justify-center text-white font-bold text-xl overflow-hidden">
+              <div className="w-full relative aspect-[3/4] bg-gradient-to-br from-blue-200 to-indigo-300 flex items-center justify-center text-white font-bold text-xl overflow-hidden">
                 {posterUrl ? (
                   <Image
                     unoptimized
                     priority
+                    loading="eager"
                     src={posterUrl}
                     alt={concert.concertName}
-                    width={300}
-                    height={400}
-                    className="w-full h-auto object-cover"
+                    fill
+                    sizes="(max-width: 768px) 100vw, 33vw"
+                    className="object-cover"
                   />
                 ) : (
                   <div className="w-full aspect-[3/4] flex items-center justify-center">

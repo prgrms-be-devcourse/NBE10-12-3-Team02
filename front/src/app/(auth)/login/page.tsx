@@ -93,15 +93,18 @@ function LoginContent() {
         className="w-96 p-10 bg-white rounded-2xl shadow-xl"
       >
         <Link href="/" className="flex justify-center mb-8">
-          <Image
-            unoptimized
-            priority
-            src="/images/logo.svg"
-            alt="티케팅고"
-            width={112}
-            height={112}
-            className="h-28 w-28"
-          />
+          <div className="h-28 w-28 relative">
+            <Image
+              unoptimized
+              priority
+              loading="eager"
+              src="/images/logo.svg"
+              alt="티케팅고"
+              fill
+              sizes="112px"
+              className="object-contain"
+            />
+          </div>
         </Link>
 
         <input

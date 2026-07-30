@@ -194,15 +194,18 @@ export default function SignupPage() {
       >
         <div className="text-center">
           <Link href="/" className="flex justify-center">
-            <Image
-              unoptimized
-              priority
-              src="/images/logo.svg"
-              alt="티케팅고"
-              width={96}
-              height={96}
-              className="h-24 w-24"
-            />
+            <div className="h-24 w-24 relative">
+              <Image
+                unoptimized
+                priority
+                loading="eager"
+                src="/images/logo.svg"
+                alt="티케팅고"
+                fill
+                sizes="96px"
+                className="object-contain"
+              />
+            </div>
           </Link>
           <p className="my-4 text-2xl font-bold text-gray-800">회원가입</p>
         </div>
