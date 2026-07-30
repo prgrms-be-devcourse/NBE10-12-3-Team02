@@ -12,6 +12,7 @@ import com.back.global.exception.ErrorCode
 import com.back.global.exception.ServiceException
 import com.back.global.security.oauth2.info.GoogleOAuth2UserInfo
 import com.back.global.security.oauth2.service.OAuthUnlinkService
+import com.back.global.security.oauth2.service.OAuthUnlinkResult
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.DisplayName
@@ -163,7 +164,8 @@ class SocialLinkServiceTest {
     fun t7() {
         val target = unlinkTarget()
         `when`(socialLinkQueryService.getUnlinkTarget(USER_ID)).thenReturn(target)
-        `when`(unlinkService.unlink(LoginType.NAVER, OAUTH_REFRESH_TOKEN)).thenReturn(true)
+        `when`(unlinkService.unlink(LoginType.NAVER, OAUTH_REFRESH_TOKEN))
+            .thenReturn(OAuthUnlinkResult.PROVIDER_UNLINKED)
 
         service.unlink(USER_ID)
 
@@ -176,7 +178,8 @@ class SocialLinkServiceTest {
     fun t8() {
         val target = unlinkTarget()
         `when`(socialLinkQueryService.getUnlinkTarget(USER_ID)).thenReturn(target)
-        `when`(unlinkService.unlink(LoginType.NAVER, OAUTH_REFRESH_TOKEN)).thenReturn(false)
+        `when`(unlinkService.unlink(LoginType.NAVER, OAUTH_REFRESH_TOKEN))
+            .thenReturn(OAuthUnlinkResult.FAILED)
 
         assertThatThrownBy { service.unlink(USER_ID) }
             .isInstanceOfSatisfying(ServiceException::class.java) {
@@ -184,6 +187,25 @@ class SocialLinkServiceTest {
             }
 
         verifyNoInteractions(socialLinkCommandService)
+    }
+
+    @Test
+    @DisplayName("Provider Refresh Token이 없으면 내부 소셜 연동 정보만 제거한다")
+    fun t9() {
+        val target = SocialUnlinkTarget(
+            userId = USER_ID,
+            provider = LoginType.NAVER,
+            providerId = PROVIDER_ID,
+            oauthRefreshToken = null,
+        )
+        `when`(socialLinkQueryService.getUnlinkTarget(USER_ID)).thenReturn(target)
+        `when`(unlinkService.unlink(LoginType.NAVER, null))
+            .thenReturn(OAuthUnlinkResult.LOCAL_ONLY)
+
+        service.unlink(USER_ID)
+
+        verify(unlinkService).unlink(LoginType.NAVER, null)
+        verify(socialLinkCommandService).completeUnlink(target)
     }
 
     private fun normalUser(): User =

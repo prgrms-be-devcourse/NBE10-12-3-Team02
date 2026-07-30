@@ -12,6 +12,7 @@ import com.back.global.exception.ErrorCode
 import com.back.global.exception.ServiceException
 import com.back.global.security.oauth2.info.OAuth2UserInfo
 import com.back.global.security.oauth2.service.OAuthUnlinkService
+import com.back.global.security.oauth2.service.OAuthUnlinkResult
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.dao.DataIntegrityViolationException
 import org.springframework.security.oauth2.core.OAuth2AuthenticationException
@@ -124,11 +125,14 @@ class SocialLinkService(
     fun unlink(userId: Long) {
         val target = socialLinkQueryService.getUnlinkTarget(userId)
 
-        if (!oAuthUnlinkService.unlink(target.provider, target.oauthRefreshToken)) {
-            throw ServiceException(ErrorCode.OAUTH_UNLINK_FAILED)
-        }
+        when (oAuthUnlinkService.unlink(target.provider, target.oauthRefreshToken)) {
+            OAuthUnlinkResult.PROVIDER_UNLINKED,
+            OAuthUnlinkResult.LOCAL_ONLY,
+            -> socialLinkCommandService.completeUnlink(target)
 
-        socialLinkCommandService.completeUnlink(target)
+            OAuthUnlinkResult.FAILED ->
+                throw ServiceException(ErrorCode.OAUTH_UNLINK_FAILED)
+        }
     }
 
     private fun parseProvider(providerName: String): LoginType {
