@@ -11,7 +11,7 @@ export const options = {
   ],
   thresholds: {
     http_req_failed: ['rate<0.01'],   // 에러율 1% 미만
-    http_req_duration: ['p(95)<300'], // 95% 요청 300ms 이내 처리
+    http_req_duration: ['p(95)<200'], // 95% 요청 200ms 이내 처리
   },
 };
 
@@ -19,7 +19,7 @@ export const options = {
 export default function () {
   const res = http.get('http://localhost:8080/api/v1/concerts', {
     headers: {
-      'X-Test-Delay': '50', // 50ms 운영 환경 I/O 대기 시뮬레이션
+      'X-Test-Delay': '100', // 100ms 운영 환경 I/O 대기 시뮬레이션
     },
   });
 

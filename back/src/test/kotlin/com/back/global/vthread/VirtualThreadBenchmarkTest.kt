@@ -16,7 +16,7 @@ class VirtualThreadBenchmarkTest {
         val ioDelayMs = 50L // 50ms I/O blocking 대기 시뮬레이션
 
         println("==================================================")
-        println("🚀 가상 스레드 vs 플랫폼 스레드 벤치마크 테스트 시작")
+        println("가상 스레드 vs 플랫폼 스레드 벤치마크 테스트 시작")
         println("총 작업 수: $taskCount 건, 각 I/O 대기시간: ${ioDelayMs}ms")
         println("==================================================")
 
@@ -33,10 +33,10 @@ class VirtualThreadBenchmarkTest {
         val improvementRatio = String.format("%.2f", (platformTime.toDouble() / virtualTime))
 
         println("\n==================================================")
-        println("📊 [성능 비교 측정 결과]")
+        println("[성능 비교 측정 결과]")
         println("1. Platform ThreadPool (200개 제한): ${platformTime}ms")
         println("2. Virtual Thread (VirtualThreadPerTask): ${virtualTime}ms")
-        println("➔ 가상 스레드가 플랫폼 스레드 대비 약 ${improvementRatio}배 빠름!")
+        println("➔ 가상 스레드가 플랫폼 스레드 대비 약 ${improvementRatio}배 빠름")
         println("==================================================")
     }
 
