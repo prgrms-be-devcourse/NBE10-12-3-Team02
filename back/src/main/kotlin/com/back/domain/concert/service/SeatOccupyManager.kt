@@ -81,9 +81,7 @@ class SeatOccupyManager(
         val hashMap = redissonClient.getMap<String, String>(redisKey, StringCodec.INSTANCE)
 
         val occupyUserId = hashMap["userId"]
-            ?: throw ServiceException(ErrorCode.SEAT_HOLD_EXPIRED)
-
-        if (occupyUserId != userId.toString()) {
+        if (occupyUserId != null && occupyUserId != userId.toString()) {
             throw ServiceException(ErrorCode.SEAT_HELD_BY_OTHER_USER)
         }
 
