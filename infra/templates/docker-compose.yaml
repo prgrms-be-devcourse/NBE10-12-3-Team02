@@ -9,8 +9,8 @@ services:
       - .env
     depends_on:
       - mysql
-      - redis-master
-      - redis-slave
+      - redis-primary
+      - redis-replica
       - redis-sentinel-1
       - redis-sentinel-2
       - redis-sentinel-3
@@ -33,33 +33,33 @@ services:
     # 외부(호스트) 포트 게시 없음 — app 컨테이너와 같은 redis-net 내부에서만 3306 접근.
     # 보안그룹에 3306을 열지 않아도 되고, DB가 인터넷에 노출되지 않음.
 
-  redis-master:
+  redis-primary:
     image: redis:7.2-alpine
-    container_name: redis-master
+    container_name: redis-primary
     restart: unless-stopped
     ports:
       - "6379:6379"
-    command: redis-server --appendonly yes --replica-announce-ip redis-master --requirepass ""
+    command: redis-server --appendonly yes --replica-announce-ip redis-primary --requirepass ""
     volumes:
-      - redis-master-data:/data
+      - redis-primary-data:/data
     labels:
       - "org.springframework.boot.ignore=true"
     networks:
       - redis-net
 
-  redis-slave:
+  redis-replica:
     image: redis:7.2-alpine
-    container_name: redis-slave
+    container_name: redis-replica
     restart: unless-stopped
     ports:
       - "6380:6379"
-    command: redis-server --appendonly yes --replicaof redis-master 6379 --replica-announce-ip redis-slave --requirepass "" --masterauth ""
+    command: redis-server --appendonly yes --replicaof redis-primary 6379 --replica-announce-ip redis-replica --requirepass "" --masterauth ""
     volumes:
-      - redis-slave-data:/data
+      - redis-replica-data:/data
     labels:
       - "org.springframework.boot.ignore=true"
     depends_on:
-      - redis-master
+      - redis-primary
     networks:
       - redis-net
 
@@ -75,7 +75,7 @@ services:
       - |
         cat <<EOF > /tmp/sentinel.conf
         port 26379
-        sentinel monitor mymaster redis-master 6379 2
+        sentinel monitor mymaster redis-primary 6379 2
         sentinel down-after-milliseconds mymaster 5000
         sentinel failover-timeout mymaster 10000
         sentinel parallel-syncs mymaster 1
@@ -87,8 +87,8 @@ services:
     labels:
       - "org.springframework.boot.ignore=true"
     depends_on:
-      - redis-master
-      - redis-slave
+      - redis-primary
+      - redis-replica
     networks:
       - redis-net
 
@@ -104,7 +104,7 @@ services:
       - |
         cat <<EOF > /tmp/sentinel.conf
         port 26379
-        sentinel monitor mymaster redis-master 6379 2
+        sentinel monitor mymaster redis-primary 6379 2
         sentinel down-after-milliseconds mymaster 5000
         sentinel failover-timeout mymaster 10000
         sentinel parallel-syncs mymaster 1
@@ -116,8 +116,8 @@ services:
     labels:
       - "org.springframework.boot.ignore=true"
     depends_on:
-      - redis-master
-      - redis-slave
+      - redis-primary
+      - redis-replica
     networks:
       - redis-net
 
@@ -133,7 +133,7 @@ services:
       - |
         cat <<EOF > /tmp/sentinel.conf
         port 26379
-        sentinel monitor mymaster redis-master 6379 2
+        sentinel monitor mymaster redis-primary 6379 2
         sentinel down-after-milliseconds mymaster 5000
         sentinel failover-timeout mymaster 10000
         sentinel parallel-syncs mymaster 1
@@ -145,8 +145,8 @@ services:
     labels:
       - "org.springframework.boot.ignore=true"
     depends_on:
-      - redis-master
-      - redis-slave
+      - redis-primary
+      - redis-replica
     networks:
       - redis-net
 
@@ -156,5 +156,5 @@ networks:
 
 volumes:
   mysql-data:
-  redis-master-data:
-  redis-slave-data:
+  redis-primary-data:
+  redis-replica-data:

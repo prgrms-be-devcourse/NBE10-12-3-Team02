@@ -45,7 +45,7 @@ export IMAGE_TAG="${image_tag}"
 # ── MySQL + Redis Sentinel 스택 우선 기동 (ECR 자격 증명과 무관하게 항상 성공해야 함) ──
 # mysql은 .env의 MYSQL_ROOT_PASSWORD가 비어 있으면 컨테이너 자체가 재시작을 반복할 수 있음
 # (docker compose up 명령 자체는 성공하며, 이후 .env를 채우고 재기동하면 정상화됨)
-docker compose --env-file .env up -d mysql redis-master redis-slave redis-sentinel-1 redis-sentinel-2 redis-sentinel-3
+docker compose --env-file .env up -d mysql redis-primary redis-replica redis-sentinel-1 redis-sentinel-2 redis-sentinel-3
 
 # ── 앱 이미지 pull & 기동 (.env가 placeholder 상태면 실패할 수 있음 — CD가 재배포) ──
 aws ecr get-login-password --region ${aws_region} | docker login --username AWS --password-stdin "${ecr_registry}" || true
