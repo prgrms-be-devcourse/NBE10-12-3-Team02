@@ -44,11 +44,11 @@ class UserService(
 
     @Transactional
     fun signup(request: SignupRequest): SignupResponse {
-        val id = checkNotNull(request.id) { "Id is required" }
-        val email = checkNotNull(request.email) { "Email is required" }
-        val password = checkNotNull(request.password) { "Password is required" }
-        val name = checkNotNull(request.name) { "Name is required" }
-        val verificationToken = checkNotNull(request.verificationToken) { "Verification token is required" }
+        val id = request.id ?: throw ServiceException(ErrorCode.BAD_REQUEST)
+        val email = request.email ?: throw ServiceException(ErrorCode.BAD_REQUEST)
+        val password = request.password ?: throw ServiceException(ErrorCode.BAD_REQUEST)
+        val name = request.name ?: throw ServiceException(ErrorCode.BAD_REQUEST)
+        val verificationToken = request.verificationToken ?: throw ServiceException(ErrorCode.BAD_REQUEST)
 
         if (userRepository.existsByLoginIdAndDeletedAtIsNull(id)) {
             throw ServiceException(ErrorCode.USER_ID_ALREADY_EXISTS)
