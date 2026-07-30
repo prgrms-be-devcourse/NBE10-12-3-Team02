@@ -69,7 +69,7 @@ class UserController(
         )
     }
 
-    @GetMapping("/me/social-links/{provider}")
+    @PostMapping("/me/social-links/{provider}")
     @Operation(summary = "소셜 계정 연동 시작")
     fun startSocialLink(@PathVariable provider: String): RsData<SocialLinkAuthorizationResponse> {
         val actor = requestContext.actor ?: throw IllegalStateException("Actor must not be null")
