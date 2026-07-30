@@ -1,0 +1,12 @@
+# cp terraform.tfvars.example terraform.tfvars 후 값 채워서 사용
+
+aws_region       = "ap-northeast-2"
+project_name     = "nbe10-12-3-team02"
+
+app_allowed_cidr = "0.0.0.0/0"
+
+# OIDC trust policy가 이 레포의 main 브랜치에서만 배포 역할을 assume하도록 제한
+github_repository = "prgrms-be-devcourse/NBE10-12-3-Team02"
+
+ecr_repository_name = "nbe10-12-3-team02"
+image_tag            = "latest"

@@ -1,0 +1,53 @@
+#!/bin/bash
+set -eux
+
+# ── 스왑 4GB 생성 (t3.micro 메모리 부족 대비) ──
+dd if=/dev/zero of=/swapfile bs=128M count=32
+chmod 600 /swapfile
+mkswap /swapfile
+swapon /swapfile
+echo "/swapfile swap swap defaults 0 0" >> /etc/fstab
+
+# ── 타임존 설정 ──
+timedatectl set-timezone Asia/Seoul
+
+# ── Docker 설치 (Amazon Linux 2023) ──
+dnf update -y
+dnf install -y docker
+systemctl enable docker
+systemctl start docker
+usermod -aG docker ec2-user
+
+# ── Docker Compose v2 플러그인 설치 ──
+mkdir -p /usr/local/lib/docker/cli-plugins
+curl -SL https://github.com/docker/compose/releases/download/v2.29.7/docker-compose-linux-x86_64 \
+  -o /usr/local/lib/docker/cli-plugins/docker-compose
+chmod +x /usr/local/lib/docker/cli-plugins/docker-compose
+
+# ── 앱 디렉터리 구성 ──
+APP_DIR=/home/ec2-user/app
+mkdir -p "$APP_DIR"
+
+cat > "$APP_DIR/docker-compose.yaml" <<'COMPOSE_EOF'
+${docker_compose_content}
+COMPOSE_EOF
+
+cat > "$APP_DIR/.env" <<'ENV_EOF'
+${env_file_content}
+ENV_EOF
+chmod 600 "$APP_DIR/.env"
+chown -R ec2-user:ec2-user "$APP_DIR"
+
+cd "$APP_DIR"
+export ECR_REGISTRY="${ecr_registry}"
+export IMAGE_TAG="${image_tag}"
+
+# ── MySQL + Redis Sentinel 스택 우선 기동 (ECR 자격 증명과 무관하게 항상 성공해야 함) ──
+# mysql은 .env의 MYSQL_ROOT_PASSWORD가 비어 있으면 컨테이너 자체가 재시작을 반복할 수 있음
+# (docker compose up 명령 자체는 성공하며, 이후 .env를 채우고 재기동하면 정상화됨)
+docker compose --env-file .env up -d mysql redis-master redis-slave redis-sentinel-1 redis-sentinel-2 redis-sentinel-3
+
+# ── 앱 이미지 pull & 기동 (.env가 placeholder 상태면 실패할 수 있음 — CD가 재배포) ──
+aws ecr get-login-password --region ${aws_region} | docker login --username AWS --password-stdin "${ecr_registry}" || true
+docker compose --env-file .env pull app || echo "[bootstrap] app 이미지 pull 실패 - CD 파이프라인에서 재배포 필요"
+docker compose --env-file .env up -d app || echo "[bootstrap] app 컨테이너 기동 실패 - .env 값 설정 후 CD로 재배포 필요"
