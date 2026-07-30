@@ -102,6 +102,21 @@ resource "aws_iam_instance_profile" "ec2" {
   role = aws_iam_role.ec2.name
 }
 
+# EC2가 SSM Parameter Store의 운영 .env 값을 조회할 수 있도록 허용 (해당 파라미터로 한정)
+data "aws_iam_policy_document" "ssm_get_prod_env" {
+  statement {
+    sid       = "SSMGetProdEnvParameter"
+    actions   = ["ssm:GetParameter"]
+    resources = [aws_ssm_parameter.prod_env.arn]
+  }
+}
+
+resource "aws_iam_role_policy" "ssm_get_prod_env" {
+  name   = "${var.project_name}-ssm-get-prod-env"
+  role   = aws_iam_role.ec2.id
+  policy = data.aws_iam_policy_document.ssm_get_prod_env.json
+}
+
 # ── GitHub Actions OIDC Provider ──
 # aws iam list-open-id-connect-providers 결과가 비어있어 계정에 아직 등록되지 않은 상태 -> 신규 생성
 resource "aws_iam_openid_connect_provider" "github" {

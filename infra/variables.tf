@@ -69,3 +69,9 @@ variable "letsencrypt_email" {
   type        = string
   default     = "hyunjihun120@gmail.com"
 }
+
+variable "prod_env_content" {
+  description = "SSM Parameter Store(/nbe10-12-3-team02/prod/env)에 저장할 운영 .env 원문. 절대 기본값을 두지 말고 terraform.tfvars(gitignore 대상)로만 주입할 것"
+  type        = string
+  sensitive   = true
+}
