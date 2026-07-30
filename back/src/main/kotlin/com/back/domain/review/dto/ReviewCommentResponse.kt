@@ -1,6 +1,7 @@
 package com.back.domain.review.dto
 
 import com.back.domain.review.entity.ReviewComment
+import com.fasterxml.jackson.annotation.JsonProperty
 import java.time.LocalDateTime
 
 data class ReviewCommentResponse(
@@ -8,7 +9,7 @@ data class ReviewCommentResponse(
     val authorName: String,
     val content: String,
     val createdAt: LocalDateTime?,
-    val isMine: Boolean
+    @get:JsonProperty("isMine") val isMine: Boolean
 ) {
     companion object {
         fun of(comment: ReviewComment, currentUserId: Long?): ReviewCommentResponse =

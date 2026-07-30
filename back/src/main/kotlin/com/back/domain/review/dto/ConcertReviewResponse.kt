@@ -1,6 +1,7 @@
 package com.back.domain.review.dto
 
 import com.back.domain.review.entity.ConcertReview
+import com.fasterxml.jackson.annotation.JsonProperty
 import java.time.LocalDateTime
 
 data class ConcertReviewResponse(
@@ -10,7 +11,7 @@ data class ConcertReviewResponse(
     val userName: String,
     val title: String,
     val content: String,
-    val isMine: Boolean,
+    @get:JsonProperty("isMine") val isMine: Boolean,
     val createdAt: LocalDateTime?,
     val updatedAt: LocalDateTime?,
     val concertName: String,
