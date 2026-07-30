@@ -51,10 +51,9 @@ class RedissonVsLettuceBenchmarkTest {
                                     .setIfAbsent(spinLockKey, "LOCKED", Duration.ofMillis(500)) == true
                                 if (!acquired) {
                                     spinRetryCount.incrementAndGet()
-                                    Thread.sleep(5) // 5ms polling retry
+                                    Thread.sleep(5)
                                 }
                             }
-                            // Critical Section (약 1ms 작업)
                             Thread.sleep(1)
                             stringRedisTemplate.delete(spinLockKey)
                         } finally {
@@ -65,14 +64,14 @@ class RedissonVsLettuceBenchmarkTest {
                 spinLatch.await()
             }
         }
-        val spinTps = String.format("%.2f", (taskCount.toDouble() / spinTime) * 1000)
+        val spinTps = "%.2f".format((taskCount.toDouble() / spinTime) * 1000)
 
         println("\n[1] StringRedisTemplate (Lettuce SETNX 스핀락)")
         println("- 소요시간: ${spinTime}ms")
         println("- 총 스핀락 재시도 횟수 (Polling Query Count): ${spinRetryCount.get()} 회")
         println("- 초당 처리량 (TPS): $spinTps TPS")
 
-        // 2. Redisson Pub/Sub Distributed Lock (실제 운영 환경과 동일한 5초 대기시간 및 100% Pub/Sub 대기)
+        // 2. Redisson Pub/Sub Distributed Lock
         val redissonAcquireCount = AtomicLong(0)
         val redissonLatch = CountDownLatch(taskCount)
         val redissonTime = Executors.newVirtualThreadPerTaskExecutor().use { executor ->
@@ -84,7 +83,6 @@ class RedissonVsLettuceBenchmarkTest {
                             redissonAcquireCount.incrementAndGet()
                             if (lock.tryLock(5, 1, TimeUnit.SECONDS)) {
                                 try {
-                                    // Critical Section (약 1ms 작업)
                                     Thread.sleep(1)
                                 } finally {
                                     if (lock.isHeldByCurrentThread) {
@@ -100,8 +98,8 @@ class RedissonVsLettuceBenchmarkTest {
                 redissonLatch.await()
             }
         }
-        val redissonTps = String.format("%.2f", (taskCount.toDouble() / redissonTime) * 1000)
-        val queryReductionRatio = String.format("%.2f", (spinRetryCount.get().toDouble() / redissonAcquireCount.get()))
+        val redissonTps = "%.2f".format((taskCount.toDouble() / redissonTime) * 1000)
+        val queryReductionRatio = "%.2f".format(spinRetryCount.get().toDouble() / redissonAcquireCount.get())
 
         println("\n[2] Redisson Pub/Sub 분산 락")
         println("- 소요시간: ${redissonTime}ms")

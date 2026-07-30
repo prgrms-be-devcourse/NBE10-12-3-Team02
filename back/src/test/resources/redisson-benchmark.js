@@ -4,7 +4,7 @@ import { check, sleep } from 'k6';
 /**
  * Redisson Pub/Sub 분산 락 실서버 고동시성 k6 부하 테스트 스크립트
  *
- * [추후 부하 테스트 재실행 시 사전 작업 가이드]
+ * [📌 추후 부하 테스트 재실행 시 사전 작업 가이드]
  * 이 스크립트로 백엔드 부하 테스트를 재실행할 경우, 아래 항목을 순서대로 확인/조정해야 합니다.
  *
  * 1. QueueInterceptor (대기열 검증) 임시 비활성화:
@@ -12,9 +12,9 @@ import { check, sleep } from 'k6';
  *    - 작업: addInterceptors() 메서드 내부의 queueInterceptor 등록 코드를 주석 처리합니다.
  *    - 이유: k6 동시성 주입 시 대기열 토큰 미발급으로 인한 403 Forbidden 즉시 반사 방지.
  *
- * 2. 테스트용 계정 준비:
- *    - setup() 함수에서 id: 'test', password: '12345678' 계정으로 자동 로그인합니다.
- *    - DB(H2)에 해당 계정이 존재하지 않으면 401 Unauthorized 오류가 발생합니다.
+ * 2. 테스트용 계정 환경변수 분리 (TEST_USER / TEST_PASS):
+ *    - 기본값: id: 'test', password: '12345678'
+ *    - 필요 시 k6 커맨드 라인 옵션으로 변경 가능: k6 run -e TEST_USER=custom -e TEST_PASS=1234 script.js
  *
  * 3. 예매 가능 미래 회차 ID 및 좌석 번호 지정:
  *    - 요청 URL: POST /api/v1/concerts/10/schedules/21/seats/occupy (2027-02-24 미래 회차)
@@ -25,6 +25,8 @@ import { check, sleep } from 'k6';
  */
 
 const BASE_URL = __ENV.BASE_URL || 'http://localhost:8080';
+const TEST_USER = __ENV.TEST_USER || 'test';
+const TEST_PASS = __ENV.TEST_PASS || '12345678';
 
 // k6 부하 테스트 옵션
 export const options = {
@@ -40,11 +42,11 @@ export const options = {
   },
 };
 
-// 테스트 시작 시 1회 수행: test/12345678 계정으로 로그인 후 JWT 토큰 발급
+// 테스트 시작 시 1회 수행: TEST_USER/TEST_PASS 계정으로 로그인 후 JWT 토큰 발급
 export function setup() {
   const loginRes = http.post(
     `${BASE_URL}/api/v1/auth/login`,
-    JSON.stringify({ id: 'test', password: '12345678' }),
+    JSON.stringify({ id: TEST_USER, password: TEST_PASS }),
     { headers: { 'Content-Type': 'application/json' } }
   );
 
