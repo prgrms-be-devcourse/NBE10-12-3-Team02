@@ -93,7 +93,8 @@ function PaymentContent() {
 
     const rawActive = sessionStorage.getItem("paymentActive");
     const activeTime = rawActive ? Number(rawActive) : 0;
-    const isValidEntry = activeTime > 0 && Date.now() - activeTime < 10 * 60 * 1000;
+    const isValidEntry =
+      activeTime > 0 && Date.now() - activeTime < 10 * 60 * 1000;
 
     if (!isValidEntry) {
       if (concertId && scheduleId) {

@@ -1,3 +1,4 @@
+/* eslint-disable @next/next/no-img-element */
 "use client";
 
 import { useState, useEffect, useRef } from "react";
@@ -93,6 +94,7 @@ export default function MyPage() {
     };
 
     initializeMyPage();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleWithdraw = async () => {
