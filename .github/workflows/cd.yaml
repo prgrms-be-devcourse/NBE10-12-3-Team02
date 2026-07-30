@@ -99,6 +99,7 @@ jobs:
           DOT_ENV_B64: ${{ secrets.DOT_ENV }}
         run: |
           COMMANDS=$(jq -n --arg env_b64 "$DOT_ENV_B64" '[
+            "set -e",
             "mkdir -p /home/ec2-user/app",
             ("echo " + $env_b64 + " | base64 -d > /home/ec2-user/app/.env"),
             "chmod 600 /home/ec2-user/app/.env",
@@ -139,7 +140,8 @@ jobs:
             --arg registry "$ECR_REGISTRY" \
             --arg tag "$IMAGE_TAG" \
             '[
-              "cd ~/app",
+              "set -e",
+              "cd /home/ec2-user/app",
               ("export ECR_REGISTRY=" + $registry),
               ("export IMAGE_TAG=" + $tag),
               ("aws ecr get-login-password --region " + $region + " | docker login --username AWS --password-stdin " + $registry),
