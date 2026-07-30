@@ -3,6 +3,7 @@
 import PasswordStrengthMeter from "@/app/components/PasswordStrengthMeter";
 import { showAlert, showError, showSuccess } from "@/lib/alert";
 import { apiFetch } from "@/lib/api";
+import { isValidEmail } from "@/lib/validators";
 import { Eye, EyeOff } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -69,8 +70,7 @@ export default function SignupPage() {
       showAlert("이메일을 입력해주세요.");
       return;
     }
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
+    if (!isValidEmail(email)) {
       showAlert("올바른 이메일 형식을 입력해주세요.");
       return;
     }
