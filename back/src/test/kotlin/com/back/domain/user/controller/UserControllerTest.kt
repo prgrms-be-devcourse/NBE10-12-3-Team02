@@ -37,6 +37,7 @@ import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPat
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.cookie
 import org.springframework.transaction.annotation.Transactional
+import org.springframework.transaction.annotation.Propagation
 
 @ActiveProfiles("test")
 @SpringBootTest
@@ -185,6 +186,7 @@ class UserControllerTest @Autowired constructor(
     }
 
     @Test
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
     @DisplayName("회원 탈퇴 성공")
     fun t5() {
         mockMvc.perform(
