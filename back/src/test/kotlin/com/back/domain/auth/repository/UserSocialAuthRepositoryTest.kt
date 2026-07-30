@@ -52,31 +52,6 @@ class UserSocialAuthRepositoryTest @Autowired constructor(
         }.isInstanceOf(DataIntegrityViolationException::class.java)
     }
 
-    @Test
-    @DisplayName("사용자와 Provider 정보가 모두 일치할 때만 소셜 인증 정보를 삭제한다")
-    fun t3() {
-        val user = saveUser("user-1", "user1@example.com")
-        val userId = requireNotNull(user.userId)
-        userSocialAuthRepository.saveAndFlush(
-            socialAuth(user, LoginType.NAVER, "naver-id"),
-        )
-
-        val mismatchCount = userSocialAuthRepository.deleteIfMatches(
-            userId,
-            LoginType.NAVER,
-            "other-id",
-        )
-        val deletedCount = userSocialAuthRepository.deleteIfMatches(
-            userId,
-            LoginType.NAVER,
-            "naver-id",
-        )
-
-        assertThat(mismatchCount).isZero()
-        assertThat(deletedCount).isEqualTo(1)
-        assertThat(userSocialAuthRepository.findByUserUserId(userId)).isNull()
-    }
-
     private fun saveUser(loginId: String, email: String): User =
         userRepository.saveAndFlush(
             User.create(

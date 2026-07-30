@@ -25,10 +25,6 @@ enum class ErrorCode(
     AUTH_REFRESH_TOKEN_ROTATION_FAILED("500-1", "리프레시 토큰 교체 처리 중 오류가 발생했습니다."),
     OAUTH_PROVIDER_NOT_SUPPORTED("400-11", "지원하지 않는 소셜 로그인 제공자입니다."),
     OAUTH_ACCOUNT_ALREADY_LINKED("409-8", "이미 소셜 계정이 연결되어 있습니다."),
-    OAUTH_ACCOUNT_NOT_LINKED("404-9", "연결된 소셜 계정이 없습니다."),
-    OAUTH_UNLINK_FAILED("502-1", "소셜 제공자 연결 해제에 실패했습니다."),
-    OAUTH_UNLINK_NOT_ALLOWED("403-4", "소셜 로그인으로 가입한 회원은 연동을 해제할 수 없습니다."),
-    OAUTH_LINK_STATE_CHANGED("409-9", "소셜 계정 연동 상태가 변경되었습니다. 다시 확인해주세요."),
 
     // User
     USER_NOT_FOUND("404-1", "회원이 존재하지 않습니다."),

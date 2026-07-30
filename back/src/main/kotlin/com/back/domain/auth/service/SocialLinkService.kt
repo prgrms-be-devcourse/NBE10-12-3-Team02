@@ -11,13 +11,10 @@ import com.back.domain.user.repository.UserRepository
 import com.back.global.exception.ErrorCode
 import com.back.global.exception.ServiceException
 import com.back.global.security.oauth2.info.OAuth2UserInfo
-import com.back.global.security.oauth2.service.OAuthUnlinkService
-import com.back.global.security.oauth2.service.OAuthUnlinkResult
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.dao.DataIntegrityViolationException
 import org.springframework.security.oauth2.core.OAuth2AuthenticationException
 import org.springframework.stereotype.Service
-import org.springframework.transaction.annotation.Propagation
 import org.springframework.transaction.annotation.Transactional
 import java.time.Duration
 import java.util.UUID
@@ -28,9 +25,6 @@ class SocialLinkService(
     private val userRepository: UserRepository,
     private val userSocialAuthRepository: UserSocialAuthRepository,
     private val socialLinkIntentRepository: SocialLinkIntentRepository,
-    private val oAuthUnlinkService: OAuthUnlinkService,
-    private val socialLinkQueryService: SocialLinkQueryService,
-    private val socialLinkCommandService: SocialLinkCommandService,
     @Value("\${custom.oauth2.link-intent-expiration-seconds:300}")
     private val linkIntentExpirationSeconds: Long,
 ) {
@@ -118,20 +112,6 @@ class SocialLinkService(
             user
         } catch (e: DataIntegrityViolationException) {
             throw OAuth2AuthenticationException("oauth2_account_already_used")
-        }
-    }
-
-    @Transactional(propagation = Propagation.NOT_SUPPORTED)
-    fun unlink(userId: Long) {
-        val target = socialLinkQueryService.getUnlinkTarget(userId)
-
-        when (oAuthUnlinkService.unlink(target.provider, target.oauthRefreshToken)) {
-            OAuthUnlinkResult.PROVIDER_UNLINKED,
-            OAuthUnlinkResult.LOCAL_ONLY,
-            -> socialLinkCommandService.completeUnlink(target)
-
-            OAuthUnlinkResult.FAILED ->
-                throw ServiceException(ErrorCode.OAUTH_UNLINK_FAILED)
         }
     }
 

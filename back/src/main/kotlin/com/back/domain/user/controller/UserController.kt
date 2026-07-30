@@ -83,14 +83,6 @@ class UserController(
         )
     }
 
-    @DeleteMapping("/me/social-links")
-    @Operation(summary = "소셜 계정 연동 해제")
-    fun unlinkSocialAccount(): RsData<Void> {
-        val actor = requestContext.actor ?: throw IllegalStateException("Actor must not be null")
-        socialLinkService.unlink(actor.id)
-        return RsData("200-1", "소셜 계정 연동이 해제되었습니다.", null)
-    }
-
     @PatchMapping("/me")
     @Operation(summary = "마이페이지 수정", description = "마이페이지 수정 API")
     fun updateMyPage(@RequestBody @Valid request: UpdateMyPageRequest): RsData<Void> {
