@@ -2,8 +2,9 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { apiFetch, decodeToken } from "@/lib/api";
+import { apiFetch, decodeToken, restoreSession } from "@/lib/api";
 import { getLocalConcertPoster } from "@/lib/concertDetailImages";
+import { formatDateTime } from "@/lib/date";
 
 interface ReviewCard {
   reviewId: number;
@@ -24,10 +25,13 @@ export default function BoardPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    apiFetch<ReviewCard[]>("/reviews")
-      .then((res) => setReviews(res.data))
-      .catch(() => setReviews([]))
-      .finally(() => setLoading(false));
+    // accessToken이 준비된 이후 fetch해야 isMine이 정확히 내려옴
+    restoreSession().then(() => {
+      apiFetch<ReviewCard[]>("/reviews")
+        .then((res) => setReviews(res.data))
+        .catch(() => setReviews([]))
+        .finally(() => setLoading(false));
+    });
   }, []);
 
   const handleWriteClick = () => {
@@ -52,11 +56,7 @@ export default function BoardPage() {
             {reviews.map((review) => (
               <li
                 key={review.reviewId}
-                onClick={() =>
-                  router.push(
-                    `/concerts/${review.concertId}${review.isMine ? "#reviews" : ""}`
-                  )
-                }
+                onClick={() => router.push(`/board/${review.reviewId}`)}
                 className="bg-white rounded-2xl shadow-sm border border-gray-100 flex gap-4 p-4 cursor-pointer hover:shadow-md transition"
               >
                 <div className="shrink-0 w-16 h-20 rounded-lg overflow-hidden bg-gradient-to-br from-blue-100 to-indigo-200 flex items-center justify-center">
@@ -87,7 +87,7 @@ export default function BoardPage() {
                     {review.content}
                   </p>
                   <p className="text-xs text-gray-400 mt-2">
-                    {review.userName} · {review.createdAt?.slice(0, 10)}
+                    {review.userName} · {formatDateTime(review.createdAt)}
                   </p>
                 </div>
               </li>
