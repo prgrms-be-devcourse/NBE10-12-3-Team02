@@ -1,5 +1,6 @@
 package com.back.domain.user.controller
 
+import com.back.domain.auth.dto.SocialLinkAuthorizationResponse
 import com.back.domain.user.dto.MyPageResponse
 import com.back.domain.user.dto.ProfileImageResponse
 import com.back.domain.user.dto.SignupRequest
@@ -70,14 +71,16 @@ class UserController(
 
     @GetMapping("/me/social-links/{provider}")
     @Operation(summary = "소셜 계정 연동 시작")
-    fun startSocialLink(@PathVariable provider: String): ResponseEntity<Void> {
+    fun startSocialLink(@PathVariable provider: String): RsData<SocialLinkAuthorizationResponse> {
         val actor = requestContext.actor ?: throw IllegalStateException("Actor must not be null")
         val result = socialLinkService.start(actor.id, provider)
         socialLinkCookieRepository.save(result.intentId)
 
-        return ResponseEntity.status(HttpStatus.FOUND)
-            .location(URI.create(result.authorizationPath))
-            .build()
+        return RsData(
+            "200-1",
+            "소셜 계정 연동 요청이 생성되었습니다.",
+            SocialLinkAuthorizationResponse(result.authorizationPath)
+        )
     }
 
     @DeleteMapping("/me/social-links")
