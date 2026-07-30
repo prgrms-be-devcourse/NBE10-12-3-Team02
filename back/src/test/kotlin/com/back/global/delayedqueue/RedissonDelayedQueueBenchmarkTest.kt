@@ -11,6 +11,7 @@ import org.redisson.client.codec.StringCodec
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.context.annotation.Import
+import java.util.UUID
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
@@ -38,15 +39,24 @@ class RedissonDelayedQueueBenchmarkTest {
     @Autowired
     private lateinit var redissonClient: RedissonClient
 
-    private val testQueueKey = "test:delayed:queue:benchmark"
+    private lateinit var testQueueKey: String
 
     @BeforeEach
+    fun setUp() {
+        // [개선 1] 테스트별 고유 Key 생성으로 테스트 격리성 및 병렬 실행 독립성 보장
+        testQueueKey = "test:delayed:queue:${UUID.randomUUID()}"
+    }
+
     @AfterEach
-    fun clearQueue() {
-        val blockingQueue = redissonClient.getBlockingQueue<String>(testQueueKey, StringCodec.INSTANCE)
-        val delayedQueue = redissonClient.getDelayedQueue(blockingQueue)
-        delayedQueue.clear()
-        blockingQueue.clear()
+    fun tearDown() {
+        // [개선 2] destroy()를 호출하여 Delayed Queue 내부 스케줄러 태스크 및 레디스 리소스 완전 해제
+        if (::testQueueKey.isInitialized) {
+            val blockingQueue = redissonClient.getBlockingQueue<String>(testQueueKey, StringCodec.INSTANCE)
+            val delayedQueue = redissonClient.getDelayedQueue(blockingQueue)
+            delayedQueue.clear()
+            delayedQueue.destroy()
+            blockingQueue.clear()
+        }
     }
 
     // ==========================================================
@@ -175,14 +185,12 @@ class RedissonDelayedQueueBenchmarkTest {
         }
         println("- ${duplicateCount}회 동일 메시지 offer() 완료")
 
-        // 최대 (TTL + 3초) 동안 수신된 이벤트 수 카운팅 (모두 수신 시 즉시 조기 탈출)
+        // [개선 3] poll() 타임아웃을 활용하여 수신 루프 가독성 개선 및 수신 즉시 탈출
         val receivedCount = AtomicInteger(0)
-        val deadline = System.currentTimeMillis() + (ttlSeconds + 3) * 1000
-
-        while (System.currentTimeMillis() < deadline) {
-            val msg = blockingQueue.poll(500, TimeUnit.MILLISECONDS) ?: continue
+        while (receivedCount.get() < duplicateCount) {
+            val msg = blockingQueue.poll(ttlSeconds + 2, TimeUnit.SECONDS) ?: break
             if (msg == message) {
-                if (receivedCount.incrementAndGet() >= duplicateCount) break
+                receivedCount.incrementAndGet()
             }
         }
 
