@@ -1,4 +1,3 @@
-/* eslint-disable @next/next/no-img-element */
 "use client";
 
 import { showAlert } from "@/lib/alert";
@@ -7,6 +6,7 @@ import {
   getConcertDetailImages,
   getLocalConcertPoster,
 } from "@/lib/concertDetailImages";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { use, useEffect, useState } from "react";
 
@@ -112,9 +112,12 @@ export default function ConcertDetailPage({
             <div className="md:w-1/3 flex flex-col">
               <div className="self-start bg-gradient-to-br from-blue-200 to-indigo-300 flex items-center justify-center text-white font-bold text-xl overflow-hidden">
                 {posterUrl ? (
-                  <img
+                  <Image
+                    unoptimized
                     src={posterUrl}
                     alt={concert.concertName}
+                    width={300}
+                    height={400}
                     className="w-full h-auto object-cover"
                   />
                 ) : (
@@ -293,9 +296,12 @@ export default function ConcertDetailPage({
             {detailImages.length > 0 ? (
               detailImages.map((url) => (
                 <div key={url} className="w-full max-w-3xl mx-auto mb-4">
-                  <img
+                  <Image
+                    unoptimized
                     src={url}
                     alt="공연 상세 설명"
+                    width={800}
+                    height={1200}
                     className="w-full h-auto rounded-xl border border-gray-200"
                   />
                 </div>

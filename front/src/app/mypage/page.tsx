@@ -1,7 +1,7 @@
-/* eslint-disable @next/next/no-img-element */
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import {
   apiFetch,
@@ -475,9 +475,12 @@ export default function MyPage() {
                 >
                   <div className="flex-shrink-0 w-36 bg-gradient-to-br from-blue-200 to-indigo-300 flex items-center justify-center text-white font-bold text-sm overflow-hidden">
                     {group.urlPoster ? (
-                      <img
+                      <Image
+                        unoptimized
                         src={getLocalConcertPoster(group.urlPoster)}
                         alt={group.concertName}
+                        width={144}
+                        height={192}
                         className="w-full h-full object-cover"
                       />
                     ) : (

@@ -1,7 +1,7 @@
-/* eslint-disable @next/next/no-img-element */
 "use client";
 
 import { Suspense, useState, useEffect, useRef, type ChangeEvent } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { Search, ChevronLeft, ChevronRight } from "lucide-react";
@@ -276,10 +276,13 @@ function HomeContent() {
                   >
                     {/* 배너 전체에 깔리는 흐린 포스터 배경 (왼쪽/오른쪽이 하나로 이어져 보이도록) */}
                     {concert.imageUrl && (
-                      <img
+                      <Image
+                        unoptimized
                         src={concert.imageUrl}
                         alt=""
                         aria-hidden="true"
+                        width={600}
+                        height={400}
                         className="absolute inset-0 w-full h-full object-cover scale-110 blur-3xl opacity-60"
                       />
                     )}
@@ -295,9 +298,12 @@ function HomeContent() {
                       }}
                     >
                       {concert.imageUrl ? (
-                        <img
+                        <Image
+                          unoptimized
                           src={concert.imageUrl}
                           alt={concert.concertName}
+                          width={448}
+                          height={448}
                           className="absolute inset-0 w-full h-full object-contain"
                         />
                       ) : (
@@ -449,9 +455,12 @@ function HomeContent() {
                 >
                   <div className="h-48 bg-gradient-to-br from-blue-200 to-indigo-300 flex items-center justify-center text-white font-bold relative overflow-hidden">
                     {concert.imageUrl ? (
-                      <img
+                      <Image
+                        unoptimized
                         src={concert.imageUrl}
                         alt={concert.concertName}
+                        width={300}
+                        height={200}
                         className="w-full h-full object-cover"
                       />
                     ) : (

@@ -1,10 +1,10 @@
-/* eslint-disable @next/next/no-img-element */
 "use client";
 
 import PasswordStrengthMeter from "@/app/components/PasswordStrengthMeter";
 import { showAlert, showError, showSuccess } from "@/lib/alert";
 import { apiFetch } from "@/lib/api";
 import { Eye, EyeOff } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -194,7 +194,14 @@ export default function SignupPage() {
       >
         <div className="text-center">
           <Link href="/" className="flex justify-center">
-            <img src="/images/logo.svg" alt="티케팅고" className="h-24 w-24" />
+            <Image
+              unoptimized
+              src="/images/logo.svg"
+              alt="티케팅고"
+              width={96}
+              height={96}
+              className="h-24 w-24"
+            />
           </Link>
           <p className="my-4 text-2xl font-bold text-gray-800">회원가입</p>
         </div>

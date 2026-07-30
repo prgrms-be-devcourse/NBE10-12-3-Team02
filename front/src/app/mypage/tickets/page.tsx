@@ -1,7 +1,7 @@
-/* eslint-disable @next/next/no-img-element */
 "use client";
 
 import { Suspense, useState } from "react";
+import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { ChevronLeft, Printer } from "lucide-react";
@@ -164,9 +164,12 @@ function TicketDetailContent() {
               style={{ backfaceVisibility: "hidden" }}
             >
               {group.urlPoster ? (
-                <img
+                <Image
+                  unoptimized
                   src={getLocalConcertPoster(group.urlPoster)}
                   alt={group.concertName}
+                  width={320}
+                  height={400}
                   className="w-full h-full object-cover"
                 />
               ) : (
