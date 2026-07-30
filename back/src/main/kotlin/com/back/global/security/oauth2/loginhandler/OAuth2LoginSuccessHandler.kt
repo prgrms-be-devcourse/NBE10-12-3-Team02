@@ -25,7 +25,8 @@ class OAuth2LoginSuccessHandler(
         response: HttpServletResponse,
         authentication: Authentication
     ) {
-        val isSocialLink = socialLinkCookieRepository.load() != null
+        val oAuth2User = authentication.principal as OAuth2User
+        val isSocialLink = oAuth2User.getAttribute<Boolean>("socialLink") == true
         socialLinkCookieRepository.remove()
 
         if (isSocialLink) {
@@ -33,7 +34,6 @@ class OAuth2LoginSuccessHandler(
             return
         }
 
-        val oAuth2User = authentication.principal as OAuth2User
         val userIdAttribute = oAuth2User.getAttribute<Any>("userId")
 
         if (userIdAttribute == null) {

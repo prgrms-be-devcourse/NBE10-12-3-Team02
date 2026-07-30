@@ -44,7 +44,9 @@ class CustomOAuth2UserService(
             "google" -> LoginType.GOOGLE to createUserInfo(attributes, LoginType.GOOGLE)
             else -> throw OAuth2AuthenticationException("oauth2_provider_not_supported")
         }
-        val user = socialLinkCookieRepository.load()
+        val linkIntentId = socialLinkCookieRepository.load()
+        val isSocialLink = linkIntentId != null
+        val user = linkIntentId
             ?.let { intentId ->
                 socialLinkService.complete(
                     intentId = intentId,
@@ -63,7 +65,8 @@ class CustomOAuth2UserService(
                 "userId" to userId,
                 "loginId" to user.loginId,
                 "email" to user.email,
-                "name" to user.name
+                "name" to user.name,
+                "socialLink" to isSocialLink,
             ),
             "userId"
         )

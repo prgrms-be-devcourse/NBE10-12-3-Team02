@@ -241,13 +241,12 @@ class OAuth2LoginHandlerTest {
     }
 
     @Test
-    @DisplayName("소셜 계정 연동 성공 시 토큰을 재발급하지 않고 마이페이지로 redirect")
+    @DisplayName("OAuth2 인증 객체가 소셜 연동 완료 상태이면 토큰을 재발급하지 않고 마이페이지로 redirect")
     fun t10() {
         val userRepository = mock(UserRepository::class.java)
         val authService = mock(AuthService::class.java)
         val requestContext = mock(RequestContext::class.java)
         val cookieRepository = mock(SocialLinkCookieRepository::class.java)
-        `when`(cookieRepository.load()).thenReturn("link-intent-id")
         val successHandler = OAuth2LoginSuccessHandler(
             userRepository,
             authService,
@@ -260,9 +259,17 @@ class OAuth2LoginHandlerTest {
         successHandler.onAuthenticationSuccess(
             mock(HttpServletRequest::class.java),
             response,
-            authentication(oAuth2User(mapOf("userId" to 1L))),
+            authentication(
+                oAuth2User(
+                    mapOf(
+                        "userId" to 1L,
+                        "socialLink" to true,
+                    ),
+                ),
+            ),
         )
 
+        verify(cookieRepository, never()).load()
         verify(cookieRepository).remove()
         verifyNoInteractions(userRepository, authService, requestContext)
         assertThat(response.status).isEqualTo(302)
