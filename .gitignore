@@ -54,6 +54,7 @@ yarn-error.log*
 *.mv.db
 *.lock.db
 *.trace.db
+*.hprof
 
 # Environment & Secret Files
 **/.env.local
