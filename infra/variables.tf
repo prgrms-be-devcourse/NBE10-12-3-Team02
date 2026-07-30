@@ -63,3 +63,9 @@ variable "image_tag" {
   type        = string
   default     = "latest"
 }
+
+variable "letsencrypt_email" {
+  description = "certbot 인증서 등록/만료 알림용 이메일"
+  type        = string
+  default     = "hyunjihun120@gmail.com"
+}
