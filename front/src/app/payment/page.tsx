@@ -87,12 +87,13 @@ function PaymentContent() {
   // 결제 페이지 재진입 감지: 좌석 선택 페이지에서 정상 진입 시 'paymentActive' 플래그가 존재한다.
   // 뒤로가기 후 앞으로 가기(또는 직접 URL 입력)로 재진입하면 플래그가 없어 좌석 선택 페이지로 리다이렉트한다.
   useEffect(() => {
-    // React Strict Mode에서 useEffect가 두 번 실행되므로 첫 번째 통과 후 플래그를 ref로 기억한다.
     if (entryValidatedRef.current) return;
 
-    const isValidEntry = sessionStorage.getItem("paymentActive") === "1";
+    const rawActive = sessionStorage.getItem("paymentActive");
+    const activeTime = rawActive ? Number(rawActive) : 0;
+    const isValidEntry = activeTime > 0 && Date.now() - activeTime < 10 * 60 * 1000;
+
     if (!isValidEntry) {
-      // 스테일 토큰으로 결제를 시도하지 못하도록 좌석 선택 페이지로 보낸다.
       if (concertId && scheduleId) {
         router.replace(`/concerts/${concertId}/seats?scheduleId=${scheduleId}`);
       } else if (concertId) {
@@ -100,9 +101,7 @@ function PaymentContent() {
       }
       return;
     }
-    // 정상 최초 진입 — 통과 표시 후 플래그 제거
     entryValidatedRef.current = true;
-    sessionStorage.removeItem("paymentActive");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -164,6 +163,7 @@ function PaymentContent() {
       );
 
       paymentCompletedRef.current = true;
+      sessionStorage.removeItem("paymentActive");
       setTicketResults(res.data);
       setShowModal(true);
     } catch (e) {
