@@ -9,6 +9,7 @@ import com.back.global.rsData.RsData
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.tags.Tag
 import org.springframework.web.bind.annotation.GetMapping
+import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
 
@@ -27,6 +28,14 @@ class ReviewController(
         val currentUserId = requestContext.actor?.id
         val data = concertReviewService.getAllReviews(currentUserId)
         return RsData("200-1", "리뷰 목록 조회 성공", data)
+    }
+
+    @GetMapping("/{reviewId}")
+    @Operation(summary = "리뷰 단건 조회", description = "reviewId로 리뷰 상세 조회 (비인증 허용)")
+    fun getReview(@PathVariable reviewId: Long): RsData<ConcertReviewResponse> {
+        val currentUserId = requestContext.actor?.id
+        val data = concertReviewService.getDetail(reviewId, currentUserId)
+        return RsData("200-1", "리뷰 조회 성공", data)
     }
 
     @GetMapping("/eligible-concerts")

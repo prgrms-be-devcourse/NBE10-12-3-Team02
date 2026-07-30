@@ -63,6 +63,10 @@ enum class ErrorCode(
     REVIEW_PERIOD_EXPIRED("403-5", "리뷰 작성 가능 기간이 지났습니다. (콘서트 종료 후 6개월 이내)"),
     REVIEW_ALREADY_EXISTS("409-4", "이미 해당 콘서트에 리뷰를 작성했습니다."),
 
+    // Comment
+    COMMENT_NOT_FOUND("404-10", "존재하지 않는 댓글입니다."),
+    COMMENT_FORBIDDEN("403-6", "댓글을 삭제할 권한이 없습니다."),
+
     // bucket4j
     TOO_MANY_REQUESTS("429-1", "요청이 너무 많습니다."),
 
