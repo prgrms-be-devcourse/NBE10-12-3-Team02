@@ -1,11 +1,15 @@
 package com.back.domain.user.controller
 
+import com.back.domain.auth.dto.SocialLinkAuthorizationResponse
 import com.back.domain.user.dto.MyPageResponse
 import com.back.domain.user.dto.ProfileImageResponse
 import com.back.domain.user.dto.SignupRequest
 import com.back.domain.user.dto.SignupResponse
+import com.back.domain.auth.dto.SocialLinkStatusResponse
+import com.back.domain.auth.repository.SocialLinkCookieRepository
 import com.back.domain.user.dto.UpdateMyPageRequest
 import com.back.domain.user.service.UserService
+import com.back.domain.auth.service.SocialLinkService
 import com.back.global.annotation.ApiV1
 import com.back.global.requestcontext.RequestContext
 import com.back.global.rsData.RsData
@@ -27,7 +31,9 @@ import java.util.concurrent.TimeUnit
 @Tag(name = "User", description = "User API")
 class UserController(
     private val userService: UserService,
-    private val requestContext: RequestContext
+    private val requestContext: RequestContext,
+    private val socialLinkService: SocialLinkService,
+    private val socialLinkCookieRepository: SocialLinkCookieRepository,
 ) {
 
     @PostMapping("/signup")
@@ -50,6 +56,31 @@ class UserController(
     fun getMyPage(): RsData<MyPageResponse> {
         val actor = requestContext.actor ?: throw IllegalStateException("Actor must not be null")
         return RsData("200-1", "마이페이지 조회 성공", userService.getMyPage(actor.id))
+    }
+
+    @GetMapping("/me/social-links")
+    @Operation(summary = "소셜 계정 연동 상태 조회")
+    fun getSocialLinkStatus(): RsData<SocialLinkStatusResponse> {
+        val actor = requestContext.actor ?: throw IllegalStateException("Actor must not be null")
+        return RsData(
+            "200-1",
+            "소셜 계정 연동 상태 조회 성공",
+            socialLinkService.getStatus(actor.id),
+        )
+    }
+
+    @PostMapping("/me/social-links/{provider}")
+    @Operation(summary = "소셜 계정 연동 시작")
+    fun startSocialLink(@PathVariable provider: String): RsData<SocialLinkAuthorizationResponse> {
+        val actor = requestContext.actor ?: throw IllegalStateException("Actor must not be null")
+        val result = socialLinkService.start(actor.id, provider)
+        socialLinkCookieRepository.save(result.intentId)
+
+        return RsData(
+            "200-1",
+            "소셜 계정 연동 요청이 생성되었습니다.",
+            SocialLinkAuthorizationResponse(result.authorizationPath)
+        )
     }
 
     @PatchMapping("/me")

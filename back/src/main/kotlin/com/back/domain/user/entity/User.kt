@@ -4,7 +4,6 @@ import com.back.domain.user.constant.LoginType
 
 import com.back.global.exception.ErrorCode
 import com.back.global.exception.ServiceException
-import com.back.global.jpa.converter.EncryptedStringConverter
 import com.back.global.jpa.entity.BaseEntity
 import jakarta.persistence.*
 import java.time.LocalDate
@@ -21,8 +20,6 @@ class User(
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     val loginType: LoginType,
-
-    oauthRefreshToken: String? = null
 ) : BaseEntity() {
 
     @Column(name = "id", nullable = false, unique = true)
@@ -39,11 +36,6 @@ class User(
 
     @Column(nullable = false)
     var name: String = name
-        protected set
-
-    @Column(columnDefinition = "TEXT")
-    @Convert(converter = EncryptedStringConverter::class)
-    var oauthRefreshToken: String? = oauthRefreshToken
         protected set
 
     @Id
@@ -75,12 +67,7 @@ class User(
         this.deletedAt = LocalDate.now()
         this.loginId = uuid
         this.email = "$uuid@deleted.local"
-        this.oauthRefreshToken = null
         this.profileImgUrl = null
-    }
-
-    fun updateOauthRefreshToken(oauthRefreshToken: String?) {
-        this.oauthRefreshToken = oauthRefreshToken
     }
 
     fun updateName(name: String) {
@@ -89,10 +76,6 @@ class User(
             throw ServiceException(ErrorCode.USER_NAME_INVALID)
         }
         this.name = trimmed
-    }
-
-    fun updateEmail(email: String) {
-        this.email = email
     }
 
     fun updatePassword(password: String) {
@@ -107,11 +90,7 @@ class User(
 
         fun create(
             loginId: String, email: String, password: String, name: String, loginType: LoginType
-        ): User = User(loginId, email, password, name, loginType, null)
+        ): User = User(loginId, email, password, name, loginType)
 
-        fun createOAuth(
-            loginId: String, email: String, password: String, name: String,
-            loginType: LoginType, oauthRefreshToken: String?
-        ): User = User(loginId, email, password, name, loginType, oauthRefreshToken)
     }
 }

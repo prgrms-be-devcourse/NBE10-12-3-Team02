@@ -2,6 +2,7 @@ package com.back.domain.auth.controller
 
 import com.back.domain.auth.dto.TokenResponse
 import com.back.domain.auth.service.AuthService
+import com.back.domain.auth.repository.SocialLinkCookieRepository
 import com.back.domain.user.constant.LoginType
 import com.back.domain.user.entity.User
 import com.back.domain.user.repository.UserRepository
@@ -54,6 +55,9 @@ class OAuth2LoginIntegrationTest {
 
     @MockitoBean
     private lateinit var authService: AuthService
+
+    @MockitoBean
+    private lateinit var socialLinkCookieRepository: SocialLinkCookieRepository
 
     @Test
     @DisplayName("카카오 OAuth2 로그인 진입 시 카카오 인증 서버로 redirect")
