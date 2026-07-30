@@ -11,6 +11,22 @@ resource "aws_security_group" "app" {
     cidr_blocks = [var.app_allowed_cidr]
   }
 
+  ingress {
+    description = "HTTP (Lets Encrypt HTTP-01 challenge + redirect to HTTPS)"
+    from_port   = 80
+    to_port     = 80
+    protocol    = "tcp"
+    cidr_blocks = [var.app_allowed_cidr]
+  }
+
+  ingress {
+    description = "HTTPS (nginx reverse proxy to app:8080)"
+    from_port   = 443
+    to_port     = 443
+    protocol    = "tcp"
+    cidr_blocks = [var.app_allowed_cidr]
+  }
+
   egress {
     description = "Allow all outbound (ECR, RDS, SSM, package repos, etc.)"
     from_port   = 0
