@@ -75,7 +75,7 @@ export default function BoardWritePage() {
         {concerts.length === 0 ? (
           <div className="bg-white rounded-2xl shadow-sm p-10 text-center">
             <p className="text-gray-500 text-sm leading-relaxed">
-              6개월 이내 관람하고 아직 리뷰를 안 쓴 콘서트가 없습니다.
+              최근 6개월 이내에 관람한 콘서트가 없습니다.
             </p>
             <button
               onClick={() => router.push("/board")}

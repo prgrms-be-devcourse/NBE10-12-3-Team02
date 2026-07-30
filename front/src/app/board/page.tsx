@@ -52,7 +52,11 @@ export default function BoardPage() {
             {reviews.map((review) => (
               <li
                 key={review.reviewId}
-                onClick={() => router.push(`/concerts/${review.concertId}`)}
+                onClick={() =>
+                  router.push(
+                    `/concerts/${review.concertId}${review.isMine ? "#reviews" : ""}`
+                  )
+                }
                 className="bg-white rounded-2xl shadow-sm border border-gray-100 flex gap-4 p-4 cursor-pointer hover:shadow-md transition"
               >
                 <div className="shrink-0 w-16 h-20 rounded-lg overflow-hidden bg-gradient-to-br from-blue-100 to-indigo-200 flex items-center justify-center">
@@ -68,9 +72,16 @@ export default function BoardPage() {
                 </div>
 
                 <div className="flex-1 min-w-0">
-                  <p className="text-xs text-blue-600 font-semibold truncate mb-0.5">
-                    {review.concertName}
-                  </p>
+                  <div className="flex items-center gap-2 mb-0.5">
+                    <p className="text-xs text-blue-600 font-semibold truncate">
+                      {review.concertName}
+                    </p>
+                    {review.isMine && (
+                      <span className="shrink-0 text-[10px] font-semibold text-blue-600 bg-blue-50 border border-blue-200 rounded px-1.5 py-0.5">
+                        내 글
+                      </span>
+                    )}
+                  </div>
                   <p className="font-semibold text-gray-800 truncate">{review.title}</p>
                   <p className="text-sm text-gray-500 mt-1 line-clamp-2 leading-relaxed">
                     {review.content}

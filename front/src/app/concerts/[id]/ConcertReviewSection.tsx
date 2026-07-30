@@ -103,7 +103,7 @@ export default function ConcertReviewSection({ concertId }: { concertId: number 
   };
 
   return (
-    <section className="mt-10 bg-white rounded-2xl shadow-sm overflow-hidden">
+    <section id="reviews" className="mt-10 bg-white rounded-2xl shadow-sm overflow-hidden">
       <div className="p-8">
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-xl font-bold text-gray-800">

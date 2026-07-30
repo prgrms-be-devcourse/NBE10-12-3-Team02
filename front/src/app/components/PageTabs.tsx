@@ -12,7 +12,7 @@ export default function PageTabs() {
   const pathname = usePathname();
 
   return (
-    <div className="sticky top-16 z-40 bg-white border-b border-gray-100">
+    <div className="bg-white border-b border-gray-100">
       <div className="max-w-5xl mx-auto px-6 flex gap-0">
         {TABS.map(({ label, href }) => {
           const isActive =
