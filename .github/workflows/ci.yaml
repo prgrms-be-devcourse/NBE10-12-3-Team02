@@ -1,6 +1,6 @@
 name: CI
 
-# - feat/**, fix/**, refactor/** 브랜치 push -> 바로 피드백
+# - feat/**, fix/**, refactor/**, test/** 브랜치 push -> 바로 피드백
 # - main 대상 PR                        -> 머지 전 최종 검증 게이트
 # - main push 제외                       -> main push는 CD(배포) 스크립트가 담당
 on:
@@ -9,6 +9,7 @@ on:
       - 'feat/**'
       - 'fix/**'
       - 'refactor/**'
+      - 'test/**'
   pull_request:
     branches:
       - 'main'
