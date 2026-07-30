@@ -61,14 +61,14 @@ class RedissonVsLettuceBenchmarkTest {
                         }
                     }
                 }
-                spinLatch.await()
+                spinLatch.await(30, TimeUnit.SECONDS) // 안전 타임아웃 30초 설정
             }
         }
         val spinTps = "%.2f".format((taskCount.toDouble() / spinTime) * 1000)
 
         println("\n[1] StringRedisTemplate (Lettuce SETNX 스핀락)")
         println("- 소요시간: ${spinTime}ms")
-        println("- 총 스핀락 재시도 횟수 (Polling Query Count): ${spinRetryCount.get()} 회")
+        println("- 총 스핀락 추가 폴링 쿼리 횟수 (Redis Polling Retries): ${spinRetryCount.get()} 회")
         println("- 초당 처리량 (TPS): $spinTps TPS")
 
         // 2. Redisson Pub/Sub Distributed Lock
@@ -95,7 +95,7 @@ class RedissonVsLettuceBenchmarkTest {
                         }
                     }
                 }
-                redissonLatch.await()
+                redissonLatch.await(30, TimeUnit.SECONDS) // 안전 타임아웃 30초 설정
             }
         }
         val redissonTps = "%.2f".format((taskCount.toDouble() / redissonTime) * 1000)
@@ -103,12 +103,13 @@ class RedissonVsLettuceBenchmarkTest {
 
         println("\n[2] Redisson Pub/Sub 분산 락")
         println("- 소요시간: ${redissonTime}ms")
-        println("- 총 락 획득 시도 횟수 (Acquire Count): ${redissonAcquireCount.get()} 회")
+        println("- 총 락 획득 시도 횟수 (Acquire Attempts): ${redissonAcquireCount.get()} 회")
+        println("  (※ 락 미획득 시 지속적인 폴링 쿼리 없이 Pub/Sub 채널 이벤트를 대기하여 추가 레디스 쿼리 0회)")
         println("- 초당 처리량 (TPS): $redissonTps TPS")
 
         println("\n==================================================")
         println("[최종 비교 요약]")
-        println("1. StringRedisTemplate 스핀락 레디스 쿼리 시도 횟수: ${spinRetryCount.get()}회")
+        println("1. StringRedisTemplate 스핀락 레디스 폴링 쿼리 횟수: ${spinRetryCount.get()}회")
         println("2. Redisson Pub/Sub 락 시도 횟수: ${redissonAcquireCount.get()}회")
         println("➔ Redisson Pub/Sub 락 도입으로 레디스 쿼리 및 네트워크 Overhead 약 ${queryReductionRatio}배 감축!")
         println("==================================================")
