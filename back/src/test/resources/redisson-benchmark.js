@@ -4,8 +4,7 @@ import { check, sleep } from 'k6';
 /**
  * Redisson Pub/Sub 분산 락 실서버 고동시성 k6 부하 테스트 스크립트
  *
- * [📌 추후 부하 테스트 재실행 시 사전 작업 가이드]
- * 이 스크립트로 백엔드 부하 테스트를 재실행할 경우, 아래 항목을 순서대로 확인/조정해야 합니다.
+ * [부하 테스트 재실행 시 가이드]
  *
  * 1. QueueInterceptor (대기열 검증) 임시 비활성화:
  *    - 대상 파일: back/src/main/kotlin/com/back/global/config/WebConfig.kt
