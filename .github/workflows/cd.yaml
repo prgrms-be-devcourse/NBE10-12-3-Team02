@@ -89,19 +89,16 @@ jobs:
         id: ecr
         uses: aws-actions/amazon-ecr-login@v2
 
-      # secrets.DOT_ENV: .env 파일 전체를 base64로 인코딩한 문자열이어야 함
-      # (반드시 줄바꿈 없이 한 줄로 인코딩할 것: base64 -w0 .env)
-      # ⚠️ SSM RunCommand 파라미터는 SSM 명령 이력(콘솔/API)에 그대로 남으므로,
-      #    ssm:ListCommands 등의 권한을 가진 주체에게는 .env 내용이 노출될 수 있음
+      # EC2가 SSM Parameter Store(/nbe10-12-3-team02/prod/env, SecureString)에서
+      # 직접 .env를 받아오도록 함 - 비밀값이 GitHub Actions 워크플로/SSM 커맨드
+      # 이력을 거치지 않고 EC2 인스턴스 role 권한으로만 조회됨
       - name: Sync .env to EC2 via SSM
         id: sync-env
-        env:
-          DOT_ENV_B64: ${{ secrets.DOT_ENV }}
         run: |
-          COMMANDS=$(jq -n --arg env_b64 "$DOT_ENV_B64" '[
+          COMMANDS=$(jq -n '[
             "set -e",
             "mkdir -p /home/ec2-user/app",
-            ("echo " + $env_b64 + " | base64 -d > /home/ec2-user/app/.env"),
+            "aws ssm get-parameter --name \"/nbe10-12-3-team02/prod/env\" --with-decryption --query \"Parameter.Value\" --output text > /home/ec2-user/app/.env",
             "chmod 600 /home/ec2-user/app/.env",
             "chown ec2-user:ec2-user /home/ec2-user/app/.env"
           ]')
