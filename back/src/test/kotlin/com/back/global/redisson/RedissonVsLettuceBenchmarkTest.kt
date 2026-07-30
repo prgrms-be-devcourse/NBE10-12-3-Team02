@@ -15,7 +15,7 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicLong
 import kotlin.system.measureTimeMillis
 
-@SpringBootTest
+@SpringBootTest(properties = ["spring.jpa.show-sql=false", "spring.jpa.properties.hibernate.format_sql=false", "logging.level.org.hibernate.SQL=OFF"])
 @Import(RedisTestConfig::class)
 class RedissonVsLettuceBenchmarkTest {
 
