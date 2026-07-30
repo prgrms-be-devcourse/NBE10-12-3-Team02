@@ -8,7 +8,7 @@ import { Eye, EyeOff } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 interface ConfirmResponseData {
   verificationToken: string;
@@ -33,6 +33,29 @@ export default function SignupPage() {
   const [isEmailVerified, setIsEmailVerified] = useState(false);
   const [isSendingEmail, setIsSendingEmail] = useState(false);
   const [isVerifyingCode, setIsVerifyingCode] = useState(false);
+  const [timeLeft, setTimeLeft] = useState(300); // 5분 = 300초
+
+  useEffect(() => {
+    if (!isEmailSent || isEmailVerified) return;
+
+    const timer = setInterval(() => {
+      setTimeLeft((prev) => {
+        if (prev <= 1) {
+          clearInterval(timer);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [isEmailSent, isEmailVerified]);
+
+  const formatTime = (seconds: number) => {
+    const min = Math.floor(seconds / 60);
+    const sec = seconds % 60;
+    return `${String(min).padStart(2, "0")}:${String(sec).padStart(2, "0")}`;
+  };
 
   const handleLoginIdChange = (value: string) => {
     setLoginId(value);
@@ -45,6 +68,7 @@ export default function SignupPage() {
     setIsEmailVerified(false);
     setVerificationCode("");
     setVerificationToken("");
+    setTimeLeft(300);
   };
 
   const handleCheckId = async () => {
@@ -82,6 +106,8 @@ export default function SignupPage() {
         body: JSON.stringify({ email }),
       });
       showSuccess("이메일로 인증번호가 발송되었습니다.");
+      setTimeLeft(300);
+      setVerificationCode("");
       setIsEmailSent(true);
       setIsEmailVerified(false);
     } catch (e) {
@@ -94,6 +120,12 @@ export default function SignupPage() {
   };
 
   const handleConfirmEmailVerification = async () => {
+    if (timeLeft === 0) {
+      showAlert(
+        "인증번호 유효시간(5분)이 만료되었습니다. 재발송 버튼을 클릭해 주세요.",
+      );
+      return;
+    }
     if (verificationCode.trim().length !== 6) {
       showAlert("6자리 인증번호를 정확히 입력해주세요.");
       return;
@@ -245,25 +277,44 @@ export default function SignupPage() {
           </button>
         </div>
 
-        {/* 인증번호 6자리 입력 + 인증확인 버튼 */}
+        {/* 인증번호 6자리 입력 + 인증확인 버튼 (5분 카운트다운 타이머 포함) */}
         {isEmailSent && !isEmailVerified && (
-          <div className="flex gap-2 mb-3">
-            <input
-              type="text"
-              placeholder="인증번호 6자리"
-              maxLength={6}
-              value={verificationCode}
-              onChange={(e) => setVerificationCode(e.target.value)}
-              className="flex-1 p-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
-            />
-            <button
-              type="button"
-              onClick={handleConfirmEmailVerification}
-              disabled={isVerifyingCode}
-              className="px-4 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-semibold whitespace-nowrap transition disabled:opacity-50"
-            >
-              {isVerifyingCode ? "확인 중..." : "인증확인"}
-            </button>
+          <div className="mb-3">
+            <div className="flex gap-2">
+              <div className="relative flex-1">
+                <input
+                  type="text"
+                  placeholder="인증번호 6자리"
+                  maxLength={6}
+                  value={verificationCode}
+                  onChange={(e) => setVerificationCode(e.target.value)}
+                  disabled={timeLeft === 0}
+                  className="w-full p-3 pr-16 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 disabled:bg-gray-100 disabled:text-gray-400"
+                />
+                <span
+                  className={`absolute right-3 top-1/2 -translate-y-1/2 text-xs font-semibold ${
+                    timeLeft <= 60
+                      ? "text-red-500 animate-pulse"
+                      : "text-gray-500"
+                  }`}
+                >
+                  {formatTime(timeLeft)}
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={handleConfirmEmailVerification}
+                disabled={isVerifyingCode || timeLeft === 0}
+                className="px-4 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-semibold whitespace-nowrap transition disabled:opacity-50"
+              >
+                {isVerifyingCode ? "확인 중..." : "인증확인"}
+              </button>
+            </div>
+            {timeLeft === 0 && (
+              <p className="mt-1 text-xs font-medium text-red-500">
+                인증번호 유효시간이 만료되었습니다. 재발송 버튼을 클릭해 주세요.
+              </p>
+            )}
           </div>
         )}
 

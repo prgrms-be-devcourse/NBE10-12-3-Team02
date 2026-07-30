@@ -18,7 +18,7 @@ import org.slf4j.LoggerFactory
 import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Component
 import org.springframework.transaction.annotation.Transactional
-import java.util.UUID
+import java.util.*
 
 @Component
 class SeatOccupyManager(
@@ -90,7 +90,6 @@ class SeatOccupyManager(
         val seat = scheduleSeatRepository.findBySchedule_ScheduleIdAndSeatNumber(scheduleId, seatNumber)
         seat?.releaseToAvailable()
 
-        // 트랜잭션 커밋 후 SSE 브로드캐스트 (SeatStatusSseBroadcaster.onSeatReleased)
         eventPublisher.publishEvent(SeatReleasedEvent(concertId, scheduleId, seatNumber))
     }
 
