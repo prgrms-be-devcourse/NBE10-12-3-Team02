@@ -1,12 +1,12 @@
 services:
-  redis-master:
+  redis-primary:
     image: redis:7.2-alpine
-    container_name: redis-master
+    container_name: redis-primary
     ports:
       - "6379:6379"
-    command: redis-server --appendonly yes --replica-announce-ip redis-master --requirepass ""
+    command: redis-server --appendonly yes --replica-announce-ip redis-primary --requirepass ""
     volumes:
-      - redis-master-data:/data
+      - redis-primary-data:/data
     labels:
       - "org.springframework.boot.ignore=true"
     networks:
@@ -17,13 +17,13 @@ services:
     container_name: redis-replica
     ports:
       - "6380:6379"
-    command: redis-server --appendonly yes --replicaof redis-master 6379 --replica-announce-ip redis-replica --requirepass "" --masterauth ""
+    command: redis-server --appendonly yes --replicaof redis-primary 6379 --replica-announce-ip redis-replica --requirepass "" --masterauth ""
     volumes:
       - redis-replica-data:/data
     labels:
       - "org.springframework.boot.ignore=true"
     depends_on:
-      - redis-master
+      - redis-primary
     networks:
       - redis-net
 
@@ -38,7 +38,7 @@ services:
       - |
         cat <<EOF > /tmp/sentinel.conf
         port 26379
-        sentinel monitor mymaster redis-master 6379 2
+        sentinel monitor mymaster redis-primary 6379 2
         sentinel down-after-milliseconds mymaster 5000
         sentinel failover-timeout mymaster 10000
         sentinel parallel-syncs mymaster 1
@@ -50,7 +50,7 @@ services:
     labels:
       - "org.springframework.boot.ignore=true"
     depends_on:
-      - redis-master
+      - redis-primary
       - redis-replica
     networks:
       - redis-net
@@ -66,7 +66,7 @@ services:
       - |
         cat <<EOF > /tmp/sentinel.conf
         port 26379
-        sentinel monitor mymaster redis-master 6379 2
+        sentinel monitor mymaster redis-primary 6379 2
         sentinel down-after-milliseconds mymaster 5000
         sentinel failover-timeout mymaster 10000
         sentinel parallel-syncs mymaster 1
@@ -78,7 +78,7 @@ services:
     labels:
       - "org.springframework.boot.ignore=true"
     depends_on:
-      - redis-master
+      - redis-primary
       - redis-replica
     networks:
       - redis-net
@@ -94,7 +94,7 @@ services:
       - |
         cat <<EOF > /tmp/sentinel.conf
         port 26379
-        sentinel monitor mymaster redis-master 6379 2
+        sentinel monitor mymaster redis-primary 6379 2
         sentinel down-after-milliseconds mymaster 5000
         sentinel failover-timeout mymaster 10000
         sentinel parallel-syncs mymaster 1
@@ -106,7 +106,7 @@ services:
     labels:
       - "org.springframework.boot.ignore=true"
     depends_on:
-      - redis-master
+      - redis-primary
       - redis-replica
     networks:
       - redis-net
@@ -116,5 +116,5 @@ networks:
     driver: bridge
 
 volumes:
-  redis-master-data:
+  redis-primary-data:
   redis-replica-data:
