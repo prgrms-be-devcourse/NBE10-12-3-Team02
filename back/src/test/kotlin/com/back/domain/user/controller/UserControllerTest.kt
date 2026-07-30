@@ -2,6 +2,7 @@ package com.back.domain.user.controller
 
 import com.back.domain.user.constant.LoginType
 import com.back.domain.auth.service.EmailVerificationService
+import com.back.domain.auth.service.SocialLinkQueryService
 import com.back.domain.user.entity.User
 import com.back.domain.user.repository.UserRepository
 import com.back.global.RedisTestConfig
@@ -9,6 +10,8 @@ import com.back.global.security.SecurityUser
 import com.back.global.security.jwt.JwtTokenProvider
 import com.back.global.security.jwt.payload.AccessTokenPayload
 import com.back.global.security.jwt.repository.BlacklistRepository
+import com.back.global.exception.ErrorCode
+import com.back.global.exception.ServiceException
 import com.fasterxml.jackson.databind.ObjectMapper
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
@@ -57,6 +60,9 @@ class UserControllerTest @Autowired constructor(
 
     @MockitoBean
     private lateinit var emailVerificationService: EmailVerificationService
+
+    @MockitoBean
+    private lateinit var socialLinkQueryService: SocialLinkQueryService
 
     @BeforeEach
     fun setUp() {
@@ -482,7 +488,7 @@ class UserControllerTest @Autowired constructor(
     @DisplayName("소셜 계정 연동 시작 시 일회성 쿠키를 발급하고 Provider 인증 경로로 이동한다")
     fun t23() {
         mockMvc.perform(
-            get("/api/v1/users/me/social-links/kakao")
+            post("/api/v1/users/me/social-links/kakao")
                 .with(user(securityUser))
         )
             .andExpect(status().isOk)
@@ -497,7 +503,7 @@ class UserControllerTest @Autowired constructor(
     @DisplayName("지원하지 않는 Provider로 소셜 계정 연동을 시작할 수 없다")
     fun t24() {
         mockMvc.perform(
-            get("/api/v1/users/me/social-links/unsupported")
+            post("/api/v1/users/me/social-links/unsupported")
                 .with(user(securityUser))
         )
             .andExpect(status().isBadRequest)
@@ -507,6 +513,9 @@ class UserControllerTest @Autowired constructor(
     @Test
     @DisplayName("연결된 소셜 계정이 없으면 연동 해제를 거절한다")
     fun t25() {
+        `when`(socialLinkQueryService.getUnlinkTarget(userEntity.userId!!))
+            .thenThrow(ServiceException(ErrorCode.OAUTH_ACCOUNT_NOT_LINKED))
+
         mockMvc.perform(
             delete("/api/v1/users/me/social-links")
                 .with(user(securityUser))

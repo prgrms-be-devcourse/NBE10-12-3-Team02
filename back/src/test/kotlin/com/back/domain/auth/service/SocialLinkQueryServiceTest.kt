@@ -1,5 +1,7 @@
 package com.back.domain.auth.service
 
+import com.back.domain.auth.entity.UserSocialAuth
+import com.back.domain.auth.repository.UserSocialAuthRepository
 import com.back.domain.user.constant.LoginType
 import com.back.domain.user.entity.User
 import com.back.domain.user.repository.UserRepository
@@ -14,15 +16,17 @@ import org.mockito.Mockito.`when`
 
 class SocialLinkQueryServiceTest {
     private val userRepository = mock(UserRepository::class.java)
-    private val service = SocialLinkQueryService(userRepository)
+    private val userSocialAuthRepository = mock(UserSocialAuthRepository::class.java)
+    private val service = SocialLinkQueryService(userRepository, userSocialAuthRepository)
 
     @Test
     @DisplayName("일반 회원의 현재 소셜 연동 정보를 해제 대상 스냅샷으로 반환한다")
     fun t1() {
-        val user = normalUser().apply {
-            linkSocialAccount(LoginType.NAVER, PROVIDER_ID, OAUTH_REFRESH_TOKEN)
-        }
+        val user = normalUser()
         `when`(userRepository.findByUserIdAndDeletedAtIsNull(USER_ID)).thenReturn(user)
+        `when`(userSocialAuthRepository.findByUserUserId(USER_ID)).thenReturn(
+            UserSocialAuth(user, LoginType.NAVER, PROVIDER_ID, OAUTH_REFRESH_TOKEN),
+        )
 
         val result = service.getUnlinkTarget(USER_ID)
 
@@ -35,14 +39,12 @@ class SocialLinkQueryServiceTest {
     @Test
     @DisplayName("소셜 로그인으로 가입한 회원은 유일한 로그인 수단을 해제할 수 없다")
     fun t2() {
-        val user = User.createOAuth(
+        val user = User.create(
             loginId = "NAVER_$PROVIDER_ID",
             email = EMAIL,
             password = "random-encoded-password",
             name = "네이버회원",
             loginType = LoginType.NAVER,
-            providerId = PROVIDER_ID,
-            oauthRefreshToken = OAUTH_REFRESH_TOKEN,
         )
         `when`(userRepository.findByUserIdAndDeletedAtIsNull(USER_ID)).thenReturn(user)
 

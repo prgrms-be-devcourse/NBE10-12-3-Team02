@@ -1,8 +1,10 @@
 package com.back.domain.auth.service
 
 import com.back.domain.auth.dto.SocialUnlinkTarget
+import com.back.domain.auth.entity.UserSocialAuth
 import com.back.domain.auth.repository.SocialLinkIntent
 import com.back.domain.auth.repository.SocialLinkIntentRepository
+import com.back.domain.auth.repository.UserSocialAuthRepository
 import com.back.domain.user.constant.LoginType
 import com.back.domain.user.entity.User
 import com.back.domain.user.repository.UserRepository
@@ -23,12 +25,14 @@ import java.time.Duration
 
 class SocialLinkServiceTest {
     private val userRepository = mock(UserRepository::class.java)
+    private val userSocialAuthRepository = mock(UserSocialAuthRepository::class.java)
     private val intentRepository = mock(SocialLinkIntentRepository::class.java)
     private val unlinkService = mock(OAuthUnlinkService::class.java)
     private val socialLinkQueryService = mock(SocialLinkQueryService::class.java)
     private val socialLinkCommandService = mock(SocialLinkCommandService::class.java)
     private val service = SocialLinkService(
         userRepository = userRepository,
+        userSocialAuthRepository = userSocialAuthRepository,
         socialLinkIntentRepository = intentRepository,
         oAuthUnlinkService = unlinkService,
         socialLinkQueryService = socialLinkQueryService,
@@ -57,10 +61,8 @@ class SocialLinkServiceTest {
     @Test
     @DisplayName("이미 소셜 계정이 연결된 회원은 추가 연동을 시작할 수 없다")
     fun t2() {
-        val user = normalUser().apply {
-            linkSocialAccount(LoginType.KAKAO, "kakao-id", null)
-        }
-        `when`(userRepository.findByUserIdAndDeletedAtIsNull(USER_ID)).thenReturn(user)
+        `when`(userRepository.findByUserIdAndDeletedAtIsNull(USER_ID)).thenReturn(normalUser())
+        `when`(userSocialAuthRepository.existsByUserUserId(USER_ID)).thenReturn(true)
 
         assertThatThrownBy { service.start(USER_ID, "google") }
             .isInstanceOfSatisfying(ServiceException::class.java) {
@@ -77,12 +79,16 @@ class SocialLinkServiceTest {
             .thenReturn(SocialLinkIntent(USER_ID, LoginType.GOOGLE))
         `when`(userRepository.findByUserIdAndDeletedAtIsNull(USER_ID)).thenReturn(user)
         `when`(
-            userRepository.existsBySocialProviderAndSocialProviderIdAndDeletedAtIsNull(
+            userSocialAuthRepository.existsByProviderAndProviderId(
                 LoginType.GOOGLE,
                 PROVIDER_ID,
             ),
         ).thenReturn(false)
-        `when`(userRepository.saveAndFlush(user)).thenReturn(user)
+        var savedSocialAuth: UserSocialAuth? = null
+        `when`(userSocialAuthRepository.saveAndFlush(org.mockito.ArgumentMatchers.any(UserSocialAuth::class.java)))
+            .thenAnswer {
+                (it.arguments[0] as UserSocialAuth).also { auth -> savedSocialAuth = auth }
+            }
 
         val result = service.complete(
             intentId = INTENT_ID,
@@ -93,9 +99,9 @@ class SocialLinkServiceTest {
 
         assertThat(result).isSameAs(user)
         assertThat(user.loginType).isEqualTo(LoginType.NORMAL)
-        assertThat(user.socialProvider).isEqualTo(LoginType.GOOGLE)
-        assertThat(user.socialProviderId).isEqualTo(PROVIDER_ID)
-        assertThat(user.oauthRefreshToken).isEqualTo(OAUTH_REFRESH_TOKEN)
+        assertThat(savedSocialAuth?.provider).isEqualTo(LoginType.GOOGLE)
+        assertThat(savedSocialAuth?.providerId).isEqualTo(PROVIDER_ID)
+        assertThat(savedSocialAuth?.oauthRefreshToken).isEqualTo(OAUTH_REFRESH_TOKEN)
     }
 
     @Test
@@ -141,7 +147,7 @@ class SocialLinkServiceTest {
             .thenReturn(SocialLinkIntent(USER_ID, LoginType.GOOGLE))
         `when`(userRepository.findByUserIdAndDeletedAtIsNull(USER_ID)).thenReturn(normalUser())
         `when`(
-            userRepository.existsBySocialProviderAndSocialProviderIdAndDeletedAtIsNull(
+            userSocialAuthRepository.existsByProviderAndProviderId(
                 LoginType.GOOGLE,
                 PROVIDER_ID,
             ),

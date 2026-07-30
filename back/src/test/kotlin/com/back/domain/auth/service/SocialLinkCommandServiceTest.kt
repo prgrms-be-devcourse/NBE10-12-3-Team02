@@ -1,8 +1,8 @@
 package com.back.domain.auth.service
 
 import com.back.domain.auth.dto.SocialUnlinkTarget
+import com.back.domain.auth.repository.UserSocialAuthRepository
 import com.back.domain.user.constant.LoginType
-import com.back.domain.user.repository.UserRepository
 import com.back.global.exception.ErrorCode
 import com.back.global.exception.ServiceException
 import org.assertj.core.api.Assertions.assertThat
@@ -14,15 +14,15 @@ import org.mockito.Mockito.verify
 import org.mockito.Mockito.`when`
 
 class SocialLinkCommandServiceTest {
-    private val userRepository = mock(UserRepository::class.java)
-    private val service = SocialLinkCommandService(userRepository)
+    private val userSocialAuthRepository = mock(UserSocialAuthRepository::class.java)
+    private val service = SocialLinkCommandService(userSocialAuthRepository)
 
     @Test
     @DisplayName("조회 시점과 같은 소셜 계정이 연결되어 있으면 내부 연동 정보를 제거한다")
     fun t1() {
         val target = unlinkTarget()
         `when`(
-            userRepository.unlinkSocialAccountIfMatches(
+            userSocialAuthRepository.deleteIfMatches(
                 USER_ID,
                 LoginType.NAVER,
                 PROVIDER_ID,
@@ -31,7 +31,7 @@ class SocialLinkCommandServiceTest {
 
         service.completeUnlink(target)
 
-        verify(userRepository).unlinkSocialAccountIfMatches(
+        verify(userSocialAuthRepository).deleteIfMatches(
             USER_ID,
             LoginType.NAVER,
             PROVIDER_ID,
@@ -43,7 +43,7 @@ class SocialLinkCommandServiceTest {
     fun t2() {
         val target = unlinkTarget()
         `when`(
-            userRepository.unlinkSocialAccountIfMatches(
+            userSocialAuthRepository.deleteIfMatches(
                 USER_ID,
                 LoginType.NAVER,
                 PROVIDER_ID,

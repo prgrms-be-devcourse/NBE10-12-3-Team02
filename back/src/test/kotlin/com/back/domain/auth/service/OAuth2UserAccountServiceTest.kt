@@ -1,5 +1,7 @@
 package com.back.domain.auth.service
 
+import com.back.domain.auth.entity.UserSocialAuth
+import com.back.domain.auth.repository.UserSocialAuthRepository
 import com.back.domain.user.constant.LoginType
 import com.back.domain.user.entity.User
 import com.back.domain.user.repository.UserRepository
@@ -18,19 +20,21 @@ import org.springframework.security.oauth2.core.OAuth2AuthenticationException
 
 class OAuth2UserAccountServiceTest {
     private val userRepository = mock(UserRepository::class.java)
+    private val userSocialAuthRepository = mock(UserSocialAuthRepository::class.java)
     private val passwordEncoder = mock(PasswordEncoder::class.java)
-    private val service = OAuth2UserAccountService(userRepository, passwordEncoder)
+    private val service = OAuth2UserAccountService(
+        userRepository,
+        userSocialAuthRepository,
+        passwordEncoder,
+    )
 
     @Test
     @DisplayName("Provider 계정이 연결된 기존 회원을 조회한다")
     fun t1() {
         val existingUser = oauthUser()
-        `when`(
-            userRepository.findBySocialProviderAndSocialProviderIdAndDeletedAtIsNull(
-                LoginType.GOOGLE,
-                PROVIDER_ID,
-            ),
-        ).thenReturn(existingUser)
+        val socialAuth = socialAuth(existingUser)
+        `when`(userSocialAuthRepository.findByProviderAndProviderId(LoginType.GOOGLE, PROVIDER_ID))
+            .thenReturn(socialAuth)
 
         val result = service.getOrCreateUser(userInfo(), LoginType.GOOGLE, "")
 
@@ -48,14 +52,12 @@ class OAuth2UserAccountServiceTest {
             name = NAME,
             loginType = LoginType.GOOGLE,
         )
-        `when`(
-            userRepository.findBySocialProviderAndSocialProviderIdAndDeletedAtIsNull(
-                LoginType.GOOGLE,
-                PROVIDER_ID,
-            ),
-        ).thenReturn(null)
+        `when`(userSocialAuthRepository.findByProviderAndProviderId(LoginType.GOOGLE, PROVIDER_ID))
+            .thenReturn(null)
         `when`(userRepository.findByLoginIdAndDeletedAtIsNull("GOOGLE_$PROVIDER_ID"))
             .thenReturn(existingUser)
+        `when`(userSocialAuthRepository.saveAndFlush(org.mockito.ArgumentMatchers.any(UserSocialAuth::class.java)))
+            .thenAnswer { it.arguments[0] as UserSocialAuth }
 
         val result = service.getOrCreateUser(
             userInfo(),
@@ -64,26 +66,27 @@ class OAuth2UserAccountServiceTest {
         )
 
         assertThat(result).isSameAs(existingUser)
-        assertThat(existingUser.socialProvider).isEqualTo(LoginType.GOOGLE)
-        assertThat(existingUser.socialProviderId).isEqualTo(PROVIDER_ID)
-        assertThat(existingUser.oauthRefreshToken).isEqualTo(OAUTH_REFRESH_TOKEN)
+        verify(userSocialAuthRepository).saveAndFlush(
+            org.mockito.ArgumentMatchers.any(UserSocialAuth::class.java),
+        )
     }
 
     @Test
     @DisplayName("기존 회원이 없으면 신규 OAuth 회원을 생성한다")
     fun t3() {
-        `when`(
-            userRepository.findBySocialProviderAndSocialProviderIdAndDeletedAtIsNull(
-                LoginType.GOOGLE,
-                PROVIDER_ID,
-            ),
-        ).thenReturn(null)
+        `when`(userSocialAuthRepository.findByProviderAndProviderId(LoginType.GOOGLE, PROVIDER_ID))
+            .thenReturn(null)
         `when`(userRepository.findByLoginIdAndDeletedAtIsNull("GOOGLE_$PROVIDER_ID"))
             .thenReturn(null)
         `when`(userRepository.existsByEmailAndDeletedAtIsNull(EMAIL)).thenReturn(false)
         `when`(passwordEncoder.encode(anyString())).thenReturn("encoded-random-password")
-        `when`(userRepository.save(org.mockito.ArgumentMatchers.any(User::class.java)))
+        `when`(userRepository.saveAndFlush(org.mockito.ArgumentMatchers.any(User::class.java)))
             .thenAnswer { it.arguments[0] as User }
+        var savedSocialAuth: UserSocialAuth? = null
+        `when`(userSocialAuthRepository.saveAndFlush(org.mockito.ArgumentMatchers.any(UserSocialAuth::class.java)))
+            .thenAnswer {
+                (it.arguments[0] as UserSocialAuth).also { auth -> savedSocialAuth = auth }
+            }
 
         val result = service.getOrCreateUser(
             userInfo(),
@@ -93,9 +96,9 @@ class OAuth2UserAccountServiceTest {
 
         assertThat(result.loginId).isEqualTo("GOOGLE_$PROVIDER_ID")
         assertThat(result.loginType).isEqualTo(LoginType.GOOGLE)
-        assertThat(result.socialProvider).isEqualTo(LoginType.GOOGLE)
-        assertThat(result.socialProviderId).isEqualTo(PROVIDER_ID)
-        assertThat(result.oauthRefreshToken).isEqualTo(OAUTH_REFRESH_TOKEN)
+        assertThat(savedSocialAuth?.provider).isEqualTo(LoginType.GOOGLE)
+        assertThat(savedSocialAuth?.providerId).isEqualTo(PROVIDER_ID)
+        assertThat(savedSocialAuth?.oauthRefreshToken).isEqualTo(OAUTH_REFRESH_TOKEN)
     }
 
     @Test
@@ -117,12 +120,8 @@ class OAuth2UserAccountServiceTest {
     @Test
     @DisplayName("신규 OAuth 회원의 이메일이 이미 사용 중이면 가입을 거절한다")
     fun t5() {
-        `when`(
-            userRepository.findBySocialProviderAndSocialProviderIdAndDeletedAtIsNull(
-                LoginType.GOOGLE,
-                PROVIDER_ID,
-            ),
-        ).thenReturn(null)
+        `when`(userSocialAuthRepository.findByProviderAndProviderId(LoginType.GOOGLE, PROVIDER_ID))
+            .thenReturn(null)
         `when`(userRepository.findByLoginIdAndDeletedAtIsNull("GOOGLE_$PROVIDER_ID"))
             .thenReturn(null)
         `when`(userRepository.existsByEmailAndDeletedAtIsNull(EMAIL)).thenReturn(true)
@@ -133,12 +132,18 @@ class OAuth2UserAccountServiceTest {
     }
 
     private fun oauthUser(): User =
-        User.createOAuth(
+        User.create(
             loginId = "GOOGLE_$PROVIDER_ID",
             email = EMAIL,
             password = "encoded-password",
             name = NAME,
             loginType = LoginType.GOOGLE,
+        )
+
+    private fun socialAuth(user: User): UserSocialAuth =
+        UserSocialAuth(
+            user = user,
+            provider = LoginType.GOOGLE,
             providerId = PROVIDER_ID,
             oauthRefreshToken = null,
         )

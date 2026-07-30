@@ -4,22 +4,13 @@ import com.back.domain.user.constant.LoginType
 
 import com.back.global.exception.ErrorCode
 import com.back.global.exception.ServiceException
-import com.back.global.jpa.converter.EncryptedStringConverter
 import com.back.global.jpa.entity.BaseEntity
 import jakarta.persistence.*
 import java.time.LocalDate
 import java.util.UUID
 
 @Entity
-@Table(
-    name = "users",
-    uniqueConstraints = [
-        UniqueConstraint(
-            name = "uk_users_social_account",
-            columnNames = ["social_provider", "social_provider_id"],
-        ),
-    ],
-)
+@Table(name = "users")
 class User(
     loginId: String,
     email: String,
@@ -29,10 +20,6 @@ class User(
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     val loginType: LoginType,
-
-    oauthRefreshToken: String? = null,
-    socialProvider: LoginType? = null,
-    socialProviderId: String? = null,
 ) : BaseEntity() {
 
     @Column(name = "id", nullable = false, unique = true)
@@ -49,20 +36,6 @@ class User(
 
     @Column(nullable = false)
     var name: String = name
-        protected set
-
-    @Column(columnDefinition = "TEXT")
-    @Convert(converter = EncryptedStringConverter::class)
-    var oauthRefreshToken: String? = oauthRefreshToken
-        protected set
-
-    @Enumerated(EnumType.STRING)
-    @Column(name = "social_provider")
-    var socialProvider: LoginType? = socialProvider
-        protected set
-
-    @Column(name = "social_provider_id")
-    var socialProviderId: String? = socialProviderId
         protected set
 
     @Id
@@ -94,36 +67,7 @@ class User(
         this.deletedAt = LocalDate.now()
         this.loginId = uuid
         this.email = "$uuid@deleted.local"
-        this.oauthRefreshToken = null
-        this.socialProvider = null
-        this.socialProviderId = null
         this.profileImgUrl = null
-    }
-
-    fun updateOauthRefreshToken(oauthRefreshToken: String?) {
-        this.oauthRefreshToken = oauthRefreshToken
-    }
-
-    fun linkSocialAccount(
-        provider: LoginType,
-        providerId: String,
-        oauthRefreshToken: String?,
-    ) {
-        require(provider != LoginType.NORMAL) { "NORMAL은 소셜 제공자가 아닙니다." }
-        require(providerId.isNotBlank()) { "소셜 제공자 사용자 ID는 비어 있을 수 없습니다." }
-        require(socialProvider == null && socialProviderId == null) {
-            "이미 소셜 계정이 연결되어 있습니다."
-        }
-
-        this.socialProvider = provider
-        this.socialProviderId = providerId
-        this.oauthRefreshToken = oauthRefreshToken
-    }
-
-    fun unlinkSocialAccount() {
-        this.socialProvider = null
-        this.socialProviderId = null
-        this.oauthRefreshToken = null
     }
 
     fun updateName(name: String) {
@@ -148,18 +92,5 @@ class User(
             loginId: String, email: String, password: String, name: String, loginType: LoginType
         ): User = User(loginId, email, password, name, loginType)
 
-        fun createOAuth(
-            loginId: String, email: String, password: String, name: String,
-            loginType: LoginType, providerId: String, oauthRefreshToken: String?
-        ): User = User(
-            loginId = loginId,
-            email = email,
-            password = password,
-            name = name,
-            loginType = loginType,
-            oauthRefreshToken = oauthRefreshToken,
-            socialProvider = loginType,
-            socialProviderId = providerId,
-        )
     }
 }

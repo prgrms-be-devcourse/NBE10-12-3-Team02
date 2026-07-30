@@ -1,6 +1,7 @@
 package com.back.domain.user.service
 
 import com.back.domain.auth.service.EmailVerificationService
+import com.back.domain.auth.repository.UserSocialAuthRepository
 import com.back.domain.ticket.event.TicketCancelledEvent
 import com.back.domain.ticket.repository.TicketRepository
 import com.back.domain.user.dto.*
@@ -29,6 +30,7 @@ import java.time.Duration
 @Transactional(readOnly = true)
 class UserService(
     private val userRepository: UserRepository,
+    private val userSocialAuthRepository: UserSocialAuthRepository,
     private val ticketRepository: TicketRepository,
     private val passwordEncoder: PasswordEncoder,
     private val emailVerificationService: EmailVerificationService,
@@ -95,10 +97,9 @@ class UserService(
 
         user.profileImgUrl?.let { fileStorage.delete(it) }
 
-        val socialProvider = user.socialProvider
-            ?: user.loginType.takeIf { it != LoginType.NORMAL }
-        if (socialProvider != null) {
-            oAuthUnlinkService.unlink(socialProvider, user.oauthRefreshToken)
+        val socialAuth = userSocialAuthRepository.findByUserUserId(userId)
+        if (socialAuth != null) {
+            oAuthUnlinkService.unlink(socialAuth.provider, socialAuth.oauthRefreshToken)
         }
 
         val activeTickets = ticketRepository.findAllByUserWithConcert(user).filter { it.isValid }
@@ -112,6 +113,7 @@ class UserService(
             eventPublisher.publishEvent(TicketCancelledEvent(concertId = concertId, scheduleId = scheduleId, userId = userId))
         }
 
+        userSocialAuthRepository.deleteByUserUserId(userId)
         user.withdraw()
         refreshTokenRepository.deleteAllByUserId(userId)
         val remaining = jwtTokenProvider.getRemainingSeconds(accessToken)
@@ -127,7 +129,8 @@ class UserService(
             .values
             .map { TicketGroupInfo.from(it) }
 
-        return MyPageResponse.from(user, ticketGroups)
+        val socialProvider = userSocialAuthRepository.findByUserUserId(userId)?.provider
+        return MyPageResponse.from(user, socialProvider, ticketGroups)
     }
 
     @Transactional

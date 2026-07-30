@@ -2,7 +2,9 @@ package com.back.domain.auth.service
 
 import com.back.domain.auth.dto.SocialLinkStartResult
 import com.back.domain.auth.dto.SocialLinkStatusResponse
+import com.back.domain.auth.entity.UserSocialAuth
 import com.back.domain.auth.repository.SocialLinkIntentRepository
+import com.back.domain.auth.repository.UserSocialAuthRepository
 import com.back.domain.user.constant.LoginType
 import com.back.domain.user.entity.User
 import com.back.domain.user.repository.UserRepository
@@ -23,6 +25,7 @@ import java.util.UUID
 @Transactional(readOnly = true)
 class SocialLinkService(
     private val userRepository: UserRepository,
+    private val userSocialAuthRepository: UserSocialAuthRepository,
     private val socialLinkIntentRepository: SocialLinkIntentRepository,
     private val oAuthUnlinkService: OAuthUnlinkService,
     private val socialLinkQueryService: SocialLinkQueryService,
@@ -32,9 +35,9 @@ class SocialLinkService(
 ) {
     fun start(userId: Long, providerName: String): SocialLinkStartResult {
         val provider = parseProvider(providerName)
-        val user = findUser(userId)
+        findUser(userId)
 
-        if (user.socialProvider != null) {
+        if (userSocialAuthRepository.existsByUserUserId(userId)) {
             throw ServiceException(ErrorCode.OAUTH_ACCOUNT_ALREADY_LINKED)
         }
 
@@ -52,8 +55,11 @@ class SocialLinkService(
         )
     }
 
-    fun getStatus(userId: Long): SocialLinkStatusResponse =
-        SocialLinkStatusResponse.from(findUser(userId))
+    fun getStatus(userId: Long): SocialLinkStatusResponse {
+        findUser(userId)
+        val socialAuth = userSocialAuthRepository.findByUserUserId(userId)
+        return SocialLinkStatusResponse.from(socialAuth?.provider)
+    }
 
     @Transactional
     fun complete(
@@ -72,7 +78,7 @@ class SocialLinkService(
         val user = userRepository.findByUserIdAndDeletedAtIsNull(intent.userId)
             ?: throw OAuth2AuthenticationException("oauth2_user_not_found")
 
-        if (user.socialProvider != null) {
+        if (userSocialAuthRepository.existsByUserUserId(intent.userId)) {
             throw OAuth2AuthenticationException("oauth2_account_already_linked")
         }
 
@@ -91,7 +97,7 @@ class SocialLinkService(
             throw OAuth2AuthenticationException("oauth2_email_mismatch")
         }
         if (
-            userRepository.existsBySocialProviderAndSocialProviderIdAndDeletedAtIsNull(
+            userSocialAuthRepository.existsByProviderAndProviderId(
                 provider,
                 providerId,
             )
@@ -99,10 +105,16 @@ class SocialLinkService(
             throw OAuth2AuthenticationException("oauth2_account_already_used")
         }
 
-        user.linkSocialAccount(provider, providerId, oauthRefreshToken)
-
         return try {
-            userRepository.saveAndFlush(user)
+            userSocialAuthRepository.saveAndFlush(
+                UserSocialAuth(
+                    user = user,
+                    provider = provider,
+                    providerId = providerId,
+                    oauthRefreshToken = oauthRefreshToken,
+                ),
+            )
+            user
         } catch (e: DataIntegrityViolationException) {
             throw OAuth2AuthenticationException("oauth2_account_already_used")
         }

@@ -1,7 +1,7 @@
 package com.back.domain.auth.service
 
 import com.back.domain.auth.dto.SocialUnlinkTarget
-import com.back.domain.user.repository.UserRepository
+import com.back.domain.auth.repository.UserSocialAuthRepository
 import com.back.global.exception.ErrorCode
 import com.back.global.exception.ServiceException
 import org.springframework.stereotype.Service
@@ -9,14 +9,14 @@ import org.springframework.transaction.annotation.Transactional
 
 @Service
 class SocialLinkCommandService(
-    private val userRepository: UserRepository,
+    private val userSocialAuthRepository: UserSocialAuthRepository,
 ) {
     @Transactional
     fun completeUnlink(target: SocialUnlinkTarget) {
-        val updatedCount = userRepository.unlinkSocialAccountIfMatches(
+        val updatedCount = userSocialAuthRepository.deleteIfMatches(
             userId = target.userId,
-            socialProvider = target.provider,
-            socialProviderId = target.providerId,
+            provider = target.provider,
+            providerId = target.providerId,
         )
 
         if (updatedCount != 1) {

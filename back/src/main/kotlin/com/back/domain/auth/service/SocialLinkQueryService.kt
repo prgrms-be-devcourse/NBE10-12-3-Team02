@@ -1,6 +1,7 @@
 package com.back.domain.auth.service
 
 import com.back.domain.auth.dto.SocialUnlinkTarget
+import com.back.domain.auth.repository.UserSocialAuthRepository
 import com.back.domain.user.constant.LoginType
 import com.back.domain.user.repository.UserRepository
 import com.back.global.exception.ErrorCode
@@ -11,6 +12,7 @@ import org.springframework.transaction.annotation.Transactional
 @Service
 class SocialLinkQueryService(
     private val userRepository: UserRepository,
+    private val userSocialAuthRepository: UserSocialAuthRepository,
 ) {
     @Transactional(readOnly = true)
     fun getUnlinkTarget(userId: Long): SocialUnlinkTarget {
@@ -21,16 +23,14 @@ class SocialLinkQueryService(
             throw ServiceException(ErrorCode.OAUTH_UNLINK_NOT_ALLOWED)
         }
 
-        val provider = user.socialProvider
-            ?: throw ServiceException(ErrorCode.OAUTH_ACCOUNT_NOT_LINKED)
-        val providerId = user.socialProviderId
+        val socialAuth = userSocialAuthRepository.findByUserUserId(userId)
             ?: throw ServiceException(ErrorCode.OAUTH_ACCOUNT_NOT_LINKED)
 
         return SocialUnlinkTarget(
             userId = userId,
-            provider = provider,
-            providerId = providerId,
-            oauthRefreshToken = user.oauthRefreshToken,
+            provider = socialAuth.provider,
+            providerId = socialAuth.providerId,
+            oauthRefreshToken = socialAuth.oauthRefreshToken,
         )
     }
 }
