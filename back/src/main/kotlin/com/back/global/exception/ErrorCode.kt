@@ -27,6 +27,7 @@ enum class ErrorCode(
     OAUTH_ACCOUNT_ALREADY_LINKED("409-8", "이미 소셜 계정이 연결되어 있습니다."),
     OAUTH_ACCOUNT_NOT_LINKED("404-9", "연결된 소셜 계정이 없습니다."),
     OAUTH_UNLINK_FAILED("502-1", "소셜 제공자 연결 해제에 실패했습니다."),
+    OAUTH_UNLINK_NOT_ALLOWED("403-4", "소셜 로그인으로 가입한 회원은 연동을 해제할 수 없습니다."),
 
     // User
     USER_NOT_FOUND("404-1", "회원이 존재하지 않습니다."),

@@ -108,6 +108,11 @@ class SocialLinkService(
     @Transactional
     fun unlink(userId: Long) {
         val user = findUser(userId)
+
+        if (user.loginType != LoginType.NORMAL) {
+            throw ServiceException(ErrorCode.OAUTH_UNLINK_NOT_ALLOWED)
+        }
+
         val provider = user.socialProvider
             ?: throw ServiceException(ErrorCode.OAUTH_ACCOUNT_NOT_LINKED)
 

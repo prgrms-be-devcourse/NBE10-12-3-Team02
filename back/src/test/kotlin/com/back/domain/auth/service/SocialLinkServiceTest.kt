@@ -164,6 +164,30 @@ class SocialLinkServiceTest {
         assertThat(user.oauthRefreshToken).isNull()
     }
 
+    @Test
+    @DisplayName("소셜 로그인으로 가입한 회원은 유일한 로그인 수단인 소셜 연동을 해제할 수 없다")
+    fun t8() {
+        val user = User.createOAuth(
+            loginId = "KAKAO_$PROVIDER_ID",
+            email = EMAIL,
+            password = "random-encoded-password",
+            name = "카카오회원",
+            loginType = LoginType.KAKAO,
+            providerId = PROVIDER_ID,
+            oauthRefreshToken = OAUTH_REFRESH_TOKEN,
+        )
+        `when`(userRepository.findByUserIdAndDeletedAtIsNull(USER_ID)).thenReturn(user)
+
+        assertThatThrownBy { service.unlink(USER_ID) }
+            .isInstanceOfSatisfying(ServiceException::class.java) {
+                assertThat(it.errorCode).isEqualTo(ErrorCode.OAUTH_UNLINK_NOT_ALLOWED)
+            }
+
+        assertThat(user.socialProvider).isEqualTo(LoginType.KAKAO)
+        assertThat(user.socialProviderId).isEqualTo(PROVIDER_ID)
+        assertThat(user.oauthRefreshToken).isEqualTo(OAUTH_REFRESH_TOKEN)
+    }
+
     private fun normalUser(): User =
         User.create(
             loginId = "normal-user",
