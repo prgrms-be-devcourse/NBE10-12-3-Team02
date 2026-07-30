@@ -32,8 +32,8 @@ export default function () {
     'X-Test-Delay': '50', // 50ms I/O 대기 시뮬레이션
   };
 
-  // 예매 가능 시간(2026-12-11)이 도래하지 않은 미래 회차(Concert 9, Schedule 18) 대상 요청
-  const res = http.post(`${BASE_URL}/api/v1/concerts/9/schedules/18/seats/occupy`, payload, { headers });
+  // 시드 데이터 중 가장 나중 날짜(2027-02-24) 회차(Concert 10, Schedule 21) 대상 요청
+  const res = http.post(`${BASE_URL}/api/v1/concerts/10/schedules/21/seats/occupy`, payload, { headers });
 
   // 200(최초 선점 성공) 또는 409(타인 선점 중/경합)는 100% 비즈니스 수용 성공으로 처리
   check(res, {
