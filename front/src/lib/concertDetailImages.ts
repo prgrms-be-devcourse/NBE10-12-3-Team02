@@ -103,10 +103,12 @@ export function extractKopisId(url?: string | null) {
 
 export function getLocalConcertPoster(urlPoster?: string | null) {
   const kopisId = extractKopisId(urlPoster);
-  return kopisId ? CONCERT_POSTER_IMAGES[kopisId] ?? urlPoster ?? "" : urlPoster ?? "";
+  return kopisId
+    ? (CONCERT_POSTER_IMAGES[kopisId] ?? urlPoster ?? "")
+    : (urlPoster ?? "");
 }
 
 export function getConcertDetailImages(urlPoster: string) {
   const kopisId = extractKopisId(urlPoster);
-  return kopisId ? CONCERT_DETAIL_IMAGES[kopisId] ?? [] : [];
+  return kopisId ? (CONCERT_DETAIL_IMAGES[kopisId] ?? []) : [];
 }

@@ -14,6 +14,19 @@ spring:
   datasource:
     hikari:
       auto-commit: false
+  mail:
+    host: smtp.naver.com
+    port: 465
+    protocol: smtps
+    default-encoding: UTF-8
+    properties:
+      mail:
+        smtp:
+          auth: true
+          ssl:
+            enable: true
+          starttls:
+            enable: false
   jpa:
     show-sql: true
     hibernate:
@@ -66,6 +79,13 @@ spring:
 springdoc:
   default-produces-media-type: application/json;charset=UTF-8
 custom:
+  auth:
+    email-verification:
+      code-expiration-seconds: 300
+      verified-expiration-seconds: 1800
+      resend-cooldown-seconds: 60
+      max-attempts: 5
+      redis-prefix: "auth:email-verification:"
   jwt:
     accessToken:
       expirationSeconds: "#{60*10}"
@@ -92,6 +112,6 @@ app:
       maximum-size: 10000
 queue:
   batch-size: 2
-  max-active-users: 5
+  max-active-users: 2
   entry-token:
     ttl: 10m

@@ -1,6 +1,7 @@
 "use client";
 
 import { Suspense, useState, useEffect, useRef, type ChangeEvent } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { Search, ChevronLeft, ChevronRight } from "lucide-react";
@@ -85,7 +86,11 @@ function HomeContent() {
     setAccessToken(token);
 
     // 주소창에서 토큰 흔적을 지운다 (새로고침해도 다시 로그인되도록 두면 안 되니까)
-    window.history.replaceState(null, "", window.location.pathname + window.location.search);
+    window.history.replaceState(
+      null,
+      "",
+      window.location.pathname + window.location.search,
+    );
   }, []);
 
   const itemsPerPage = 12;
@@ -96,7 +101,10 @@ function HomeContent() {
     params.set("page", String(page));
     router.push(`${pathname}?${params.toString()}`, { scroll: false });
     requestAnimationFrame(() => {
-      listSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      listSectionRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
     });
   };
 
@@ -109,10 +117,14 @@ function HomeContent() {
         if (keyword.trim() !== "") params.append("keyword", keyword);
         params.append("sort", sort);
 
-        const res = await apiFetch<ConcertListItem[]>(`/concerts?${params.toString()}`);
+        const res = await apiFetch<ConcertListItem[]>(
+          `/concerts?${params.toString()}`,
+        );
         setConcerts(res.data);
       } catch (e) {
-        setError(e instanceof Error ? e.message : "콘서트를 불러오지 못했습니다.");
+        setError(
+          e instanceof Error ? e.message : "콘서트를 불러오지 못했습니다.",
+        );
       } finally {
         setLoading(false);
       }
@@ -124,7 +136,9 @@ function HomeContent() {
   useEffect(() => {
     const fetchTopConcerts = async () => {
       try {
-        const res = await apiFetch<ConcertListItem[]>(`/concerts?sort=closingSoon`);
+        const res = await apiFetch<ConcertListItem[]>(
+          `/concerts?sort=closingSoon`,
+        );
         // 이미 마감된 콘서트는 배너에서 제외하고, 그다음으로 마감이 임박한 콘서트로 채운다.
         const top5 = res.data.filter((c) => c.status !== "CLOSED").slice(0, 5);
 
@@ -133,7 +147,9 @@ function HomeContent() {
         const detailed = await Promise.all(
           top5.map(async (concert) => {
             try {
-              const detailRes = await apiFetch<ConcertDetailResponse>(`/concerts/${concert.concertId}`);
+              const detailRes = await apiFetch<ConcertDetailResponse>(
+                `/concerts/${concert.concertId}`,
+              );
               return {
                 ...concert,
                 description: detailRes.data.description,
@@ -158,13 +174,16 @@ function HomeContent() {
                   return;
                 }
                 const img = new window.Image();
-                img.onload = () => resolve(img.naturalWidth / img.naturalHeight);
+                img.onload = () =>
+                  resolve(img.naturalWidth / img.naturalHeight);
                 img.onerror = () => resolve(null);
                 img.src = concert.imageUrl;
               }),
           ),
         );
-        const validRatios = ratios.filter((r): r is number => r !== null && r > 0);
+        const validRatios = ratios.filter(
+          (r): r is number => r !== null && r > 0,
+        );
         if (validRatios.length > 0) {
           setPosterAspectRatio(Math.min(...validRatios));
         }
@@ -187,7 +206,7 @@ function HomeContent() {
   const totalPages = Math.ceil(filteredConcerts.length / itemsPerPage);
   const pagedConcerts = filteredConcerts.slice(
     (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
+    currentPage * itemsPerPage,
   );
 
   const handleKeywordChange = (e: ChangeEvent<HTMLInputElement>) => {
@@ -238,7 +257,9 @@ function HomeContent() {
                 swiperRef.current = swiper;
               }}
               onSlideChange={(swiper) => setActiveTopIndex(swiper.realIndex)}
-              onAutoplayTimeLeft={(_swiper, _timeLeft, percentage) => setAutoplayProgress(1 - percentage)}
+              onAutoplayTimeLeft={(_swiper, _timeLeft, percentage) =>
+                setAutoplayProgress(1 - percentage)
+              }
               slidesPerView={1}
               loop={topConcerts.length > 1}
               autoplay={{
@@ -249,14 +270,20 @@ function HomeContent() {
             >
               {topConcerts.map((concert) => (
                 <SwiperSlide key={concert.concertId}>
-                  <Link href={`/concerts/${concert.concertId}`} className="relative flex h-[28rem] overflow-hidden bg-gray-900">
+                  <Link
+                    href={`/concerts/${concert.concertId}`}
+                    className="relative flex h-[28rem] overflow-hidden bg-gray-900"
+                  >
                     {/* 배너 전체에 깔리는 흐린 포스터 배경 (왼쪽/오른쪽이 하나로 이어져 보이도록) */}
                     {concert.imageUrl && (
-                      <img
+                      <Image
+                        fill
+                        unoptimized
+                        priority
                         src={concert.imageUrl}
                         alt=""
                         aria-hidden="true"
-                        className="absolute inset-0 w-full h-full object-cover scale-110 blur-3xl opacity-60"
+                        className="object-cover scale-110 blur-3xl opacity-60"
                       />
                     )}
                     {/* 글자 가독성을 위해 어둡게 한 겹 덮는다 */}
@@ -265,13 +292,19 @@ function HomeContent() {
                     {/* 왼쪽: 포스터 (크게, 잘리지 않도록) */}
                     <div
                       className="relative flex-shrink-0 overflow-hidden"
-                      style={{ width: `${448 * posterAspectRatio}px`, minWidth: 220 }}
+                      style={{
+                        width: `${448 * posterAspectRatio}px`,
+                        minWidth: 220,
+                      }}
                     >
                       {concert.imageUrl ? (
-                        <img
+                        <Image
+                          fill
+                          unoptimized
+                          priority
                           src={concert.imageUrl}
                           alt={concert.concertName}
-                          className="absolute inset-0 w-full h-full object-contain"
+                          className="object-contain"
                         />
                       ) : (
                         <div className="absolute inset-0 bg-gradient-to-br from-blue-500 to-indigo-600" />
@@ -285,14 +318,22 @@ function HomeContent() {
                           마감
                         </span>
                       )}
-                      <h3 className="text-3xl md:text-4xl font-bold drop-shadow-md">{concert.concertName}</h3>
+                      <h3 className="text-3xl md:text-4xl font-bold drop-shadow-md">
+                        {concert.concertName}
+                      </h3>
 
                       <p className="text-sm text-white font-medium mt-4 drop-shadow-md">
                         📍 {concert.venueName}
-                        {concert.location && <span className="text-gray-100"> · {concert.location}</span>}
+                        {concert.location && (
+                          <span className="text-gray-100">
+                            {" "}
+                            · {concert.location}
+                          </span>
+                        )}
                       </p>
                       <p className="text-sm text-gray-100 font-medium mt-1 drop-shadow-md">
-                        {concert.startDate?.slice(0, 10)} ~ {concert.endDate?.slice(0, 10)}
+                        {concert.startDate?.slice(0, 10)} ~{" "}
+                        {concert.endDate?.slice(0, 10)}
                       </p>
 
                       {concert.description && (
@@ -315,7 +356,10 @@ function HomeContent() {
           {!topConcertsLoading && topConcerts.length > 0 && (
             <div className="absolute bottom-4 left-8 right-8 flex gap-2 z-20 pointer-events-none">
               {topConcerts.map((_, segmentIndex) => (
-                <div key={segmentIndex} className="flex-1 h-1 rounded-full bg-white/25 overflow-hidden">
+                <div
+                  key={segmentIndex}
+                  className="flex-1 h-1 rounded-full bg-white/25 overflow-hidden"
+                >
                   <div
                     className="h-full bg-white rounded-full"
                     style={{
@@ -335,9 +379,14 @@ function HomeContent() {
       </div>
 
       <div className="max-w-5xl mx-auto px-6 py-10">
-        <div ref={listSectionRef} className="flex items-center justify-between mb-6 scroll-mt-6">
+        <div
+          ref={listSectionRef}
+          className="flex items-center justify-between mb-6 scroll-mt-6"
+        >
           <h2 className="text-2xl font-bold text-gray-800">전체 공연</h2>
-          <span className="text-sm text-gray-400">{filteredConcerts.length}개의 공연</span>
+          <span className="text-sm text-gray-400">
+            {filteredConcerts.length}개의 공연
+          </span>
         </div>
 
         <div className="flex gap-2 mb-4">
@@ -364,7 +413,10 @@ function HomeContent() {
 
         <div className="flex flex-col md:flex-row gap-3 mb-6">
           <div className="relative flex-1">
-            <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+            <Search
+              size={18}
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+            />
             <input
               type="text"
               placeholder="콘서트 이름으로 검색"
@@ -389,11 +441,13 @@ function HomeContent() {
         ) : error ? (
           <p className="text-center text-red-400 py-20">{error}</p>
         ) : filteredConcerts.length === 0 ? (
-          <p className="text-center text-gray-400 py-20">해당 조건의 공연이 없습니다.</p>
+          <p className="text-center text-gray-400 py-20">
+            해당 조건의 공연이 없습니다.
+          </p>
         ) : (
           <>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-              {pagedConcerts.map((concert) => (
+              {pagedConcerts.map((concert, idx) => (
                 <Link
                   href={`/concerts/${concert.concertId}`}
                   key={concert.concertId}
@@ -401,7 +455,15 @@ function HomeContent() {
                 >
                   <div className="h-48 bg-gradient-to-br from-blue-200 to-indigo-300 flex items-center justify-center text-white font-bold relative overflow-hidden">
                     {concert.imageUrl ? (
-                      <img src={concert.imageUrl} alt={concert.concertName} className="w-full h-full object-cover" />
+                      <Image
+                        fill
+                        unoptimized
+                        loading={idx < 4 ? "eager" : "lazy"}
+                        src={concert.imageUrl}
+                        alt={concert.concertName}
+                        sizes="(max-width: 768px) 100vw, 25vw"
+                        className="object-cover"
+                      />
                     ) : (
                       "포스터"
                     )}
@@ -412,10 +474,15 @@ function HomeContent() {
                     )}
                   </div>
                   <div className="p-4 flex flex-col flex-1">
-                    <h3 className="font-bold text-gray-800 truncate">{concert.concertName}</h3>
-                    <p className="text-sm text-gray-500 mt-1 line-clamp-1">{concert.venueName}</p>
+                    <h3 className="font-bold text-gray-800 truncate">
+                      {concert.concertName}
+                    </h3>
+                    <p className="text-sm text-gray-500 mt-1 line-clamp-1">
+                      {concert.venueName}
+                    </p>
                     <p className="text-sm text-gray-400 mt-auto pt-1">
-                      {concert.startDate?.slice(0, 10)} ~ {concert.endDate?.slice(0, 10)}
+                      {concert.startDate?.slice(0, 10)} ~{" "}
+                      {concert.endDate?.slice(0, 10)}
                     </p>
                   </div>
                 </Link>
@@ -432,7 +499,10 @@ function HomeContent() {
                 >
                   이전
                 </button>
-                {Array.from({ length: totalPages }, (_, index) => index + 1).map((page) => (
+                {Array.from(
+                  { length: totalPages },
+                  (_, index) => index + 1,
+                ).map((page) => (
                   <button
                     type="button"
                     key={page}
@@ -448,7 +518,9 @@ function HomeContent() {
                 ))}
                 <button
                   type="button"
-                  onClick={() => goToPage(Math.min(totalPages, currentPage + 1))}
+                  onClick={() =>
+                    goToPage(Math.min(totalPages, currentPage + 1))
+                  }
                   disabled={currentPage === totalPages}
                   className="px-3 py-2 rounded-lg border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-default"
                 >

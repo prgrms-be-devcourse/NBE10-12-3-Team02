@@ -17,6 +17,11 @@ enum class ErrorCode(
     AUTH_EXPIRED_ACCESS_TOKEN("401-9", "Access Token이 만료되었습니다."),
     AUTH_INVALID_ACCESS_TOKEN("401-10", "유효하지 않은 Access Token입니다."),
     AUTH_FORBIDDEN("403-1", "권한이 없습니다."),
+    AUTH_EMAIL_VERIFICATION_INVALID("400-10", "이메일 인증번호가 올바르지 않거나 만료되었습니다."),
+    AUTH_EMAIL_VERIFICATION_REQUIRED("401-12", "이메일 인증이 필요합니다."),
+    AUTH_EMAIL_VERIFICATION_TOO_MANY_ATTEMPTS("429-2", "이메일 인증 시도 횟수를 초과했습니다."),
+    AUTH_EMAIL_VERIFICATION_RESEND_NOT_ALLOWED("429-3", "이메일 인증번호 재전송 대기 시간이 지나지 않았습니다."),
+    AUTH_EMAIL_SEND_FAILED("500-3", "인증 이메일 전송에 실패했습니다."),
     AUTH_REFRESH_TOKEN_ROTATION_FAILED("500-1", "리프레시 토큰 교체 처리 중 오류가 발생했습니다."),
 
     // User

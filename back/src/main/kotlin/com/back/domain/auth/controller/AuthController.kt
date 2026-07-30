@@ -1,8 +1,12 @@
 package com.back.domain.auth.controller
 
 import com.back.domain.auth.dto.AuthRestoreResponse
+import com.back.domain.auth.dto.EmailVerificationConfirmRequest
+import com.back.domain.auth.dto.EmailVerificationRequest
+import com.back.domain.auth.dto.EmailVerificationResponse
 import com.back.domain.auth.dto.LoginRequest
 import com.back.domain.auth.service.AuthService
+import com.back.domain.auth.service.EmailVerificationService
 import com.back.global.annotation.ApiV1
 import com.back.global.exception.ErrorCode
 import com.back.global.exception.ServiceException
@@ -20,7 +24,8 @@ import org.springframework.web.bind.annotation.*
 @Tag(name = "Auth", description = "Auth API")
 class AuthController(
     private val requestContext: RequestContext,
-    private val authService: AuthService
+    private val authService: AuthService,
+    private val emailVerificationService: EmailVerificationService,
 ) {
 
     @PostMapping("/login")
@@ -87,6 +92,28 @@ class AuthController(
         } catch (e: ServiceException) {
             handleRestoreFailure(e)
         }
+    }
+
+    @PostMapping("/email-verifications")
+    @Operation(summary = "이메일 인증번호 발송", description = "회원가입에 사용할 이메일 인증번호를 발송합니다.")
+    fun sendEmailVerification(
+        @RequestBody @Valid request: EmailVerificationRequest,
+    ): RsData<Void> {
+        emailVerificationService.sendVerificationCode(request.email)
+        return RsData("200-1", "이메일 인증번호를 발송했습니다.")
+    }
+
+    @PostMapping("/email-verifications/confirm")
+    @Operation(summary = "이메일 인증번호 확인", description = "인증번호를 확인하고 일회용 이메일 인증 토큰을 발급합니다.")
+    fun confirmEmailVerification(
+        @RequestBody @Valid request: EmailVerificationConfirmRequest,
+    ): RsData<EmailVerificationResponse> {
+        val verificationToken = emailVerificationService.confirm(request.email, request.code)
+        return RsData(
+            "200-1",
+            "이메일 인증이 완료되었습니다.",
+            EmailVerificationResponse(verificationToken),
+        )
     }
 
     private fun handleRestoreFailure(e: ServiceException): RsData<AuthRestoreResponse> {

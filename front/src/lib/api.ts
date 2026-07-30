@@ -22,7 +22,10 @@ export function getAccessToken() {
 export function decodeToken(): { id: number; name: string } | null {
   if (!accessToken) return null;
   try {
-    const base64 = accessToken.split(".")[1].replace(/-/g, "+").replace(/_/g, "/");
+    const base64 = accessToken
+      .split(".")[1]
+      .replace(/-/g, "+")
+      .replace(/_/g, "/");
     const binary = atob(base64);
     const bytes = Uint8Array.from(binary, (c) => c.charCodeAt(0));
     const json = JSON.parse(new TextDecoder("utf-8").decode(bytes));
@@ -32,7 +35,8 @@ export function decodeToken(): { id: number; name: string } | null {
   }
 }
 
-const DEFAULT_ERROR_MESSAGE = "요청 처리 중 문제가 발생했습니다. 잠시 후 다시 시도해주세요.";
+const DEFAULT_ERROR_MESSAGE =
+  "요청 처리 중 문제가 발생했습니다. 잠시 후 다시 시도해주세요.";
 
 // 일반 Error 대신 이걸 던져서, 화면단에서 "어떤 종류의 실패인지"를 문구 대신
 // resultCode(서버가 정해둔 코드)로 정확히 구분할 수 있게 한다.
@@ -77,7 +81,7 @@ function refreshAccessToken(): Promise<boolean> {
 export async function apiFetch<T>(
   path: string,
   options: RequestInit = {},
-  _isRetry = false
+  _isRetry = false,
 ): Promise<RsData<T>> {
   const res = await fetch(`${BASE_URL}/api/v1${path}`, {
     ...options,
@@ -111,7 +115,10 @@ export async function apiFetch<T>(
   }
 
   if (!res.ok) {
-    throw new ApiError(json.msg || json.message || DEFAULT_ERROR_MESSAGE, json.resultCode);
+    throw new ApiError(
+      json.msg || json.message || DEFAULT_ERROR_MESSAGE,
+      json.resultCode,
+    );
   }
 
   return json as RsData<T>;

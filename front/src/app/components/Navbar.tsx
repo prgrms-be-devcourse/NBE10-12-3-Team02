@@ -1,9 +1,15 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { User } from "lucide-react";
-import { apiFetch, decodeToken, setAccessToken, restoreSession } from "@/lib/api";
+import {
+  apiFetch,
+  decodeToken,
+  setAccessToken,
+  restoreSession,
+} from "@/lib/api";
 import { showConfirm } from "@/lib/alert";
 
 export default function Navbar() {
@@ -24,12 +30,15 @@ export default function Navbar() {
   const handleLogoClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
     if (typeof window !== "undefined" && window.location.pathname === "/") {
       e.preventDefault();
-      window.location.href = "/";
+      window.location.reload();
     }
   };
 
   const handleLogout = async () => {
-    const confirmed = await showConfirm("로그아웃 하시겠습니까?", { danger: true });
+    const confirmed = await showConfirm("로그아웃 하시겠습니까?", {
+      confirmText: "로그아웃",
+      danger: true,
+    });
     if (!confirmed) return;
 
     try {
@@ -37,8 +46,6 @@ export default function Navbar() {
     } catch {
     } finally {
       setAccessToken(null);
-      // router.push만 하면 화면에 남아있는 상태(변수, 메모리)가 안 씻겨나갈 수 있어서
-      // 아예 브라우저를 새로고침시켜서 완전히 초기 상태로 되돌린다.
       window.location.href = "/";
     }
   };
@@ -47,16 +54,25 @@ export default function Navbar() {
     <nav className="print:hidden sticky top-0 z-50 bg-white border-b border-gray-100 shadow-sm">
       <div className="max-w-5xl mx-auto px-6 h-16 flex items-center justify-between">
         <Link href="/" onClick={handleLogoClick} className="flex items-center">
-          <img src="/images/logo-horizontal.svg" alt="티케팅고" className="h-12 w-auto object-contain block" />
+          <Image
+            unoptimized
+            priority
+            src="/images/logo-horizontal.svg"
+            alt="티케팅고"
+            width={160}
+            height={48}
+            className="h-12 w-auto object-contain block"
+          />
         </Link>
         <div className="flex items-center gap-6 text-sm font-semibold text-gray-600">
-          <Link href="/mypage" className="flex items-center gap-1 hover:text-blue-600 transition">
+          <Link
+            href="/mypage"
+            className="flex items-center gap-1 hover:text-blue-600 transition"
+          >
             <User size={18} />
             마이페이지
           </Link>
           {!authChecked ? (
-            // 로그인 여부 확인 중 — "로그인 안 한 상태"로 잘못 깜빡이지 않도록, 확인될 때까지는
-            // 아무 것도(로그인 버튼도, 로그인 정보도) 보여주지 않는다. 자리만 비슷하게 잡아둔다.
             <div className="w-24 h-9" />
           ) : userName ? (
             <>

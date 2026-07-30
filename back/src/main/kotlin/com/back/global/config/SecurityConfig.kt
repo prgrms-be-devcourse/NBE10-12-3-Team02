@@ -65,6 +65,7 @@ class SecurityConfig(
                         HttpMethod.GET,
                         "/api/*/concerts",
                         "/api/*/concerts/*",
+                        "/api/*/concerts/*/schedules/*/seats/status",
                         "/api/*/schedules/**",
                         "/api/*/users/check-id",
                         "/api/*/tickets/verify/*",
@@ -77,7 +78,9 @@ class SecurityConfig(
                         "/api/*/auth/logout",
                         "/api/*/auth/refresh",
                         "/api/*/users/signup",
-                        "/api/*/auth/restore"
+                        "/api/*/auth/restore",
+                        "/api/*/auth/email-verifications",
+                        "/api/*/auth/email-verifications/confirm"
                     ).permitAll()
                     .requestMatchers("/api/*/**").authenticated()
                     .anyRequest().permitAll()

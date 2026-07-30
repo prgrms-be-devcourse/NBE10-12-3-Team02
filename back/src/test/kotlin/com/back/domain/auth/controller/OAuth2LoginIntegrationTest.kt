@@ -121,6 +121,15 @@ class OAuth2LoginIntegrationTest {
             .isEqualTo("http://localhost:3000/login?error=oauth2_email_already_exists")
     }
 
+    @Test
+    @DisplayName("네이버 OAuth2 로그인 진입 시 네이버 인증 서버로 redirect")
+    fun t5() {
+        mockMvc.perform(get("/oauth2/authorization/naver"))
+            .andExpect(status().is3xxRedirection)
+            .andExpect(header().exists("Location"))
+            .andExpect(header().string("Location", containsString("nid.naver.com")))
+    }
+
     private fun authentication(oAuth2User: OAuth2User): Authentication {
         val authentication = mock(Authentication::class.java)
         `when`(authentication.principal).thenReturn(oAuth2User)
