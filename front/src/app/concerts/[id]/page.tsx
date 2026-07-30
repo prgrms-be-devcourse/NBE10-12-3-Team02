@@ -1,7 +1,6 @@
 "use client";
 
 import { showAlert } from "@/lib/alert";
-import { getConcertDetailImages, getLocalConcertPoster } from "@/lib/concertDetailImages";
 import ConcertReviewSection from "./ConcertReviewSection";
 import { apiFetch, decodeToken } from "@/lib/api";
 import {
