@@ -49,7 +49,7 @@ export function setup() {
     { headers: { 'Content-Type': 'application/json' } }
   );
 
-  const token = loginRes.headers['Authorization'] || '';
+  const token = loginRes.headers['Authorization'] || loginRes.headers['authorization'] || '';
 
   if (!token) {
     console.error(`로그인 실패! status=${loginRes.status}, body=${loginRes.body}`);
