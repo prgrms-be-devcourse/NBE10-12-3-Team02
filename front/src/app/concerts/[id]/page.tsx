@@ -114,6 +114,7 @@ export default function ConcertDetailPage({
                 {posterUrl ? (
                   <Image
                     unoptimized
+                    priority
                     src={posterUrl}
                     alt={concert.concertName}
                     width={300}

@@ -95,6 +95,7 @@ function LoginContent() {
         <Link href="/" className="flex justify-center mb-8">
           <Image
             unoptimized
+            priority
             src="/images/logo.svg"
             alt="티케팅고"
             width={112}

@@ -196,6 +196,7 @@ export default function SignupPage() {
           <Link href="/" className="flex justify-center">
             <Image
               unoptimized
+              priority
               src="/images/logo.svg"
               alt="티케팅고"
               width={96}

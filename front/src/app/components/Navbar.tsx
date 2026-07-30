@@ -56,6 +56,7 @@ export default function Navbar() {
         <Link href="/" onClick={handleLogoClick} className="flex items-center">
           <Image
             unoptimized
+            priority
             src="/images/logo-horizontal.svg"
             alt="티케팅고"
             width={160}
