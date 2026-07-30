@@ -1,7 +1,7 @@
 package com.back.domain.user.service
 
 import com.back.domain.auth.service.EmailVerificationService
-import com.back.domain.ticket.event.TicketCancelledEvent
+import com.back.domain.auth.repository.UserSocialAuthRepository
 import com.back.domain.ticket.repository.TicketRepository
 import com.back.domain.user.dto.*
 import com.back.domain.user.constant.LoginType
@@ -11,35 +11,30 @@ import com.back.global.exception.ErrorCode
 import com.back.global.exception.ServiceException
 import com.back.global.file.FileStorage
 import com.back.global.security.filter.BearerTokenExtractor
-import com.back.global.security.jwt.JwtTokenProvider
-import com.back.global.security.jwt.repository.BlacklistRepository
-import com.back.global.security.jwt.repository.RefreshTokenRepository
 import com.back.global.security.oauth2.service.OAuthUnlinkService
-import org.springframework.beans.factory.annotation.Value
-import org.springframework.context.ApplicationEventPublisher
+import com.back.global.security.oauth2.service.OAuthUnlinkResult
+import org.slf4j.LoggerFactory
 import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.stereotype.Service
+import org.springframework.transaction.annotation.Propagation
 import org.springframework.transaction.annotation.Transactional
 import org.springframework.web.multipart.MultipartFile
 import org.springframework.transaction.support.TransactionSynchronization
 import org.springframework.transaction.support.TransactionSynchronizationManager
-import java.time.Duration
 
 @Service
 @Transactional(readOnly = true)
 class UserService(
     private val userRepository: UserRepository,
+    private val userSocialAuthRepository: UserSocialAuthRepository,
     private val ticketRepository: TicketRepository,
     private val passwordEncoder: PasswordEncoder,
     private val emailVerificationService: EmailVerificationService,
-    private val refreshTokenRepository: RefreshTokenRepository,
-    private val blacklistRepository: BlacklistRepository,
-    private val jwtTokenProvider: JwtTokenProvider,
     private val bearerTokenExtractor: BearerTokenExtractor,
     private val oAuthUnlinkService: OAuthUnlinkService,
-    private val eventPublisher: ApplicationEventPublisher,
+    private val userWithdrawalQueryService: UserWithdrawalQueryService,
+    private val userWithdrawalCommandService: UserWithdrawalCommandService,
     private val fileStorage: FileStorage,
-    @Value("\${custom.jwt.blacklist.grace-seconds}") private val tokenBlacklistGraceSeconds: Long
 ) {
 
     @Transactional
@@ -87,33 +82,26 @@ class UserService(
         return SignupResponse.from(user)
     }
 
-    @Transactional
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
     fun withdraw(userId: Long, authorization: String) {
         val accessToken = bearerTokenExtractor.extract(authorization)
-        val user = userRepository.findByUserIdAndDeletedAtIsNull(userId)
-            ?: throw ServiceException(ErrorCode.USER_NOT_FOUND_OR_DELETED)
+        val target = userWithdrawalQueryService.getWithdrawalTarget(userId)
 
-        user.profileImgUrl?.let { fileStorage.delete(it) }
-
-        if (user.loginType != LoginType.NORMAL) {
-            oAuthUnlinkService.unlink(user.loginType, user.oauthRefreshToken)
+        target.provider?.let { provider ->
+            if (
+                oAuthUnlinkService.unlink(provider, target.oauthRefreshToken) ==
+                OAuthUnlinkResult.FAILED
+            ) {
+                log.warn(
+                    "회원 탈퇴 중 OAuth Provider 연결 해제 실패, 내부 탈퇴 계속: userId={}, provider={}, providerId={}",
+                    userId,
+                    provider,
+                    target.providerId,
+                )
+            }
         }
 
-        val activeTickets = ticketRepository.findAllByUserWithConcert(user).filter { it.isValid }
-        for (ticket in activeTickets) {
-            ticket.cancel()
-            ticket.scheduleSeat.releaseToAvailable()
-
-            val concertId = checkNotNull(ticket.schedule.concert.concertId) { "Concert ID is null" }
-            val scheduleId = checkNotNull(ticket.schedule.scheduleId) { "Schedule ID is null" }
-
-            eventPublisher.publishEvent(TicketCancelledEvent(concertId = concertId, scheduleId = scheduleId, userId = userId))
-        }
-
-        user.withdraw()
-        refreshTokenRepository.deleteAllByUserId(userId)
-        val remaining = jwtTokenProvider.getRemainingSeconds(accessToken)
-        blacklistRepository.add(accessToken, Duration.ofSeconds(remaining + tokenBlacklistGraceSeconds))
+        userWithdrawalCommandService.withdraw(userId, accessToken)
     }
 
     fun getMyPage(userId: Long): MyPageResponse {
@@ -125,7 +113,8 @@ class UserService(
             .values
             .map { TicketGroupInfo.from(it) }
 
-        return MyPageResponse.from(user, ticketGroups)
+        val socialProvider = userSocialAuthRepository.findByUserUserId(userId)?.provider
+        return MyPageResponse.from(user, socialProvider, ticketGroups)
     }
 
     @Transactional
@@ -135,10 +124,9 @@ class UserService(
 
         request.name?.let { user.updateName(it) }
         request.email?.let { email ->
-            if (user.email != email && userRepository.existsByEmailAndDeletedAtIsNull(email)) {
-                throw ServiceException(ErrorCode.USER_EMAIL_ALREADY_EXISTS)
+            if (!user.email.equals(email.trim(), ignoreCase = true)) {
+                throw ServiceException(ErrorCode.USER_EMAIL_CHANGE_NOT_ALLOWED)
             }
-            user.updateEmail(email)
         }
         request.password?.let { password ->
             val encoded = requireNotNull(passwordEncoder.encode(password)) { "Password encoding failed" }
@@ -181,5 +169,9 @@ class UserService(
             ?: throw ServiceException(ErrorCode.USER_NOT_FOUND)
 
         return user.profileImgUrlOrDefault
+    }
+
+    companion object {
+        private val log = LoggerFactory.getLogger(UserService::class.java)
     }
 }

@@ -12,4 +12,7 @@ class GoogleOAuth2UserInfo(
 
     override val name: String
         get() = attributes["name"]?.toString() ?: "구글사용자"
+
+    override val isEmailVerified: Boolean
+        get() = attributes["email_verified"]?.toString()?.toBooleanStrictOrNull() == true
 }

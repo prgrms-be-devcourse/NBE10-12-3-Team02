@@ -32,7 +32,9 @@ import org.springframework.test.web.servlet.result.MockMvcResultHandlers.print
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.header
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
+import org.springframework.test.web.servlet.result.MockMvcResultMatchers.cookie
 import org.springframework.transaction.annotation.Transactional
+import org.springframework.transaction.annotation.Propagation
 
 @ActiveProfiles("test")
 @SpringBootTest
@@ -178,6 +180,7 @@ class UserControllerTest @Autowired constructor(
     }
 
     @Test
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
     @DisplayName("회원 탈퇴 성공")
     fun t5() {
         mockMvc.perform(
@@ -270,7 +273,7 @@ class UserControllerTest @Autowired constructor(
     }
 
     @Test
-    @DisplayName("마이페이지 수정 실패 - 이메일 중복")
+    @DisplayName("마이페이지 수정 실패 - 이메일은 변경 불가")
     fun t11() {
         userRepository.save(
             User.create("otheruser", "other@naver.com", passwordEncoder.encode("q1w2e3r4")!!, "김철수", LoginType.NORMAL)
@@ -283,8 +286,8 @@ class UserControllerTest @Autowired constructor(
                 .content(objectMapper.writeValueAsString(mapOf("email" to "other@naver.com")))
         )
             .andDo(print())
-            .andExpect(status().isConflict)
-            .andExpect(jsonPath("$.resultCode").value("409-2"))
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.resultCode").value("400-12"))
     }
 
     @Test
@@ -464,4 +467,43 @@ class UserControllerTest @Autowired constructor(
             .andExpect(jsonPath("$.resultCode").value("401-12"))
             .andExpect(jsonPath("$.msg").value("이메일 인증이 필요합니다."))
     }
+
+    @Test
+    @DisplayName("소셜 계정이 연결되지 않은 회원의 연동 상태를 조회한다")
+    fun t22() {
+        mockMvc.perform(
+            get("/api/v1/users/me/social-links")
+                .with(user(securityUser))
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.data.linked").value(false))
+            .andExpect(jsonPath("$.data.provider").doesNotExist())
+    }
+
+    @Test
+    @DisplayName("소셜 계정 연동 시작 시 일회성 쿠키를 발급하고 Provider 인증 경로로 이동한다")
+    fun t23() {
+        mockMvc.perform(
+            post("/api/v1/users/me/social-links/kakao")
+                .with(user(securityUser))
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.data.authorizationUrl")
+            .value("/oauth2/authorization/kakao"))
+            .andExpect(cookie().exists("oauth2_link_intent"))
+            .andExpect(cookie().httpOnly("oauth2_link_intent", true))
+            .andExpect(cookie().maxAge("oauth2_link_intent", 300))
+    }
+
+    @Test
+    @DisplayName("지원하지 않는 Provider로 소셜 계정 연동을 시작할 수 없다")
+    fun t24() {
+        mockMvc.perform(
+            post("/api/v1/users/me/social-links/unsupported")
+                .with(user(securityUser))
+        )
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.resultCode").value("400-11"))
+    }
+
 }
