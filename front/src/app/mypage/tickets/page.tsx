@@ -1,6 +1,7 @@
 "use client";
 
 import { Suspense, useState } from "react";
+import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { ChevronLeft, Printer } from "lucide-react";
@@ -16,6 +17,10 @@ interface TicketSummary {
   ticketPrice: number;
   isValid: boolean;
   createdAt: string;
+}
+
+interface LegacyTicketSummary extends TicketSummary {
+  valid?: boolean;
 }
 
 interface TicketGroupInfo {
@@ -42,22 +47,36 @@ function parseGroup(raw: string | null): TicketGroupInfo | null {
 function TicketDetailContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [group] = useState<TicketGroupInfo | null>(() => parseGroup(searchParams.get("group")));
+  const [group] = useState<TicketGroupInfo | null>(() =>
+    parseGroup(searchParams.get("group")),
+  );
   const [isFlipped, setIsFlipped] = useState(false);
-  const [origin] = useState(() => typeof window !== "undefined" ? window.location.origin : "");
+  const [origin] = useState(() =>
+    typeof window !== "undefined" ? window.location.origin : "",
+  );
 
   if (!group) {
     return (
       <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center gap-4">
         <p className="text-gray-400">티켓 정보를 찾을 수 없습니다.</p>
-        <Link href="/mypage" className="text-blue-600 font-semibold hover:underline">
+        <Link
+          href="/mypage"
+          className="text-blue-600 font-semibold hover:underline"
+        >
           마이페이지로 돌아가기
         </Link>
       </div>
     );
   }
 
-  const allInvalid = group.tickets.every((t) => !t.isValid);
+  const isTicketValid = (t: TicketSummary): boolean => {
+    const legacyTicket = t as LegacyTicketSummary;
+    if (t.isValid !== undefined) return t.isValid;
+    if (legacyTicket.valid !== undefined) return legacyTicket.valid;
+    return true;
+  };
+
+  const allInvalid = group.tickets.every((t) => !isTicketValid(t));
   const statusLabel = allInvalid ? "취소됨" : "예매완료";
 
   return (
@@ -121,7 +140,9 @@ function TicketDetailContent() {
         </div>
 
         <div className="no-print mb-6">
-          <h1 className="text-xl font-bold text-gray-800">{group.concertName}</h1>
+          <h1 className="text-xl font-bold text-gray-800">
+            {group.concertName}
+          </h1>
           <p className="text-sm text-gray-400 mt-1">
             {group.startDate} ~ {group.endDate} · {group.tickets.length}매
           </p>
@@ -143,10 +164,13 @@ function TicketDetailContent() {
               style={{ backfaceVisibility: "hidden" }}
             >
               {group.urlPoster ? (
-                <img
+                <Image
+                  fill
+                  unoptimized
                   src={getLocalConcertPoster(group.urlPoster)}
                   alt={group.concertName}
-                  className="w-full h-full object-cover"
+                  sizes="320px"
+                  className="object-cover"
                 />
               ) : (
                 <div className="w-full h-full flex items-center justify-center text-white/60 text-sm">
@@ -154,15 +178,22 @@ function TicketDetailContent() {
                 </div>
               )}
               <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/80 to-transparent p-5 pt-10 text-center">
-                <h3 className="text-white font-bold text-lg leading-snug">{group.concertName}</h3>
-                <p className="no-print text-white/70 text-xs mt-2">탭하여 상세정보 보기 ↻</p>
+                <h3 className="text-white font-bold text-lg leading-snug">
+                  {group.concertName}
+                </h3>
+                <p className="no-print text-white/70 text-xs mt-2">
+                  탭하여 상세정보 보기 ↻
+                </p>
               </div>
             </div>
 
             {/* 뒷면: 좌석 전체 + 합산 금액 (서비스 시그니처 블루) — 실제 티켓 라벨 구조로 구성 */}
             <div
               className="ticket-face ticket-face-mask relative w-full shadow-xl bg-blue-600 text-white p-6 pt-8 flex flex-col text-left"
-              style={{ backfaceVisibility: "hidden", transform: "rotateY(180deg)" }}
+              style={{
+                backfaceVisibility: "hidden",
+                transform: "rotateY(180deg)",
+              }}
             >
               <div className="flex items-center justify-between mb-3">
                 <span className="text-[10px] font-semibold tracking-widest text-blue-200">
@@ -173,19 +204,29 @@ function TicketDetailContent() {
                 </span>
               </div>
 
-              <p className="text-blue-200 text-[10px] tracking-widest mb-1">TITLE</p>
-              <h2 className="text-lg font-bold leading-snug mb-3">{group.concertName}</h2>
+              <p className="text-blue-200 text-[10px] tracking-widest mb-1">
+                TITLE
+              </p>
+              <h2 className="text-lg font-bold leading-snug mb-3">
+                {group.concertName}
+              </h2>
 
               <div className="grid grid-cols-2 gap-x-4 text-sm border-t border-white/20 pt-3 mb-3">
                 <div>
-                  <p className="text-blue-200 text-[10px] tracking-widest mb-0.5">PERIOD</p>
+                  <p className="text-blue-200 text-[10px] tracking-widest mb-0.5">
+                    PERIOD
+                  </p>
                   <p className="font-semibold">
                     {group.startDate.slice(5)} ~ {group.endDate.slice(5)}
                   </p>
                 </div>
                 <div>
-                  <p className="text-blue-200 text-[10px] tracking-widest mb-0.5">AMOUNT</p>
-                  <p className="font-semibold">{group.totalPrice.toLocaleString()}원</p>
+                  <p className="text-blue-200 text-[10px] tracking-widest mb-0.5">
+                    AMOUNT
+                  </p>
+                  <p className="font-semibold">
+                    {group.totalPrice.toLocaleString()}원
+                  </p>
                 </div>
               </div>
 
@@ -195,11 +236,20 @@ function TicketDetailContent() {
                 </p>
                 <div className="space-y-1">
                   {group.tickets.map((t, index) => (
-                    <div key={t.ticketId} className="flex items-center justify-between text-sm">
+                    <div
+                      key={t.ticketId}
+                      className="flex items-center justify-between text-sm"
+                    >
                       <span className="font-semibold">
                         No.{index + 1} &nbsp;{t.gradeName}석 · {t.seatNumber}
                       </span>
-                      <span className={t.isValid ? "text-blue-100" : "text-blue-300 line-through"}>
+                      <span
+                        className={
+                          isTicketValid(t)
+                            ? "text-blue-100"
+                            : "text-blue-300 line-through"
+                        }
+                      >
                         {t.ticketPrice.toLocaleString()}원
                       </span>
                     </div>
@@ -208,10 +258,15 @@ function TicketDetailContent() {
               </div>
 
               <div className="border-t border-white/20 pt-3">
-                <p className="text-blue-200 text-[10px] tracking-widest mb-1.5">TICKET NO.</p>
+                <p className="text-blue-200 text-[10px] tracking-widest mb-1.5">
+                  TICKET NO.
+                </p>
                 <div className="space-y-0.5">
                   {group.tickets.map((t, index) => (
-                    <p key={t.ticketId} className="text-[11px] text-blue-100 tracking-wide break-all text-left">
+                    <p
+                      key={t.ticketId}
+                      className="text-[11px] text-blue-100 tracking-wide break-all text-left"
+                    >
                       No.{index + 1} &nbsp;{t.ticketNumber}
                     </p>
                   ))}
@@ -221,28 +276,35 @@ function TicketDetailContent() {
               <div className="mt-3 mb-3">
                 <span
                   className={`px-3 py-1 text-xs rounded-full font-semibold ${
-                    allInvalid ? "bg-white/20 text-white" : "bg-white text-blue-700"
+                    allInvalid
+                      ? "bg-white/20 text-white"
+                      : "bg-white text-blue-700"
                   }`}
                 >
                   {statusLabel}
                 </span>
               </div>
 
-              {origin && group.tickets.find((t) => t.groupToken)?.groupToken && (
-                <div className="border-t border-white/20 pt-3 mb-2">
-                  <p className="text-blue-200 text-[10px] tracking-widest mb-2">QR CODE</p>
-                  <div className="flex justify-center">
-                    <div className="bg-white p-1.5 rounded">
-                      <QRCodeSVG
-                        value={`${origin}/verify/group/${group.tickets.find((t) => t.groupToken)!.groupToken}`}
-                        size={80}
-                      />
+              {origin &&
+                group.tickets.find((t) => t.groupToken)?.groupToken && (
+                  <div className="border-t border-white/20 pt-3 mb-2">
+                    <p className="text-blue-200 text-[10px] tracking-widest mb-2">
+                      QR CODE
+                    </p>
+                    <div className="flex justify-center">
+                      <div className="bg-white p-1.5 rounded">
+                        <QRCodeSVG
+                          value={`${origin}/verify/group/${group.tickets.find((t) => t.groupToken)!.groupToken}`}
+                          size={80}
+                        />
+                      </div>
                     </div>
                   </div>
-                </div>
-              )}
+                )}
 
-              <p className="no-print text-blue-200 text-[11px] mt-auto pt-2 text-center">탭하여 앞면으로 ↻</p>
+              <p className="no-print text-blue-200 text-[11px] mt-auto pt-2 text-center">
+                탭하여 앞면으로 ↻
+              </p>
             </div>
           </button>
         </div>
@@ -257,7 +319,11 @@ function TicketDetailContent() {
 
 export default function TicketDetailPage() {
   return (
-    <Suspense fallback={<p className="text-center text-gray-400 py-20">불러오는 중...</p>}>
+    <Suspense
+      fallback={
+        <p className="text-center text-gray-400 py-20">불러오는 중...</p>
+      }
+    >
       <TicketDetailContent />
     </Suspense>
   );

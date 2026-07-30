@@ -44,6 +44,7 @@ spring:
     oauth2:
       front-callback-url: "http://localhost:3000"
       front-login-url: "http://localhost:3000/login"
+      front-social-link-url: "http://localhost:3000/mypage"
       client:
         registration:
           kakao:
@@ -99,6 +100,9 @@ custom:
     refresh-token:
       prefix: "auth:refresh:"
       index-prefix: "auth:refresh:index:"
+  oauth2:
+    link-intent-prefix: "auth:oauth2:link:"
+    link-intent-expiration-seconds: 300
   upload:
     path: ${CUSTOM_UPLOAD_PATH:./uploads}
 
@@ -112,6 +116,6 @@ app:
       maximum-size: 10000
 queue:
   batch-size: 2
-  max-active-users: 5
+  max-active-users: 2
   entry-token:
     ttl: 10m

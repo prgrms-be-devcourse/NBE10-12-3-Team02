@@ -1,0 +1,160 @@
+services:
+  app:
+    image: ${ECR_REGISTRY}/nbe10-12-3-team02:${IMAGE_TAG}
+    container_name: app
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    env_file:
+      - .env
+    depends_on:
+      - mysql
+      - redis-primary
+      - redis-replica
+      - redis-sentinel-1
+      - redis-sentinel-2
+      - redis-sentinel-3
+    networks:
+      - redis-net
+
+  mysql:
+    image: mysql:8.0
+    container_name: mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+    volumes:
+      - mysql-data:/var/lib/mysql
+    networks:
+      - redis-net
+    # 외부(호스트) 포트 게시 없음 — app 컨테이너와 같은 redis-net 내부에서만 3306 접근.
+    # 보안그룹에 3306을 열지 않아도 되고, DB가 인터넷에 노출되지 않음.
+
+  redis-primary:
+    image: redis:7.2-alpine
+    container_name: redis-primary
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes --replica-announce-ip redis-primary --requirepass ""
+    volumes:
+      - redis-primary-data:/data
+    labels:
+      - "org.springframework.boot.ignore=true"
+    networks:
+      - redis-net
+
+  redis-replica:
+    image: redis:7.2-alpine
+    container_name: redis-replica
+    restart: unless-stopped
+    ports:
+      - "6380:6379"
+    command: redis-server --appendonly yes --replicaof redis-primary 6379 --replica-announce-ip redis-replica --requirepass "" --masterauth ""
+    volumes:
+      - redis-replica-data:/data
+    labels:
+      - "org.springframework.boot.ignore=true"
+    depends_on:
+      - redis-primary
+    networks:
+      - redis-net
+
+  redis-sentinel-1:
+    image: redis:7.2-alpine
+    container_name: redis-sentinel-1
+    restart: unless-stopped
+    ports:
+      - "26379:26379"
+    command:
+      - sh
+      - -c
+      - |
+        cat <<EOF > /tmp/sentinel.conf
+        port 26379
+        sentinel monitor mymaster redis-primary 6379 2
+        sentinel down-after-milliseconds mymaster 5000
+        sentinel failover-timeout mymaster 10000
+        sentinel parallel-syncs mymaster 1
+        sentinel resolve-hostnames yes
+        sentinel announce-hostnames yes
+        sentinel announce-ip redis-sentinel-1
+        EOF
+        exec redis-sentinel /tmp/sentinel.conf
+    labels:
+      - "org.springframework.boot.ignore=true"
+    depends_on:
+      - redis-primary
+      - redis-replica
+    networks:
+      - redis-net
+
+  redis-sentinel-2:
+    image: redis:7.2-alpine
+    container_name: redis-sentinel-2
+    restart: unless-stopped
+    ports:
+      - "26380:26379"
+    command:
+      - sh
+      - -c
+      - |
+        cat <<EOF > /tmp/sentinel.conf
+        port 26379
+        sentinel monitor mymaster redis-primary 6379 2
+        sentinel down-after-milliseconds mymaster 5000
+        sentinel failover-timeout mymaster 10000
+        sentinel parallel-syncs mymaster 1
+        sentinel resolve-hostnames yes
+        sentinel announce-hostnames yes
+        sentinel announce-ip redis-sentinel-2
+        EOF
+        exec redis-sentinel /tmp/sentinel.conf
+    labels:
+      - "org.springframework.boot.ignore=true"
+    depends_on:
+      - redis-primary
+      - redis-replica
+    networks:
+      - redis-net
+
+  redis-sentinel-3:
+    image: redis:7.2-alpine
+    container_name: redis-sentinel-3
+    restart: unless-stopped
+    ports:
+      - "26381:26379"
+    command:
+      - sh
+      - -c
+      - |
+        cat <<EOF > /tmp/sentinel.conf
+        port 26379
+        sentinel monitor mymaster redis-primary 6379 2
+        sentinel down-after-milliseconds mymaster 5000
+        sentinel failover-timeout mymaster 10000
+        sentinel parallel-syncs mymaster 1
+        sentinel resolve-hostnames yes
+        sentinel announce-hostnames yes
+        sentinel announce-ip redis-sentinel-3
+        EOF
+        exec redis-sentinel /tmp/sentinel.conf
+    labels:
+      - "org.springframework.boot.ignore=true"
+    depends_on:
+      - redis-primary
+      - redis-replica
+    networks:
+      - redis-net
+
+networks:
+  redis-net:
+    driver: bridge
+
+volumes:
+  mysql-data:
+  redis-primary-data:
+  redis-replica-data:

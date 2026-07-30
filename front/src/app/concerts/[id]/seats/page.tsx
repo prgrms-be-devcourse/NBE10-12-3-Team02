@@ -1,11 +1,17 @@
 "use client";
 
-import { apiFetch, ApiError, BASE_URL, decodeToken, restoreSession } from "@/lib/api";
 import { showAlert, showError } from "@/lib/alert";
+import {
+  ApiError,
+  apiFetch,
+  BASE_URL,
+  decodeToken,
+  restoreSession,
+} from "@/lib/api";
 import { connectQueueSocket } from "@/lib/queueSocket";
 import type { Client } from "@stomp/stompjs";
-import { useRouter, useSearchParams } from "next/navigation";
 import { Minus, Plus } from "lucide-react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, use, useEffect, useRef, useState } from "react";
 
 interface SeatDetail {
@@ -80,7 +86,9 @@ function SeatSelectContent({ params }: { params: Promise<{ id: string }> }) {
   // 2인 이상이면 "짝"(나란히 붙은 좌석 2개)을 먼저 채우고, 3인이면 그 뒤에 자유석 1개를 더 받는다.
   const [pairSeats, setPairSeats] = useState<[string, string] | null>(null);
   const [freeSeats, setFreeSeats] = useState<string[]>([]);
-  const selectedSeats = [...(pairSeats ?? []), ...freeSeats];
+  const selectedSeats = Array.from(
+    new Set([...(pairSeats ?? []), ...freeSeats]),
+  );
 
   // 인원수가 변경되면 선택되어 있던 좌석을 리셋합니다.
   useEffect(() => {
@@ -118,7 +126,11 @@ function SeatSelectContent({ params }: { params: Promise<{ id: string }> }) {
         scheduleId,
         onConnected: async () => {
           try {
-            const res = await apiFetch<{ rank: number; myQueueNumber: number; entryToken?: string }>(
+            const res = await apiFetch<{
+              rank: number;
+              myQueueNumber: number;
+              entryToken?: string;
+            }>(
               `/waiting/concerts/${id}/schedules/${scheduleId}/waiting-queue`,
               { method: "POST" },
             );
@@ -176,14 +188,23 @@ function SeatSelectContent({ params }: { params: Promise<{ id: string }> }) {
       // 컴포넌트 언마운트 시점에 실제로 페이지를 벗어나는 경우(뒤로가기, 홈 이동 등)에만 대기열을 취소합니다.
       // 새로고침(F5), 개발 모드 핫 리로드(HMR), React Strict Mode로 인한 순간적인 언마운트 시에는
       // 주소창 경로가 여전히 '/seats'를 포함하므로 대기열을 취소하지 않고 활성 상태를 안전하게 보존합니다.
-      const isNavigatingAway = typeof window !== "undefined" && !window.location.pathname.includes("/seats");
+      const isNavigatingAway =
+        typeof window !== "undefined" &&
+        !window.location.pathname.includes("/seats");
 
-      if (isNavigatingAway && !leftQueueRef.current && !proceedingToPaymentRef.current) {
+      if (
+        isNavigatingAway &&
+        !leftQueueRef.current &&
+        !proceedingToPaymentRef.current
+      ) {
         leftQueueRef.current = true;
-        apiFetch(`/waiting/concerts/${id}/schedules/${scheduleId}/waiting-queue`, {
-          method: "DELETE",
-          keepalive: true,
-        }).catch(() => {
+        apiFetch(
+          `/waiting/concerts/${id}/schedules/${scheduleId}/waiting-queue`,
+          {
+            method: "DELETE",
+            keepalive: true,
+          },
+        ).catch(() => {
           // 이미 취소됐거나 없는 대기열이면 조용히 넘어간다.
         });
       }
@@ -195,9 +216,12 @@ function SeatSelectContent({ params }: { params: Promise<{ id: string }> }) {
     setIsCancelingQueue(true);
     leftQueueRef.current = true;
     try {
-      await apiFetch(`/waiting/concerts/${id}/schedules/${scheduleId}/waiting-queue`, {
-        method: "DELETE",
-      });
+      await apiFetch(
+        `/waiting/concerts/${id}/schedules/${scheduleId}/waiting-queue`,
+        {
+          method: "DELETE",
+        },
+      );
     } catch {
       // 이미 만료됐거나 없는 대기열이어도, 어차피 나가려던 참이니 조용히 넘어간다.
     } finally {
@@ -223,25 +247,35 @@ function SeatSelectContent({ params }: { params: Promise<{ id: string }> }) {
       sse.addEventListener("seat_snapshot", (e) => {
         if (!active) return;
         try {
-          const snapshot: { seatNumber: string; status: string }[] = JSON.parse(e.data);
-          const statusMap = new Map(snapshot.map((s) => [s.seatNumber, s.status]));
+          const snapshot: { seatNumber: string; status: string }[] = JSON.parse(
+            e.data,
+          );
+          const statusMap = new Map(
+            snapshot.map((s) => [s.seatNumber, s.status]),
+          );
           setSeatData((prev) => {
             if (!prev) return prev;
             return {
               ...prev,
               seats: prev.seats.map((s) => ({
                 ...s,
-                seatStatus: (statusMap.get(s.seatNumber) ?? s.seatStatus) as SeatDetail["seatStatus"],
+                seatStatus: (statusMap.get(s.seatNumber) ??
+                  s.seatStatus) as SeatDetail["seatStatus"],
               })),
             };
           });
-        } catch { /* snapshot 파싱 실패 시 무시 */ }
+        } catch {
+          /* snapshot 파싱 실패 시 무시 */
+        }
       });
 
       sse.addEventListener("seat_status_changed", (e) => {
         if (!active) return;
         try {
-          const { seatNumber, status } = JSON.parse(e.data) as { seatNumber: string; status: string };
+          const { seatNumber, status } = JSON.parse(e.data) as {
+            seatNumber: string;
+            status: string;
+          };
           setSeatData((prev) => {
             if (!prev) return prev;
             return {
@@ -253,7 +287,9 @@ function SeatSelectContent({ params }: { params: Promise<{ id: string }> }) {
               ),
             };
           });
-        } catch { /* 개별 이벤트 파싱 실패 시 무시 */ }
+        } catch {
+          /* 개별 이벤트 파싱 실패 시 무시 */
+        }
       });
 
       sse.onerror = () => {
@@ -275,6 +311,20 @@ function SeatSelectContent({ params }: { params: Promise<{ id: string }> }) {
           setSeatData(res.data);
           setError("");
           connectSse();
+
+          // 결제 페이지에서 뒤로가기 등으로 돌아왔을 때 백엔드의 DELETE /occupy 처리 완료 시점과의
+          // 비동기 타이밍 차이(Race Condition)를 완전히 해소하기 위해 350ms 후 최신 상태를 1회 재조회한다.
+          setTimeout(() => {
+            if (!active) return;
+            apiFetch<SeatSelectionData>(
+              `/concerts/${id}/schedules/${scheduleId}/seats`,
+              { headers: { "X-Queue-Token": entryToken } },
+            )
+              .then((refreshed) => {
+                if (active) setSeatData(refreshed.data);
+              })
+              .catch(() => {});
+          }, 350);
         }
       } catch (e) {
         // 이 회차에서 이미 3매를 구매한 경우: 재시도해봐야 결과가 안 바뀌니 안내 후 돌려보낸다.
@@ -287,7 +337,10 @@ function SeatSelectContent({ params }: { params: Promise<{ id: string }> }) {
         }
 
         // 대기열 토큰 문제(누락/만료): 대기열 화면으로 돌려서 처음부터 다시 등록하게 한다.
-        if (e instanceof ApiError && (e.resultCode === "401-11" || e.resultCode === "403-3")) {
+        if (
+          e instanceof ApiError &&
+          (e.resultCode === "401-11" || e.resultCode === "403-3")
+        ) {
           if (active) {
             setEntryToken(null);
             setQueueError(e.message);
@@ -296,7 +349,9 @@ function SeatSelectContent({ params }: { params: Promise<{ id: string }> }) {
         }
 
         if (active) {
-          setError(e instanceof Error ? e.message : "좌석 정보를 불러오지 못했습니다.");
+          setError(
+            e instanceof Error ? e.message : "좌석 정보를 불러오지 못했습니다.",
+          );
         }
       } finally {
         if (active) setLoading(false);
@@ -342,7 +397,9 @@ function SeatSelectContent({ params }: { params: Promise<{ id: string }> }) {
 
     const mid = Math.ceil(rowSeats.length / 2);
     const isLeftBlock = index < mid;
-    const isLastInBlock = isLeftBlock ? index === mid - 1 : index === rowSeats.length - 1;
+    const isLastInBlock = isLeftBlock
+      ? index === mid - 1
+      : index === rowSeats.length - 1;
     if (isLastInBlock) return null;
 
     return rowSeats[index + 1]?.seatNumber ?? null;
@@ -355,7 +412,7 @@ function SeatSelectContent({ params }: { params: Promise<{ id: string }> }) {
   };
 
   const needsPair = requiredSeatCount >= 2;
-  const totalSelected = (pairSeats ? 2 : 0) + freeSeats.length;
+  const totalSelected = selectedSeats.length;
   const isSelectionFull = totalSelected >= requiredSeatCount;
 
   const handleSeatClick = (seatNumber: string) => {
@@ -379,11 +436,19 @@ function SeatSelectContent({ params }: { params: Promise<{ id: string }> }) {
       const neighbor = getRightNeighborSeat(seatNumber);
       if (!neighbor || seatStatusMap.get(neighbor) !== "AVAILABLE") return;
       setPairSeats([seatNumber, neighbor]);
+      setFreeSeats((prev) =>
+        prev.filter((s) => s !== seatNumber && s !== neighbor),
+      );
       return;
     }
 
     // 짝을 다 채웠거나(혹은 1명이라 짝이 필요 없거나), 자유석 자리 — 아무 빈 좌석이나 선택.
-    setFreeSeats((prev) => [...prev, seatNumber]);
+    setFreeSeats((prev) => {
+      if (prev.includes(seatNumber) || pairSeats?.includes(seatNumber)) {
+        return prev;
+      }
+      return [...prev, seatNumber];
+    });
   };
 
   const totalPrice = selectedSeats.reduce((sum, seatNumber) => {
@@ -393,10 +458,21 @@ function SeatSelectContent({ params }: { params: Promise<{ id: string }> }) {
   }, 0);
 
   const handleProceedToPayment = async () => {
-    if (selectedSeats.length === 0 || !scheduleId || !entryToken) return;
+    if (
+      selectedSeats.length < requiredSeatCount ||
+      !scheduleId ||
+      !entryToken
+    ) {
+      showAlert(`좌석 ${requiredSeatCount}매를 모두 선택해주세요.`);
+      return;
+    }
 
     setIsReserving(true);
-    const occupied: { seatNumber: string; occupyToken: string; price: number }[] = [];
+    const occupied: {
+      seatNumber: string;
+      occupyToken: string;
+      price: number;
+    }[] = [];
 
     try {
       for (const seatNumber of selectedSeats) {
@@ -422,6 +498,9 @@ function SeatSelectContent({ params }: { params: Promise<{ id: string }> }) {
         queueToken: entryToken,
       });
       proceedingToPaymentRef.current = true;
+      // eslint-disable-next-line react-hooks/purity
+      const activeTimestamp = String(Date.now());
+      sessionStorage.setItem("paymentActive", activeTimestamp);
       router.push(`/payment?${params.toString()}`);
     } catch (e) {
       await Promise.all(
@@ -438,9 +517,10 @@ function SeatSelectContent({ params }: { params: Promise<{ id: string }> }) {
   };
 
   // 대기열 입장 허가(entryToken)를 아직 못 받았으면, 좌석 화면 대신 대기 화면을 보여준다.
-  const remainingRank = myQueueNumber !== null && queueRank !== null
-    ? Math.max(1, myQueueNumber - queueRank)
-    : (queueRank ?? "-");
+  const remainingRank =
+    myQueueNumber !== null && queueRank !== null
+      ? Math.max(1, myQueueNumber - queueRank)
+      : (queueRank ?? "-");
 
   if (!entryToken) {
     return (
@@ -450,16 +530,21 @@ function SeatSelectContent({ params }: { params: Promise<{ id: string }> }) {
             <p className="text-red-400 text-sm">{queueError}</p>
           ) : (
             <>
-              <h2 className="text-xl font-bold text-gray-800 mb-2">대기 중입니다</h2>
+              <h2 className="text-xl font-bold text-gray-800 mb-2">
+                대기 중입니다
+              </h2>
               <p className="text-gray-400 text-sm mb-6">
-                접속자가 많아 순서대로 입장을 안내하고 있어요. 잠시만 기다려주세요.
+                접속자가 많아 순서대로 입장을 안내하고 있어요. 잠시만
+                기다려주세요.
               </p>
               <div className="text-4xl font-bold text-blue-600 mb-1">
                 {remainingRank}
                 <span className="text-lg text-gray-400 font-normal">번째</span>
               </div>
               {queueTotal !== null && (
-                <p className="text-xs text-gray-400 mb-6">전체 대기 {queueTotal}명</p>
+                <p className="text-xs text-gray-400 mb-6">
+                  전체 대기 {queueTotal}명
+                </p>
               )}
             </>
           )}
@@ -468,7 +553,11 @@ function SeatSelectContent({ params }: { params: Promise<{ id: string }> }) {
             disabled={isCancelingQueue}
             className="w-full mt-4 p-3 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-bold transition disabled:opacity-50"
           >
-            {queueError ? "돌아가기" : (isCancelingQueue ? "취소 중..." : "대기열 취소")}
+            {queueError
+              ? "돌아가기"
+              : isCancelingQueue
+                ? "취소 중..."
+                : "대기열 취소"}
           </button>
         </div>
       </div>
@@ -543,7 +632,9 @@ function SeatSelectContent({ params }: { params: Promise<{ id: string }> }) {
         <div className="mb-6 flex items-center justify-between">
           <h1 className="text-lg font-bold text-gray-800">좌석 선택</h1>
           {userName && (
-            <span className="text-sm text-gray-400">{userName}님, 좌석을 선택해주세요</span>
+            <span className="text-sm text-gray-400">
+              {userName}님, 좌석을 선택해주세요
+            </span>
           )}
         </div>
 
@@ -614,8 +705,12 @@ function SeatSelectContent({ params }: { params: Promise<{ id: string }> }) {
                 {/* 성인 */}
                 <div className="flex items-center justify-between p-3 bg-gray-50/50 rounded-xl border border-gray-100/50">
                   <div className="flex flex-col">
-                    <span className="font-semibold text-gray-700 text-xs">성인</span>
-                    <span className="text-[9px] text-gray-400 font-medium">만 19세 이상</span>
+                    <span className="font-semibold text-gray-700 text-xs">
+                      성인
+                    </span>
+                    <span className="text-[9px] text-gray-400 font-medium">
+                      만 19세 이상
+                    </span>
                   </div>
                   <div className="flex items-center gap-2.5">
                     <button
@@ -626,10 +721,14 @@ function SeatSelectContent({ params }: { params: Promise<{ id: string }> }) {
                     >
                       <Minus size={12} />
                     </button>
-                    <span className="w-4 text-center font-bold text-gray-800 text-xs">{adultCount}</span>
+                    <span className="w-4 text-center font-bold text-gray-800 text-xs">
+                      {adultCount}
+                    </span>
                     <button
                       type="button"
-                      onClick={() => setAdultCount((c) => Math.min(MAX_HEADCOUNT, c + 1))}
+                      onClick={() =>
+                        setAdultCount((c) => Math.min(MAX_HEADCOUNT, c + 1))
+                      }
                       disabled={adultCount + teenCount >= MAX_HEADCOUNT}
                       className="w-7 h-7 flex items-center justify-center rounded-full border border-gray-200 text-gray-600 hover:bg-blue-50 hover:border-blue-200 hover:text-blue-600 transition disabled:opacity-30 disabled:cursor-not-allowed"
                     >
@@ -641,8 +740,12 @@ function SeatSelectContent({ params }: { params: Promise<{ id: string }> }) {
                 {/* 청소년 */}
                 <div className="flex items-center justify-between p-3 bg-gray-50/50 rounded-xl border border-gray-100/50">
                   <div className="flex flex-col">
-                    <span className="font-semibold text-gray-700 text-xs">청소년</span>
-                    <span className="text-[9px] text-gray-400 font-medium">만 13세 ~ 18세</span>
+                    <span className="font-semibold text-gray-700 text-xs">
+                      청소년
+                    </span>
+                    <span className="text-[9px] text-gray-400 font-medium">
+                      만 13세 ~ 18세
+                    </span>
                   </div>
                   <div className="flex items-center gap-2.5">
                     <button
@@ -653,10 +756,14 @@ function SeatSelectContent({ params }: { params: Promise<{ id: string }> }) {
                     >
                       <Minus size={12} />
                     </button>
-                    <span className="w-4 text-center font-bold text-gray-800 text-xs">{teenCount}</span>
+                    <span className="w-4 text-center font-bold text-gray-800 text-xs">
+                      {teenCount}
+                    </span>
                     <button
                       type="button"
-                      onClick={() => setTeenCount((c) => Math.min(MAX_HEADCOUNT, c + 1))}
+                      onClick={() =>
+                        setTeenCount((c) => Math.min(MAX_HEADCOUNT, c + 1))
+                      }
                       disabled={adultCount + teenCount >= MAX_HEADCOUNT}
                       className="w-7 h-7 flex items-center justify-center rounded-full border border-gray-200 text-gray-600 hover:bg-blue-50 hover:border-blue-200 hover:text-blue-600 transition disabled:opacity-30 disabled:cursor-not-allowed"
                     >
@@ -761,7 +868,6 @@ function SeatSelectContent({ params }: { params: Promise<{ id: string }> }) {
           </div>
         </div>
       </div>
-
     </div>
   );
 }

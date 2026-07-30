@@ -1,6 +1,7 @@
 package com.back.domain.user.dto
 
 import com.back.domain.ticket.entity.Ticket
+import com.fasterxml.jackson.annotation.JsonProperty
 
 data class TicketSummary(
     val ticketId: Long,
@@ -9,7 +10,7 @@ data class TicketSummary(
     val seatNumber: String,
     val gradeName: String,
     val ticketPrice: Int,
-    val isValid: Boolean,
+    @get:JsonProperty("isValid") val isValid: Boolean,
     val createdAt: String
 ) {
     companion object {

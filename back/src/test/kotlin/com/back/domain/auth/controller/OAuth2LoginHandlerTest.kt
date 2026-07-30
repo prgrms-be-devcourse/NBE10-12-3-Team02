@@ -2,6 +2,7 @@ package com.back.domain.auth.controller
 
 import com.back.domain.auth.dto.TokenResponse
 import com.back.domain.auth.service.AuthService
+import com.back.domain.auth.repository.SocialLinkCookieRepository
 import com.back.domain.user.constant.LoginType
 import com.back.domain.user.entity.User
 import com.back.domain.user.repository.UserRepository
@@ -29,12 +30,17 @@ import java.util.Optional
 
 class OAuth2LoginHandlerTest {
 
-    private val redirectHandler = OAuth2RedirectHandler("http://localhost:3000", "http://localhost:3000/login")
+    private val redirectHandler = OAuth2RedirectHandler(
+        "http://localhost:3000",
+        "http://localhost:3000/login",
+        "http://localhost:3000/mypage",
+    )
 
     @BeforeEach
     fun setUp() {
         ReflectionTestUtils.setField(redirectHandler, "frontCallbackUrl", "http://localhost:3000")
         ReflectionTestUtils.setField(redirectHandler, "frontLoginUrl", "http://localhost:3000/login")
+        ReflectionTestUtils.setField(redirectHandler, "frontSocialLinkUrl", "http://localhost:3000/mypage")
     }
 
     @Test
@@ -81,7 +87,8 @@ class OAuth2LoginHandlerTest {
             userRepository,
             authService,
             requestContext,
-            redirectHandler
+            redirectHandler,
+            mock(SocialLinkCookieRepository::class.java),
         )
 
         val user = User.create(
@@ -199,7 +206,10 @@ class OAuth2LoginHandlerTest {
     @Test
     @DisplayName("OAuth2 로그인 실패 시 OAuth2 에러 코드로 redirect")
     fun t8() {
-        val failureHandler = OAuth2LoginFailureHandler(redirectHandler)
+        val failureHandler = OAuth2LoginFailureHandler(
+            redirectHandler,
+            mock(SocialLinkCookieRepository::class.java),
+        )
         val response = MockHttpServletResponse()
 
         failureHandler.onAuthenticationFailure(
@@ -230,12 +240,81 @@ class OAuth2LoginHandlerTest {
         assertThat(userInfo.name).isEqualTo("네이버유저")
     }
 
+    @Test
+    @DisplayName("OAuth2 인증 객체가 소셜 연동 완료 상태이면 토큰을 재발급하지 않고 마이페이지로 redirect")
+    fun t10() {
+        val userRepository = mock(UserRepository::class.java)
+        val authService = mock(AuthService::class.java)
+        val requestContext = mock(RequestContext::class.java)
+        val cookieRepository = mock(SocialLinkCookieRepository::class.java)
+        val successHandler = OAuth2LoginSuccessHandler(
+            userRepository,
+            authService,
+            requestContext,
+            redirectHandler,
+            cookieRepository,
+        )
+        val response = MockHttpServletResponse()
+
+        successHandler.onAuthenticationSuccess(
+            mock(HttpServletRequest::class.java),
+            response,
+            authentication(
+                oAuth2User(
+                    mapOf(
+                        "userId" to 1L,
+                        "socialLink" to true,
+                    ),
+                ),
+            ),
+        )
+
+        verify(cookieRepository, never()).load()
+        verify(cookieRepository).remove()
+        verifyNoInteractions(userRepository, authService, requestContext)
+        assertThat(response.status).isEqualTo(302)
+        assertThat(response.redirectedUrl)
+            .isEqualTo("http://localhost:3000/mypage?socialLink=success")
+    }
+
+    @Test
+    @DisplayName("소셜 계정 연동 실패 시 에러 코드와 함께 마이페이지로 redirect")
+    fun t11() {
+        val cookieRepository = mock(SocialLinkCookieRepository::class.java)
+        `when`(cookieRepository.load()).thenReturn("link-intent-id")
+        val failureHandler = OAuth2LoginFailureHandler(
+            redirectHandler,
+            cookieRepository,
+        )
+        val response = MockHttpServletResponse()
+
+        failureHandler.onAuthenticationFailure(
+            mock(HttpServletRequest::class.java),
+            response,
+            OAuth2AuthenticationException("oauth2_account_already_used"),
+        )
+
+        verify(cookieRepository).remove()
+        assertThat(response.status).isEqualTo(302)
+        assertThat(response.redirectedUrl)
+            .isEqualTo(
+                "http://localhost:3000/mypage" +
+                    "?socialLinkError=oauth2_account_already_used",
+            )
+    }
+
     private fun successHandler(
         userRepository: UserRepository,
         authService: AuthService,
         requestContext: RequestContext
     ): OAuth2LoginSuccessHandler {
-        return OAuth2LoginSuccessHandler(userRepository, authService, requestContext, redirectHandler)
+        return OAuth2LoginSuccessHandler(
+            userRepository,
+            authService,
+            requestContext,
+            redirectHandler,
+            mock(SocialLinkCookieRepository::class.java),
+        )
     }
 
     private fun authentication(oAuth2User: OAuth2User): Authentication {

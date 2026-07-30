@@ -1,12 +1,18 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
-import Link from "next/link";
-import { Eye, EyeOff } from "lucide-react";
-import { apiFetch } from "@/lib/api";
-import { showAlert, showSuccess, showError } from "@/lib/alert";
 import PasswordStrengthMeter from "@/app/components/PasswordStrengthMeter";
+import { showAlert, showError, showSuccess } from "@/lib/alert";
+import { apiFetch } from "@/lib/api";
+import { isValidEmail } from "@/lib/validators";
+import { Eye, EyeOff } from "lucide-react";
+import Image from "next/image";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+
+interface ConfirmResponseData {
+  verificationToken: string;
+}
 
 export default function SignupPage() {
   const router = useRouter();
@@ -20,9 +26,49 @@ export default function SignupPage() {
   const [isIdChecked, setIsIdChecked] = useState(false);
   const [isChecking, setIsChecking] = useState(false);
 
+  // 이메일 인증 관련 state
+  const [verificationCode, setVerificationCode] = useState("");
+  const [verificationToken, setVerificationToken] = useState("");
+  const [isEmailSent, setIsEmailSent] = useState(false);
+  const [isEmailVerified, setIsEmailVerified] = useState(false);
+  const [isSendingEmail, setIsSendingEmail] = useState(false);
+  const [isVerifyingCode, setIsVerifyingCode] = useState(false);
+  const [timeLeft, setTimeLeft] = useState(300); // 5분 = 300초
+
+  useEffect(() => {
+    if (!isEmailSent || isEmailVerified) return;
+
+    const timer = setInterval(() => {
+      setTimeLeft((prev) => {
+        if (prev <= 1) {
+          clearInterval(timer);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [isEmailSent, isEmailVerified]);
+
+  const formatTime = (seconds: number) => {
+    const min = Math.floor(seconds / 60);
+    const sec = seconds % 60;
+    return `${String(min).padStart(2, "0")}:${String(sec).padStart(2, "0")}`;
+  };
+
   const handleLoginIdChange = (value: string) => {
     setLoginId(value);
     setIsIdChecked(false);
+  };
+
+  const handleEmailChange = (value: string) => {
+    setEmail(value);
+    setIsEmailSent(false);
+    setIsEmailVerified(false);
+    setVerificationCode("");
+    setVerificationToken("");
+    setTimeLeft(300);
   };
 
   const handleCheckId = async () => {
@@ -43,6 +89,76 @@ export default function SignupPage() {
     }
   };
 
+  const handleSendEmailVerification = async () => {
+    if (email.trim() === "") {
+      showAlert("이메일을 입력해주세요.");
+      return;
+    }
+    if (!isValidEmail(email)) {
+      showAlert("올바른 이메일 형식을 입력해주세요.");
+      return;
+    }
+
+    setIsSendingEmail(true);
+    try {
+      await apiFetch("/auth/email-verifications", {
+        method: "POST",
+        body: JSON.stringify({ email }),
+      });
+      showSuccess("이메일로 인증번호가 발송되었습니다.");
+      setTimeLeft(300);
+      setVerificationCode("");
+      setIsEmailSent(true);
+      setIsEmailVerified(false);
+    } catch (e) {
+      showError(
+        e instanceof Error ? e.message : "인증번호 발송에 실패했습니다.",
+      );
+    } finally {
+      setIsSendingEmail(false);
+    }
+  };
+
+  const handleConfirmEmailVerification = async () => {
+    if (timeLeft === 0) {
+      showAlert(
+        "인증번호 유효시간(5분)이 만료되었습니다. 재발송 버튼을 클릭해 주세요.",
+      );
+      return;
+    }
+    if (verificationCode.trim().length !== 6) {
+      showAlert("6자리 인증번호를 정확히 입력해주세요.");
+      return;
+    }
+
+    setIsVerifyingCode(true);
+    try {
+      const res = await apiFetch<ConfirmResponseData>(
+        "/auth/email-verifications/confirm",
+        {
+          method: "POST",
+          body: JSON.stringify({ email, code: verificationCode }),
+        },
+      );
+
+      if (res.data?.verificationToken) {
+        setVerificationToken(res.data.verificationToken);
+        setIsEmailVerified(true);
+        showSuccess("이메일 인증이 완료되었습니다.");
+      } else {
+        throw new Error("인증 토큰을 전달받지 못했습니다.");
+      }
+    } catch (e) {
+      showError(
+        e instanceof Error
+          ? e.message
+          : "인증번호가 일치하지 않거나 만료되었습니다.",
+      );
+    } finally {
+      setIsVerifyingCode(false);
+    }
+  };
+
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -54,8 +170,16 @@ export default function SignupPage() {
       showAlert("이메일을 입력해주세요.");
       return;
     }
+    if (!isEmailVerified || !verificationToken) {
+      showAlert("이메일 인증을 진행해주세요.");
+      return;
+    }
     if (loginId.trim() === "") {
       showAlert("아이디를 입력해주세요.");
+      return;
+    }
+    if (!isIdChecked) {
+      showAlert("아이디 중복확인을 먼저 진행해주세요.");
       return;
     }
     if (password.trim() === "") {
@@ -70,21 +194,25 @@ export default function SignupPage() {
       showAlert("비밀번호가 일치하지 않습니다.");
       return;
     }
-    if (!isIdChecked) {
-      showAlert("아이디 중복확인을 먼저 진행해주세요.");
-      return;
-    }
 
     setIsSubmitting(true);
     try {
       await apiFetch("/users/signup", {
         method: "POST",
-        body: JSON.stringify({ id: loginId, email, password, name }),
+        body: JSON.stringify({
+          id: loginId,
+          email,
+          password,
+          name,
+          verificationToken,
+        }),
       });
       await showSuccess("회원가입이 완료되었습니다. 로그인해주세요.");
       router.push("/login");
     } catch (err) {
-      showError(err instanceof Error ? err.message : "회원가입 중 오류가 발생했습니다.");
+      showError(
+        err instanceof Error ? err.message : "회원가입 중 오류가 발생했습니다.",
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -92,10 +220,21 @@ export default function SignupPage() {
 
   return (
     <div className="h-screen overflow-hidden flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
-      <form onSubmit={handleSignup} className="w-96 p-10 bg-white rounded-2xl shadow-xl">
+      <form
+        onSubmit={handleSignup}
+        className="w-96 p-10 bg-white rounded-2xl shadow-xl"
+      >
         <div className="text-center">
           <Link href="/" className="flex justify-center">
-            <img src="/images/logo.svg" alt="티케팅고" className="h-24 w-24" />
+            <Image
+              unoptimized
+              priority
+              src="/images/logo.svg"
+              alt="티케팅고"
+              width={96}
+              height={96}
+              className="h-24 w-24 object-contain"
+            />
           </Link>
           <p className="my-4 text-2xl font-bold text-gray-800">회원가입</p>
         </div>
@@ -107,13 +246,77 @@ export default function SignupPage() {
           onChange={(e) => setName(e.target.value)}
           className="w-full p-3 mb-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
         />
-        <input
-          type="email"
-          placeholder="이메일"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          className="w-full p-3 mb-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
-        />
+
+        {/* 이메일 입력 + 인증번호 발송 버튼 */}
+        <div className="flex gap-2 mb-3">
+          <input
+            type="email"
+            placeholder="이메일"
+            value={email}
+            onChange={(e) => handleEmailChange(e.target.value)}
+            disabled={isEmailVerified}
+            className="flex-1 p-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 disabled:bg-gray-50 disabled:text-gray-500"
+          />
+          <button
+            type="button"
+            onClick={handleSendEmailVerification}
+            disabled={isSendingEmail || isEmailVerified}
+            className={`px-4 rounded-lg text-sm font-semibold whitespace-nowrap transition ${
+              isEmailVerified
+                ? "bg-green-100 text-green-700"
+                : "bg-gray-100 hover:bg-gray-200 text-gray-700"
+            } disabled:opacity-50`}
+          >
+            {isSendingEmail
+              ? "발송 중..."
+              : isEmailVerified
+                ? "인증완료"
+                : isEmailSent
+                  ? "재발송"
+                  : "인증발송"}
+          </button>
+        </div>
+
+        {/* 인증번호 6자리 입력 + 인증확인 버튼 (5분 카운트다운 타이머 포함) */}
+        {isEmailSent && !isEmailVerified && (
+          <div className="mb-3">
+            <div className="flex gap-2">
+              <div className="relative flex-1">
+                <input
+                  type="text"
+                  placeholder="인증번호 6자리"
+                  maxLength={6}
+                  value={verificationCode}
+                  onChange={(e) => setVerificationCode(e.target.value)}
+                  disabled={timeLeft === 0}
+                  className="w-full p-3 pr-16 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 disabled:bg-gray-100 disabled:text-gray-400"
+                />
+                <span
+                  className={`absolute right-3 top-1/2 -translate-y-1/2 text-xs font-semibold ${
+                    timeLeft <= 60
+                      ? "text-red-500 animate-pulse"
+                      : "text-gray-500"
+                  }`}
+                >
+                  {formatTime(timeLeft)}
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={handleConfirmEmailVerification}
+                disabled={isVerifyingCode || timeLeft === 0}
+                className="px-4 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-semibold whitespace-nowrap transition disabled:opacity-50"
+              >
+                {isVerifyingCode ? "확인 중..." : "인증확인"}
+              </button>
+            </div>
+            {timeLeft === 0 && (
+              <p className="mt-1 text-xs font-medium text-red-500">
+                인증번호 유효시간이 만료되었습니다. 재발송 버튼을 클릭해 주세요.
+              </p>
+            )}
+          </div>
+        )}
 
         <div className="flex gap-2 mb-3">
           <input
@@ -174,7 +377,10 @@ export default function SignupPage() {
 
         <p className="text-center text-sm text-gray-500 mt-6">
           이미 계정이 있으신가요?{" "}
-          <Link href="/login" className="text-blue-600 font-semibold hover:underline">
+          <Link
+            href="/login"
+            className="text-blue-600 font-semibold hover:underline"
+          >
             로그인
           </Link>
         </p>

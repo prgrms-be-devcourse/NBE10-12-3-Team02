@@ -158,7 +158,7 @@ class ConcertControllerTest @Autowired constructor(
 
         val rScript = mock(RScript::class.java)
         doReturn(rScript).`when`(redissonClient).getScript(any(Codec::class.java))
-        `when`(rScript.eval<Any>(any(), anyString(), any(), anyList<Any>(), any(), any(), any(), any(), any())).thenReturn(1L)
+        `when`(rScript.eval<Any>(any(), anyString(), any(), anyList<Any>(), any(), any(), any())).thenReturn(1L)
 
         val rMap = mock(RMap::class.java) as RMap<String, String>
         doReturn(rMap).`when`(redissonClient).getMap<String, String>(anyString(), any(Codec::class.java))

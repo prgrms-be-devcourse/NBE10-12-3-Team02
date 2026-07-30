@@ -1,5 +1,6 @@
 package com.back.domain.auth.service
 
+import com.back.domain.user.repository.UserRepository
 import com.back.global.exception.ErrorCode
 import com.back.global.exception.ServiceException
 import com.back.global.security.email.EmailVerificationProperties
@@ -21,12 +22,18 @@ import java.util.UUID
 class EmailVerificationService(
     private val mailSender: JavaMailSender,
     private val emailVerificationRepository: EmailVerificationRepository,
+    private val userRepository: UserRepository,
     private val properties: EmailVerificationProperties,
     @Value("\${spring.mail.username}")
     private val senderEmail: String,
 ) {
     fun sendVerificationCode(email: String) {
         val normalizedEmail = normalizeEmail(email)
+
+        if (userRepository.existsByEmailAndDeletedAtIsNull(normalizedEmail)) {
+            throw ServiceException(ErrorCode.USER_EMAIL_ALREADY_EXISTS)
+        }
+
         val emailHash = TokenHashUtil.sha256(normalizedEmail)
         val code = generateCode()
         val challengeSaved = emailVerificationRepository.saveChallenge(

@@ -1,6 +1,6 @@
 name: CI
 
-# - feat/**, fix/**, refactor/** 브랜치 push -> 바로 피드백
+# - feat/**, fix/**, refactor/**, test/** 브랜치 push -> 바로 피드백
 # - main 대상 PR                        -> 머지 전 최종 검증 게이트
 # - main push 제외                       -> main push는 CD(배포) 스크립트가 담당
 on:
@@ -9,6 +9,7 @@ on:
       - 'feat/**'
       - 'fix/**'
       - 'refactor/**'
+      - 'test/**'
   pull_request:
     branches:
       - 'main'
@@ -64,7 +65,7 @@ jobs:
           path: back/build/reports/tests/test
           retention-days: 7
 
-  # ── 프론트엔드: Node.js 22 + pnpm v9 기반 lint + build ──
+  # ── 프론트엔드: Node.js 22 + pnpm v9 기반 ci:check + build ──
   frontend:
     name: Frontend CI
     runs-on: ubuntu-latest
@@ -99,10 +100,10 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      # 5. ESLint 정적 코드 분석
-      - name: Lint check
-        run: pnpm run lint
+      # 5. CI 검증 (TypeScript Type Check + ESLint)
+      - name: Run CI checks (TSC, ESLint)
+        run: pnpm run ci:check
 
-      # 6. TypeScript + Next.js 빌드 검증
+      # 6. Next.js 빌드 검증
       - name: Build check
         run: pnpm run build

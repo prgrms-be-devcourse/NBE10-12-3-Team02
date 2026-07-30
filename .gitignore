@@ -54,6 +54,7 @@ yarn-error.log*
 *.mv.db
 *.lock.db
 *.trace.db
+*.hprof
 
 # Environment & Secret Files
 **/.env.local
@@ -65,3 +66,10 @@ yarn-error.log*
 back/docs
 back/AGENTS.md
 back/uploads/
+
+# Terraform
+infra/.terraform/
+infra/*.tfstate
+infra/*.tfstate.*
+infra/terraform.tfvars
+back/.env

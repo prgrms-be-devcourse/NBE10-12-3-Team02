@@ -8,7 +8,11 @@ import {
   STRENGTH_LEVELS,
 } from "@/lib/passwordStrength";
 
-export default function PasswordStrengthMeter({ password }: { password: string }) {
+export default function PasswordStrengthMeter({
+  password,
+}: {
+  password: string;
+}) {
   const strength = getPasswordStrength(password);
   if (!strength) return null;
 

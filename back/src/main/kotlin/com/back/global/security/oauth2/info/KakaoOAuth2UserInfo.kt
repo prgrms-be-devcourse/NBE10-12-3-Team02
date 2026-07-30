@@ -16,6 +16,10 @@ class KakaoOAuth2UserInfo(
             return profile["nickname"]?.toString() ?: "카카오사용자"
         }
 
+    override val isEmailVerified: Boolean
+        get() = kakaoAccount["is_email_valid"] == true &&
+            kakaoAccount["is_email_verified"] == true
+
     private val kakaoAccount: Map<*, *>
         get() = (attributes["kakao_account"] as? Map<*, *>) ?: emptyMap<Any, Any>()
 }

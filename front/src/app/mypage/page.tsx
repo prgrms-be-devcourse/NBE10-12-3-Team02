@@ -1,8 +1,14 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { apiFetch, decodeToken, restoreSession, setAccessToken } from "@/lib/api";
+import {
+  apiFetch,
+  decodeToken,
+  restoreSession,
+  setAccessToken,
+} from "@/lib/api";
 import { showAlert, showConfirm, showSuccess, showError } from "@/lib/alert";
 import { getLocalConcertPoster } from "@/lib/concertDetailImages";
 import PasswordStrengthMeter from "@/app/components/PasswordStrengthMeter";
@@ -16,6 +22,10 @@ interface TicketSummary {
   ticketPrice: number;
   isValid: boolean;
   createdAt: string;
+}
+
+interface LegacyTicketSummary extends TicketSummary {
+  valid?: boolean;
 }
 
 interface TicketGroupInfo {
@@ -75,13 +85,16 @@ export default function MyPage() {
         const res = await apiFetch<MyPageData>(`/users/me`);
         setData(res.data);
       } catch (e) {
-        showError(e instanceof Error ? e.message : "마이페이지 조회에 실패했습니다.");
+        showError(
+          e instanceof Error ? e.message : "마이페이지 조회에 실패했습니다.",
+        );
       } finally {
         setLoading(false);
       }
     };
 
     initializeMyPage();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleWithdraw = async () => {
@@ -91,7 +104,9 @@ export default function MyPage() {
       await showSuccess("회원 탈퇴가 완료되었습니다.");
       window.location.href = "/";
     } catch (e) {
-      showError(e instanceof Error ? e.message : "탈퇴 처리 중 오류가 발생했습니다.");
+      showError(
+        e instanceof Error ? e.message : "탈퇴 처리 중 오류가 발생했습니다.",
+      );
     } finally {
       setShowWithdrawModal(false);
     }
@@ -151,13 +166,17 @@ export default function MyPage() {
         body: JSON.stringify(body),
       });
 
-      setData((prev) => (prev ? { ...prev, name: editName, email: editEmail } : prev));
+      setData((prev) =>
+        prev ? { ...prev, name: editName, email: editEmail } : prev,
+      );
       setIsEditing(false);
       setEditPassword("");
       setEditPasswordCheck("");
       showSuccess("정보가 수정되었습니다.");
     } catch (e) {
-      showError(e instanceof Error ? e.message : "정보 수정 중 오류가 발생했습니다.");
+      showError(
+        e instanceof Error ? e.message : "정보 수정 중 오류가 발생했습니다.",
+      );
     } finally {
       setIsSavingProfile(false);
     }
@@ -179,19 +198,15 @@ export default function MyPage() {
   // 경우(예: 취소한 옛날 예매 + 새로 산 예매)까지 하나로 합쳐버릴 수 있다.
   // 그래서 그룹 안에서 다시 한번, "한 번의 결제로 생성된 티켓들은 ticketId가 바로 이어진다"는
   // 규칙으로 진짜 예매 단위로 쪼갠다.
+  // 결제 단위(groupToken)별로 개별 예매 그룹으로 쪼갠다.
   const splitIntoReservations = (group: TicketGroupInfo): TicketGroupInfo[] => {
-    const byIdAsc = [...group.tickets].sort((a, b) => a.ticketId - b.ticketId);
-    const chunks: TicketSummary[][] = [];
-    for (const ticket of byIdAsc) {
-      const last = chunks[chunks.length - 1];
-      const lastTicket = last?.[last.length - 1];
-      if (lastTicket && ticket.ticketId === lastTicket.ticketId + 1) {
-        last.push(ticket);
-      } else {
-        chunks.push([ticket]);
-      }
+    const map = new Map<string, TicketSummary[]>();
+    for (const ticket of group.tickets) {
+      const key = ticket.groupToken || `ticket-${ticket.ticketId}`;
+      if (!map.has(key)) map.set(key, []);
+      map.get(key)!.push(ticket);
     }
-    return chunks.map((tickets) => ({
+    return Array.from(map.values()).map((tickets) => ({
       ...group,
       tickets,
       totalPrice: tickets.reduce((sum, t) => sum + t.ticketPrice, 0),
@@ -206,8 +221,15 @@ export default function MyPage() {
     return maxB - maxA;
   });
 
+  const isTicketValid = (t: TicketSummary): boolean => {
+    const legacyTicket = t as LegacyTicketSummary;
+    if (t.isValid !== undefined) return t.isValid;
+    if (legacyTicket.valid !== undefined) return legacyTicket.valid;
+    return true;
+  };
+
   const ticketGroups = sortedGroups.filter((group) => {
-    const allInvalid = group.tickets.every((t) => !t.isValid);
+    const allInvalid = group.tickets.every((t) => !isTicketValid(t));
     if (statusFilter === "valid") return !allInvalid;
     if (statusFilter === "canceled") return allInvalid;
     return true;
@@ -216,7 +238,7 @@ export default function MyPage() {
   const totalPages = Math.ceil(ticketGroups.length / ticketsPerPage);
   const pagedGroups = ticketGroups.slice(
     (currentPage - 1) * ticketsPerPage,
-    currentPage * ticketsPerPage
+    currentPage * ticketsPerPage,
   );
 
   const handleFilterChange = (filter: StatusFilter) => {
@@ -232,15 +254,24 @@ export default function MyPage() {
   const handleCancelGroup = async (group: TicketGroupInfo) => {
     const validTickets = group.tickets.filter((t) => t.isValid);
     const confirmed = await showConfirm(
-      validTickets.length > 1 ? `좌석 ${validTickets.length}매를 모두 취소하시겠어요?` : "예매를 취소하시겠어요?",
-      { title: "예매 취소", confirmText: "취소하기", cancelText: "돌아가기", danger: true },
+      validTickets.length > 1
+        ? `좌석 ${validTickets.length}매를 모두 취소하시겠어요?`
+        : "예매를 취소하시겠어요?",
+      {
+        title: "예매 취소",
+        confirmText: "취소하기",
+        cancelText: "돌아가기",
+        danger: true,
+      },
     );
     if (!confirmed) return;
 
     setCancelingKey(group.tickets[0].ticketId);
     try {
       await Promise.all(
-        validTickets.map((t) => apiFetch(`/tickets/cancel/${t.ticketId}`, { method: "PATCH" })),
+        validTickets.map((t) =>
+          apiFetch(`/tickets/cancel/${t.ticketId}`, { method: "PATCH" }),
+        ),
       );
       const canceledIds = new Set(validTickets.map((t) => t.ticketId));
       setData((prev) =>
@@ -252,17 +283,21 @@ export default function MyPage() {
                   ? {
                       ...g,
                       tickets: g.tickets.map((t) =>
-                        canceledIds.has(t.ticketId) ? { ...t, isValid: false } : t
+                        canceledIds.has(t.ticketId)
+                          ? { ...t, isValid: false }
+                          : t,
                       ),
                     }
-                  : g
+                  : g,
               ),
             }
-          : prev
+          : prev,
       );
       await showSuccess("예매가 취소되었습니다.");
     } catch (e) {
-      showError(e instanceof Error ? e.message : "취소 처리 중 오류가 발생했습니다.");
+      showError(
+        e instanceof Error ? e.message : "취소 처리 중 오류가 발생했습니다.",
+      );
     } finally {
       setCancelingKey(null);
     }
@@ -274,7 +309,9 @@ export default function MyPage() {
         <div className="flex justify-between items-center mb-8">
           <div>
             <p className="text-gray-400 text-sm">안녕하세요</p>
-            <h1 className="text-2xl font-bold text-gray-800">{data.name}님 👋</h1>
+            <h1 className="text-2xl font-bold text-gray-800">
+              {data.name}님 👋
+            </h1>
           </div>
           <button
             onClick={() => setShowWithdrawModal(true)}
@@ -309,7 +346,9 @@ export default function MyPage() {
                 />
               </div>
               <div>
-                <label className="block text-xs text-gray-400 mb-1">이메일</label>
+                <label className="block text-xs text-gray-400 mb-1">
+                  이메일
+                </label>
                 <input
                   type="email"
                   value={editEmail}
@@ -334,7 +373,9 @@ export default function MyPage() {
                   </div>
                   {editPassword !== "" && (
                     <div>
-                      <label className="block text-xs text-gray-400 mb-1">새 비밀번호 확인</label>
+                      <label className="block text-xs text-gray-400 mb-1">
+                        새 비밀번호 확인
+                      </label>
                       <input
                         type="password"
                         value={editPasswordCheck}
@@ -364,9 +405,18 @@ export default function MyPage() {
             </div>
           ) : (
             <div className="space-y-2 text-gray-600">
-              <p><span className="inline-block w-20 text-gray-400">이름</span>{data.name}</p>
-              <p><span className="inline-block w-20 text-gray-400">아이디</span>{data.id}</p>
-              <p><span className="inline-block w-20 text-gray-400">이메일</span>{data.email}</p>
+              <p>
+                <span className="inline-block w-20 text-gray-400">이름</span>
+                {data.name}
+              </p>
+              <p>
+                <span className="inline-block w-20 text-gray-400">아이디</span>
+                {data.id}
+              </p>
+              <p>
+                <span className="inline-block w-20 text-gray-400">이메일</span>
+                {data.email}
+              </p>
             </div>
           )}
         </div>
@@ -374,7 +424,8 @@ export default function MyPage() {
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-bold text-gray-700">내 티켓</h2>
           <span className="text-sm text-gray-400">
-            {ticketGroups.reduce((sum, g) => sum + g.tickets.length, 0)}개의 티켓
+            {ticketGroups.reduce((sum, g) => sum + g.tickets.length, 0)}개의
+            티켓
           </span>
         </div>
 
@@ -401,12 +452,14 @@ export default function MyPage() {
         </div>
 
         {ticketGroups.length === 0 ? (
-          <p className="text-sm text-gray-400 text-center py-10">해당 조건의 티켓이 없습니다.</p>
+          <p className="text-sm text-gray-400 text-center py-10">
+            해당 조건의 티켓이 없습니다.
+          </p>
         ) : (
           <div className="space-y-6">
             {pagedGroups.map((group) => {
               // "일부 취소"는 두지 않는다 — 한 장이라도 유효하면 "예매완료", 전부 취소됐을 때만 "취소됨".
-              const allInvalid = group.tickets.every((t) => !t.isValid);
+              const allInvalid = group.tickets.every((t) => !isTicketValid(t));
               const statusLabel = allInvalid ? "취소됨" : "예매완료";
               const statusClass = allInvalid
                 ? "bg-gray-100 text-gray-400"
@@ -420,12 +473,15 @@ export default function MyPage() {
                   tabIndex={0}
                   className="w-full flex shadow-md rounded-2xl overflow-hidden text-left hover:shadow-lg transition cursor-pointer"
                 >
-                  <div className="flex-shrink-0 w-36 bg-gradient-to-br from-blue-200 to-indigo-300 flex items-center justify-center text-white font-bold text-sm overflow-hidden">
+                  <div className="flex-shrink-0 w-36 relative aspect-[3/4] bg-gradient-to-br from-blue-200 to-indigo-300 flex items-center justify-center text-white font-bold text-sm overflow-hidden">
                     {group.urlPoster ? (
-                      <img
+                      <Image
+                        fill
+                        unoptimized
                         src={getLocalConcertPoster(group.urlPoster)}
                         alt={group.concertName}
-                        className="w-full h-full object-cover"
+                        sizes="144px"
+                        className="object-cover"
                       />
                     ) : (
                       "포스터"
@@ -436,7 +492,9 @@ export default function MyPage() {
 
                   <div className="flex-1 bg-white p-6">
                     <div className="flex justify-between items-start mb-3">
-                      <h3 className="font-bold text-gray-800 text-lg">{group.concertName}</h3>
+                      <h3 className="font-bold text-gray-800 text-lg">
+                        {group.concertName}
+                      </h3>
                       <div className="flex items-center gap-2">
                         {!allInvalid && (
                           <button
@@ -444,13 +502,19 @@ export default function MyPage() {
                               e.stopPropagation();
                               handleCancelGroup(group);
                             }}
-                            disabled={cancelingKey === group.tickets[0].ticketId}
+                            disabled={
+                              cancelingKey === group.tickets[0].ticketId
+                            }
                             className="text-xs text-gray-400 hover:text-red-500 border border-gray-200 hover:border-red-300 px-3 py-1 rounded-lg transition disabled:opacity-50"
                           >
-                            {cancelingKey === group.tickets[0].ticketId ? "취소 중..." : "예매 취소"}
+                            {cancelingKey === group.tickets[0].ticketId
+                              ? "취소 중..."
+                              : "예매 취소"}
                           </button>
                         )}
-                        <span className={`px-2 py-1 text-xs rounded-full font-semibold ${statusClass}`}>
+                        <span
+                          className={`px-2 py-1 text-xs rounded-full font-semibold ${statusClass}`}
+                        >
                           {statusLabel}
                         </span>
                       </div>
@@ -458,16 +522,25 @@ export default function MyPage() {
 
                     <div className="space-y-1 text-sm text-gray-500">
                       <p>
-                        <span className="inline-block w-20 text-gray-400">좌석</span>
-                        {group.tickets.length}매 ({group.tickets.map((t) => t.seatNumber).join(", ")})
+                        <span className="inline-block w-20 text-gray-400">
+                          좌석
+                        </span>
+                        {group.tickets.length}매 (
+                        {group.tickets.map((t) => t.seatNumber).join(", ")})
                       </p>
                       <p>
-                        <span className="inline-block w-20 text-gray-400">공연기간</span>
+                        <span className="inline-block w-20 text-gray-400">
+                          공연기간
+                        </span>
                         {group.startDate} ~ {group.endDate}
                       </p>
                       <p>
-                        <span className="inline-block w-20 text-gray-400">결제금액</span>
-                        <span className="text-blue-600 font-bold">{group.totalPrice.toLocaleString()}원</span>
+                        <span className="inline-block w-20 text-gray-400">
+                          결제금액
+                        </span>
+                        <span className="text-blue-600 font-bold">
+                          {group.totalPrice.toLocaleString()}원
+                        </span>
                       </p>
                     </div>
                   </div>
@@ -513,9 +586,13 @@ export default function MyPage() {
       {showWithdrawModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl p-8 max-w-sm w-full">
-            <h2 className="text-xl font-bold text-center text-gray-800 mb-3">정말 탈퇴하시겠어요?</h2>
+            <h2 className="text-xl font-bold text-center text-gray-800 mb-3">
+              정말 탈퇴하시겠어요?
+            </h2>
             <p className="text-center text-gray-500 text-sm mb-6">
-              탈퇴 시 모든 예매 내역이 사라지며,<br />되돌릴 수 없습니다.
+              탈퇴 시 모든 예매 내역이 사라지며,
+              <br />
+              되돌릴 수 없습니다.
             </p>
             <div className="flex gap-3">
               <button

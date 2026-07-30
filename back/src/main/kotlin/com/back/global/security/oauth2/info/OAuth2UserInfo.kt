@@ -4,4 +4,5 @@ interface OAuth2UserInfo {
     val providerId: String?
     val email: String?
     val name: String
+    val isEmailVerified: Boolean
 }
