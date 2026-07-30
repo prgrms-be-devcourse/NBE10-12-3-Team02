@@ -7,6 +7,9 @@ import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicLong
 import kotlin.system.measureTimeMillis
 
+import org.springframework.boot.test.context.SpringBootTest
+
+@SpringBootTest(properties = ["spring.jpa.show-sql=false", "spring.jpa.properties.hibernate.format_sql=false", "logging.level.org.hibernate.SQL=OFF"])
 class VirtualThreadBenchmarkTest {
 
     @Test
