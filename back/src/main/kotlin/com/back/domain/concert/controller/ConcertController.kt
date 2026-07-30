@@ -70,12 +70,12 @@ class ConcertController(
         @PathVariable scheduleId: Long,
         @RequestBody request: SeatOccupyRequest
     ): RsData<SeatOccupyResponse> {
-        val actor = requestContext.actor ?: throw IllegalStateException("Actor must not be null")
+        val actorId = requestContext.actor?.id ?: 1L // 부하 테스트용 임시 기본 사용자 ID 1L 지정
         val response = seatOccupyManager.seatOccupy(
             concertId,
             scheduleId,
             request.seatNumber,
-            actor.id
+            actorId
         )
 
         return RsData(
