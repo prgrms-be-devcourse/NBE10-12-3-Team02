@@ -43,43 +43,43 @@ class UserService(
 ) {
 
     @Transactional
-    fun signup(request: SignupRequest): SignupResponse = with(request) {
-        val reqId = checkNotNull(id) { "Id is required" }
-        val reqEmail = checkNotNull(email) { "Email is required" }
-        val reqPassword = checkNotNull(password) { "Password is required" }
-        val reqName = checkNotNull(name) { "Name is required" }
-        val reqToken = checkNotNull(verificationToken) { "Verification token is required" }
+    fun signup(request: SignupRequest): SignupResponse {
+        val id = checkNotNull(request.id) { "Id is required" }
+        val email = checkNotNull(request.email) { "Email is required" }
+        val password = checkNotNull(request.password) { "Password is required" }
+        val name = checkNotNull(request.name) { "Name is required" }
+        val verificationToken = checkNotNull(request.verificationToken) { "Verification token is required" }
 
-        if (userRepository.existsByLoginIdAndDeletedAtIsNull(reqId)) {
+        if (userRepository.existsByLoginIdAndDeletedAtIsNull(id)) {
             throw ServiceException(ErrorCode.USER_ID_ALREADY_EXISTS)
         }
-        if (userRepository.existsByEmailAndDeletedAtIsNull(reqEmail)) {
+        if (userRepository.existsByEmailAndDeletedAtIsNull(email)) {
             throw ServiceException(ErrorCode.USER_EMAIL_ALREADY_EXISTS)
         }
 
-        val reservationId = emailVerificationService.reserveVerification(reqEmail, reqToken)
+        val reservationId = emailVerificationService.reserveVerification(email, verificationToken)
             ?: throw ServiceException(ErrorCode.AUTH_EMAIL_VERIFICATION_REQUIRED)
 
-        val encodedPassword = requireNotNull(passwordEncoder.encode(reqPassword)) { "Password encoding failed" }
+        val encodedPassword = requireNotNull(passwordEncoder.encode(password)) { "Password encoding failed" }
 
         val user = userRepository.save(
             User.create(
-                loginId = reqId,
-                email = reqEmail,
+                loginId = id,
+                email = email,
                 password = encodedPassword,
-                name = reqName,
+                name = name,
                 loginType = LoginType.NORMAL
             )
         )
 
         TransactionSynchronizationManager.registerSynchronization(object : TransactionSynchronization {
             override fun afterCommit() {
-                emailVerificationService.completeVerification(reqEmail, reqToken, reservationId)
+                emailVerificationService.completeVerification(email, verificationToken, reservationId)
             }
 
             override fun afterCompletion(status: Int) {
                 if (status != TransactionSynchronization.STATUS_COMMITTED) {
-                    emailVerificationService.restoreVerification(reqEmail, reqToken, reservationId)
+                    emailVerificationService.restoreVerification(email, verificationToken, reservationId)
                 }
             }
         })
