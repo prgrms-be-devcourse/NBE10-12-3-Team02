@@ -72,7 +72,7 @@ class RedissonVsLettuceBenchmarkTest {
         println("- 총 스핀락 재시도 횟수 (Polling Query Count): ${spinRetryCount.get()} 회")
         println("- 초당 처리량 (TPS): $spinTps TPS")
 
-        // 2. Redisson Pub/Sub Distributed Lock (동적 락 획득 시도 횟수 측정)
+        // 2. Redisson Pub/Sub Distributed Lock (실제 운영 환경과 동일한 5초 대기시간 및 100% Pub/Sub 대기)
         val redissonAcquireCount = AtomicLong(0)
         val redissonLatch = CountDownLatch(taskCount)
         val redissonTime = Executors.newVirtualThreadPerTaskExecutor().use { executor ->
@@ -81,17 +81,15 @@ class RedissonVsLettuceBenchmarkTest {
                     executor.submit {
                         val lock = redissonClient.getLock(redissonLockKey)
                         try {
-                            var acquired = false
-                            while (!acquired) {
-                                redissonAcquireCount.incrementAndGet()
-                                acquired = lock.tryLock(100, 1000, TimeUnit.MILLISECONDS)
-                            }
-                            try {
-                                // Critical Section (약 1ms 작업)
-                                Thread.sleep(1)
-                            } finally {
-                                if (lock.isHeldByCurrentThread) {
-                                    lock.unlock()
+                            redissonAcquireCount.incrementAndGet()
+                            if (lock.tryLock(5, 1, TimeUnit.SECONDS)) {
+                                try {
+                                    // Critical Section (약 1ms 작업)
+                                    Thread.sleep(1)
+                                } finally {
+                                    if (lock.isHeldByCurrentThread) {
+                                        lock.unlock()
+                                    }
                                 }
                             }
                         } finally {
