@@ -19,12 +19,17 @@ class OAuth2LoginFailureHandler(
         response: HttpServletResponse,
         exception: AuthenticationException
     ) {
+        val isSocialLink = socialLinkCookieRepository.load() != null
         socialLinkCookieRepository.remove()
         val errorCode = (exception as? OAuth2AuthenticationException)
             ?.error
             ?.errorCode
             ?: "oauth2_login_failed"
 
-        redirectHandler.redirectFailure(response, errorCode)
+        if (isSocialLink) {
+            redirectHandler.redirectLinkFailure(response, errorCode)
+        } else {
+            redirectHandler.redirectLoginFailure(response, errorCode)
+        }
     }
 }

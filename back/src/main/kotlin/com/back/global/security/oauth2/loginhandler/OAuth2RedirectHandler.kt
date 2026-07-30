@@ -7,11 +7,19 @@ import org.springframework.web.util.UriComponentsBuilder
 
 @Component
 class OAuth2RedirectHandler(
-    @Value("\${spring.security.oauth2.front-callback-url}") private val frontCallbackUrl: String,
-    @Value("\${spring.security.oauth2.front-login-url}") private val frontLoginUrl: String
-) {
+    @Value("\${spring.security.oauth2.front-callback-url}")
+    private val frontCallbackUrl: String,
 
-    fun redirectSuccess(response: HttpServletResponse, accessToken: String) {
+    @Value("\${spring.security.oauth2.front-login-url}")
+    private val frontLoginUrl: String,
+
+    @Value("\${spring.security.oauth2.front-social-link-url}")
+    private val frontSocialLinkUrl: String,
+) {
+    fun redirectLoginSuccess(
+        response: HttpServletResponse,
+        accessToken: String,
+    ) {
         val redirectUrl = UriComponentsBuilder
             .fromUriString(frontCallbackUrl)
             .fragment("accessToken=$accessToken")
@@ -21,10 +29,36 @@ class OAuth2RedirectHandler(
         response.sendRedirect(redirectUrl)
     }
 
-    fun redirectFailure(response: HttpServletResponse, errorCode: String) {
+    fun redirectLoginFailure(
+        response: HttpServletResponse,
+        errorCode: String,
+    ) {
         val redirectUrl = UriComponentsBuilder
             .fromUriString(frontLoginUrl)
             .queryParam("error", errorCode)
+            .build()
+            .toUriString()
+
+        response.sendRedirect(redirectUrl)
+    }
+
+    fun redirectLinkSuccess(response: HttpServletResponse) {
+        val redirectUrl = UriComponentsBuilder
+            .fromUriString(frontSocialLinkUrl)
+            .queryParam("socialLink", "success")
+            .build()
+            .toUriString()
+
+        response.sendRedirect(redirectUrl)
+    }
+
+    fun redirectLinkFailure(
+        response: HttpServletResponse,
+        errorCode: String,
+    ) {
+        val redirectUrl = UriComponentsBuilder
+            .fromUriString(frontSocialLinkUrl)
+            .queryParam("socialLinkError", errorCode)
             .build()
             .toUriString()
 

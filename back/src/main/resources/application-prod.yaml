@@ -41,6 +41,7 @@ spring.security:
   oauth2:
     front-callback-url: "https://nbe-10-12-2-team02-fv1h.vercel.app"
     front-login-url: "https://nbe-10-12-2-team02-fv1h.vercel.app/login"
+    front-social-link-url: "https://nbe-10-12-2-team02-fv1h.vercel.app/mypage"
     client:
       registration:
         kakao:

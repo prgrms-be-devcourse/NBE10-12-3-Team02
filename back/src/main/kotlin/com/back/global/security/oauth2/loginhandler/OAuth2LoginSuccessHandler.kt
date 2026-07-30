@@ -25,34 +25,41 @@ class OAuth2LoginSuccessHandler(
         response: HttpServletResponse,
         authentication: Authentication
     ) {
+        val isSocialLink = socialLinkCookieRepository.load() != null
         socialLinkCookieRepository.remove()
+
+        if (isSocialLink) {
+            redirectHandler.redirectLinkSuccess(response)
+            return
+        }
+
         val oAuth2User = authentication.principal as OAuth2User
         val userIdAttribute = oAuth2User.getAttribute<Any>("userId")
 
         if (userIdAttribute == null) {
-            redirectHandler.redirectFailure(response, "oauth2_user_id_missing")
+            redirectHandler.redirectLoginFailure(response, "oauth2_user_id_missing")
             return
         }
 
         val userId = try {
             userIdAttribute.toString().toLong()
         } catch (e: NumberFormatException) {
-            redirectHandler.redirectFailure(response, "oauth2_user_id_invalid")
+            redirectHandler.redirectLoginFailure(response, "oauth2_user_id_invalid")
             return
         }
 
         val user = userRepository.findByUserIdAndDeletedAtIsNull(userId)
         if (user == null) {
-            redirectHandler.redirectFailure(response, "oauth2_user_not_found")
+            redirectHandler.redirectLoginFailure(response, "oauth2_user_not_found")
             return
         }
 
         try {
             val tokenResponse = authService.issueTokens(user)
             requestContext.setCookie("refreshToken", tokenResponse.refreshToken, "/api/v1/auth")
-            redirectHandler.redirectSuccess(response, tokenResponse.accessToken)
+            redirectHandler.redirectLoginSuccess(response, tokenResponse.accessToken)
         } catch (e: RuntimeException) {
-            redirectHandler.redirectFailure(response, "oauth2_token_issue_failed")
+            redirectHandler.redirectLoginFailure(response, "oauth2_token_issue_failed")
         }
     }
 }

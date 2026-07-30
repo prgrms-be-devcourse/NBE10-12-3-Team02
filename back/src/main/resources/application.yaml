@@ -44,6 +44,7 @@ spring:
     oauth2:
       front-callback-url: "http://localhost:3000"
       front-login-url: "http://localhost:3000/login"
+      front-social-link-url: "http://localhost:3000/mypage"
       client:
         registration:
           kakao:
