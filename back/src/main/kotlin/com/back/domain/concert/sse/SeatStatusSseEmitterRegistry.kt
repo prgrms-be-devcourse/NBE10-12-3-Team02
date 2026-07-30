@@ -56,7 +56,8 @@ class SeatStatusSseEmitterRegistry {
                         .data(data)
                 )
             } catch (e: Exception) {
-                log.warn("SSE 전송 연동 경고 (스킵): scheduleId={}, seat={}, err={}", scheduleId, seatNumber, e.message)
+                log.warn("SSE 전송 실패 (자원 정리): scheduleId={}, seat={}, err={}", scheduleId, seatNumber, e.message)
+                runCatching { wrapper.emitter.completeWithError(e) }
             }
         }
     }
