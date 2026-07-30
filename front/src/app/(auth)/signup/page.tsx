@@ -197,12 +197,10 @@ export default function SignupPage() {
             <Image
               unoptimized
               priority
-              loading="eager"
               src="/images/logo.svg"
               alt="티케팅고"
               width={96}
               height={96}
-              style={{ width: "96px", height: "96px" }}
               className="h-24 w-24 object-contain"
             />
           </Link>

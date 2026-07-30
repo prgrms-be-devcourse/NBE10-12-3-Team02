@@ -96,12 +96,10 @@ function LoginContent() {
           <Image
             unoptimized
             priority
-            loading="eager"
             src="/images/logo.svg"
             alt="티케팅고"
             width={112}
             height={112}
-            style={{ width: "112px", height: "112px" }}
             className="h-28 w-28 object-contain"
           />
         </Link>

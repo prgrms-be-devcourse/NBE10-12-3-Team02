@@ -57,12 +57,10 @@ export default function Navbar() {
           <Image
             unoptimized
             priority
-            loading="eager"
             src="/images/logo-horizontal.svg"
             alt="티케팅고"
             width={160}
             height={48}
-            style={{ width: "auto", height: "48px" }}
             className="h-12 w-auto object-contain block"
           />
         </Link>

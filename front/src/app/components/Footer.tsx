@@ -15,7 +15,6 @@ export default function Footer() {
                 alt="티케팅고"
                 width={160}
                 height={32}
-                style={{ width: "auto", height: "32px" }}
                 className="h-8 w-auto object-contain block"
               />
             </Link>
