@@ -62,8 +62,8 @@ export default function Navbar() {
             alt="티케팅고"
             width={160}
             height={48}
-            style={{ width: "auto", height: "100%" }}
-            className="h-full w-auto object-contain block"
+            style={{ width: "auto", height: "auto" }}
+            className="h-full max-h-12 w-auto object-contain block"
           />
         </Link>
         <div className="flex items-center gap-6 text-sm font-semibold text-gray-600">

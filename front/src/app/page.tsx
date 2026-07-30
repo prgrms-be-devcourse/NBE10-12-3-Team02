@@ -268,7 +268,7 @@ function HomeContent() {
                 pauseOnMouseEnter: true,
               }}
             >
-              {topConcerts.map((concert) => (
+              {topConcerts.map((concert, idx) => (
                 <SwiperSlide key={concert.concertId}>
                   <Link
                     href={`/concerts/${concert.concertId}`}
@@ -279,8 +279,8 @@ function HomeContent() {
                       <Image
                         fill
                         unoptimized
-                        priority
-                        loading="eager"
+                        priority={idx === 0}
+                        loading={idx === 0 ? "eager" : "lazy"}
                         src={concert.imageUrl}
                         alt=""
                         aria-hidden="true"
@@ -302,8 +302,8 @@ function HomeContent() {
                         <Image
                           fill
                           unoptimized
-                          priority
-                          loading="eager"
+                          priority={idx === 0}
+                          loading={idx === 0 ? "eager" : "lazy"}
                           src={concert.imageUrl}
                           alt={concert.concertName}
                           className="object-contain"
