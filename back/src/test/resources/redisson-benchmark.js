@@ -5,16 +5,14 @@ import { check, sleep } from 'k6';
  * Redisson Pub/Sub 분산 락 실서버 고동시성 k6 부하 테스트
  *
  * [임시 비활성화 항목 - 부하 테스트 전용]
- * 아래 두 항목은 테스트 목적으로 임시 비활성화되어 있습니다.
- * 테스트 완료 후 커밋 'a34f48d' 이전으로 git revert 하여 반드시 복구해야 합니다.
+ * 아래 항목은 테스트 목적으로 임시 비활성화되어 있습니다.
+ * 테스트 완료 후 커밋 '4a41044' 이전으로 git revert 하여 반드시 복구해야 합니다.
  *
  * 1. QueueInterceptor (대기열 검증):
  *    파일: back/src/main/kotlin/com/back/global/config/WebConfig.kt
  *    변경: addInterceptors 내 queueInterceptor 등록 주석 처리됨
  *
- * 2. 로그인 인증 강제화 해제:
- *    파일: back/src/main/kotlin/com/back/domain/concert/controller/ConcertController.kt
- *    변경: requestContext.actor?.id ?: 1L 로 폴백 허용 (원래: actor가 null이면 예외 발생)
+ * ※ 로그인 인증은 setup()에서 JWT 토큰을 발급받아 정상 처리됩니다. (복구 완료)
  */
 
 const BASE_URL = __ENV.BASE_URL || 'http://localhost:8080';
