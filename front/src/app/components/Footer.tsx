@@ -8,15 +8,15 @@ export default function Footer() {
         <div className="flex flex-col md:flex-row justify-between gap-8">
           {/* 로고 + 소개 */}
           <div>
-            <Link href="/" className="h-8 flex items-center mb-3">
+            <Link href="/" className="flex items-center mb-3">
               <Image
                 unoptimized
                 src="/images/logo-horizontal.svg"
                 alt="티케팅고"
                 width={160}
                 height={32}
-                style={{ width: "auto", height: "100%" }}
-                className="h-full w-auto object-contain block"
+                style={{ width: "auto", height: "32px" }}
+                className="h-8 w-auto object-contain block"
               />
             </Link>
             <p className="text-sm text-gray-400 leading-relaxed">

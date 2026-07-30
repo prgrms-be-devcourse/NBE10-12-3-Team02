@@ -449,7 +449,7 @@ function HomeContent() {
         ) : (
           <>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-              {pagedConcerts.map((concert) => (
+              {pagedConcerts.map((concert, idx) => (
                 <Link
                   href={`/concerts/${concert.concertId}`}
                   key={concert.concertId}
@@ -460,6 +460,7 @@ function HomeContent() {
                       <Image
                         fill
                         unoptimized
+                        loading={idx < 4 ? "eager" : "lazy"}
                         src={concert.imageUrl}
                         alt={concert.concertName}
                         sizes="(max-width: 768px) 100vw, 25vw"

@@ -53,7 +53,7 @@ export default function Navbar() {
   return (
     <nav className="print:hidden sticky top-0 z-50 bg-white border-b border-gray-100 shadow-sm">
       <div className="max-w-5xl mx-auto px-6 h-16 flex items-center justify-between">
-        <Link href="/" onClick={handleLogoClick} className="h-12 flex items-center">
+        <Link href="/" onClick={handleLogoClick} className="flex items-center">
           <Image
             unoptimized
             priority
@@ -62,8 +62,8 @@ export default function Navbar() {
             alt="티케팅고"
             width={160}
             height={48}
-            style={{ width: "auto", height: "auto" }}
-            className="h-full max-h-12 w-auto object-contain block"
+            style={{ width: "auto", height: "48px" }}
+            className="h-12 w-auto object-contain block"
           />
         </Link>
         <div className="flex items-center gap-6 text-sm font-semibold text-gray-600">
