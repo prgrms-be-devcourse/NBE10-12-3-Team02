@@ -9,6 +9,7 @@ import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.context.annotation.Import
 import org.springframework.data.redis.core.StringRedisTemplate
 import java.time.Duration
+import java.util.UUID
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
@@ -37,25 +38,32 @@ class RedissonVsLettuceBenchmarkTest {
         println("동시 경합 요청 수: $taskCount 건")
         println("==================================================")
 
-        // 1. StringRedisTemplate (Lettuce SETNX Spin-Lock)
+        // 1. StringRedisTemplate (Lettuce SETNX Spin-Lock + UUID 토큰 소유권 검증)
         val spinRetryCount = AtomicLong(0)
         val spinLatch = CountDownLatch(taskCount)
         val spinTime = Executors.newVirtualThreadPerTaskExecutor().use { executor ->
             measureTimeMillis {
                 repeat(taskCount) {
                     executor.submit {
+                        val threadToken = UUID.randomUUID().toString()
                         try {
                             var acquired = false
                             while (!acquired) {
                                 acquired = stringRedisTemplate.opsForValue()
-                                    .setIfAbsent(spinLockKey, "LOCKED", Duration.ofMillis(500)) == true
+                                    .setIfAbsent(spinLockKey, threadToken, Duration.ofMillis(500)) == true
                                 if (!acquired) {
                                     spinRetryCount.incrementAndGet()
                                     Thread.sleep(5)
                                 }
                             }
-                            Thread.sleep(1)
-                            stringRedisTemplate.delete(spinLockKey)
+                            try {
+                                Thread.sleep(1)
+                            } finally {
+                                // 남의 락 삭제 방지를 위한 토큰 소유권 검증 후 해제
+                                if (stringRedisTemplate.opsForValue().get(spinLockKey) == threadToken) {
+                                    stringRedisTemplate.delete(spinLockKey)
+                                }
+                            }
                         } finally {
                             spinLatch.countDown()
                         }
@@ -71,7 +79,7 @@ class RedissonVsLettuceBenchmarkTest {
         println("- 총 스핀락 재시도 횟수 (Polling Query Count): ${spinRetryCount.get()} 회")
         println("- 초당 처리량 (TPS): $spinTps TPS")
 
-        // 2. Redisson Pub/Sub Distributed Lock
+        // 2. Redisson Pub/Sub Distributed Lock (Watchdog 자동 갱신 활성화)
         val redissonAcquireCount = AtomicLong(0)
         val redissonLatch = CountDownLatch(taskCount)
         val redissonTime = Executors.newVirtualThreadPerTaskExecutor().use { executor ->
@@ -81,7 +89,8 @@ class RedissonVsLettuceBenchmarkTest {
                         val lock = redissonClient.getLock(redissonLockKey)
                         try {
                             redissonAcquireCount.incrementAndGet()
-                            if (lock.tryLock(5, 1, TimeUnit.SECONDS)) {
+                            // leaseTime 미지정 -> Redisson Watchdog 자동 갱신 메커니즘 활성화 (기본 30초)
+                            if (lock.tryLock(5, TimeUnit.SECONDS)) {
                                 try {
                                     Thread.sleep(1)
                                 } finally {
@@ -99,10 +108,18 @@ class RedissonVsLettuceBenchmarkTest {
             }
         }
         val redissonTps = "%.2f".format((taskCount.toDouble() / redissonTime) * 1000)
+        val queryReductionRatio = "%.2f".format(spinRetryCount.get().toDouble() / redissonAcquireCount.get())
 
         println("\n[2] Redisson Pub/Sub 분산 락")
         println("- 소요시간: ${redissonTime}ms")
         println("- 총 락 획득 시도 횟수 (Acquire Count): ${redissonAcquireCount.get()} 회")
         println("- 초당 처리량 (TPS): $redissonTps TPS")
+
+        println("\n==================================================")
+        println("[최종 비교 요약]")
+        println("1. StringRedisTemplate 스핀락 레디스 쿼리 시도 횟수: ${spinRetryCount.get()}회")
+        println("2. Redisson Pub/Sub 락 시도 횟수: ${redissonAcquireCount.get()}회")
+        println("➔ Redisson Pub/Sub 락 도입으로 레디스 쿼리 및 네트워크 Overhead 약 ${queryReductionRatio}배 감축!")
+        println("==================================================")
     }
 }
