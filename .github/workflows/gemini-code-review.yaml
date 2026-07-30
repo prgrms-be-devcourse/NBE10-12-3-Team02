@@ -87,7 +87,8 @@ jobs:
              - 관용적인 코틀린(Idiomatic Kotlin) 작성 여부 (Scope 함수 `with/apply/run`, `ifEmpty`, 단일 표현식 함수, Null-safety, 불필요한 `var` 사용 지양)
              - Spring Boot 4.x & Virtual Threads 호환성 (Virtual Thread 피닝을 일으키는 `synchronized` 블록 지양)
              - Redisson 데이터 조율 시 코덱 일치 여부 (Raw String/Token 조작 시 `StringCodec.INSTANCE` 명시 여부 검증)
-             - 좌석 선점(10분 TTL) & Delayed Queue 이벤트 처리 및 분산 락/JPA 락 동시성(Race Condition) 검증
+             - Redis Lua 스크립트가 원자적(Atomic) 동시성을 제어하는 구간 내 불필요한 DB 비관적 락(`FOR UPDATE`) 혼용 지양 (일반 조회 사용 검증)
+             - 좌석 선점(10분 TTL) & Delayed Queue 이벤트 처리 및 분산 락 동시성(Race Condition) 검증
              - 회차당 1인 최대 3매 예매 제한 로직 보호 여부
              - Refresh Token Rotation (RTR) 탈취 검증 & Access Token 블랙리스트 처리
           3. **프론트엔드 검토 포인트 (`front/`)**:
