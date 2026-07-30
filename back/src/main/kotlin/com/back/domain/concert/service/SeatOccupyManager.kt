@@ -54,7 +54,7 @@ class SeatOccupyManager(
 
         try {
             val seat = scheduleSeatRepository
-                .findWithLockByScheduleIdAndSeatNumber(scheduleId, seatNumber)
+                .findBySchedule_ScheduleIdAndSeatNumber(scheduleId, seatNumber)
                 ?: throw ServiceException(ErrorCode.SEAT_NOT_FOUND)
 
             seat.occupyHold()
@@ -87,7 +87,7 @@ class SeatOccupyManager(
 
         cleanupRedis(redisKey)
 
-        val seat = scheduleSeatRepository.findWithLockByScheduleIdAndSeatNumber(scheduleId, seatNumber)
+        val seat = scheduleSeatRepository.findBySchedule_ScheduleIdAndSeatNumber(scheduleId, seatNumber)
         seat?.releaseToAvailable()
 
         // 트랜잭션 커밋 후 SSE 브로드캐스트 (SeatStatusSseBroadcaster.onSeatReleased)

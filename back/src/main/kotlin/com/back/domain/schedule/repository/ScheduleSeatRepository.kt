@@ -12,6 +12,8 @@ interface ScheduleSeatRepository : JpaRepository<ScheduleSeat, Long> {
 
     fun findByScheduleScheduleId(scheduleId: Long): List<ScheduleSeat>
 
+    fun findBySchedule_ScheduleIdAndSeatNumber(scheduleId: Long, seatNumber: String): ScheduleSeat?
+
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("""
         select ss
