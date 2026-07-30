@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import {
   apiFetch,
@@ -21,6 +22,10 @@ interface TicketSummary {
   ticketPrice: number;
   isValid: boolean;
   createdAt: string;
+}
+
+interface LegacyTicketSummary extends TicketSummary {
+  valid?: boolean;
 }
 
 interface TicketGroupInfo {
@@ -89,6 +94,7 @@ export default function MyPage() {
     };
 
     initializeMyPage();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleWithdraw = async () => {
@@ -192,19 +198,15 @@ export default function MyPage() {
   // 경우(예: 취소한 옛날 예매 + 새로 산 예매)까지 하나로 합쳐버릴 수 있다.
   // 그래서 그룹 안에서 다시 한번, "한 번의 결제로 생성된 티켓들은 ticketId가 바로 이어진다"는
   // 규칙으로 진짜 예매 단위로 쪼갠다.
+  // 결제 단위(groupToken)별로 개별 예매 그룹으로 쪼갠다.
   const splitIntoReservations = (group: TicketGroupInfo): TicketGroupInfo[] => {
-    const byIdAsc = [...group.tickets].sort((a, b) => a.ticketId - b.ticketId);
-    const chunks: TicketSummary[][] = [];
-    for (const ticket of byIdAsc) {
-      const last = chunks[chunks.length - 1];
-      const lastTicket = last?.[last.length - 1];
-      if (lastTicket && ticket.ticketId === lastTicket.ticketId + 1) {
-        last.push(ticket);
-      } else {
-        chunks.push([ticket]);
-      }
+    const map = new Map<string, TicketSummary[]>();
+    for (const ticket of group.tickets) {
+      const key = ticket.groupToken || `ticket-${ticket.ticketId}`;
+      if (!map.has(key)) map.set(key, []);
+      map.get(key)!.push(ticket);
     }
-    return chunks.map((tickets) => ({
+    return Array.from(map.values()).map((tickets) => ({
       ...group,
       tickets,
       totalPrice: tickets.reduce((sum, t) => sum + t.ticketPrice, 0),
@@ -219,8 +221,15 @@ export default function MyPage() {
     return maxB - maxA;
   });
 
+  const isTicketValid = (t: TicketSummary): boolean => {
+    const legacyTicket = t as LegacyTicketSummary;
+    if (t.isValid !== undefined) return t.isValid;
+    if (legacyTicket.valid !== undefined) return legacyTicket.valid;
+    return true;
+  };
+
   const ticketGroups = sortedGroups.filter((group) => {
-    const allInvalid = group.tickets.every((t) => !t.isValid);
+    const allInvalid = group.tickets.every((t) => !isTicketValid(t));
     if (statusFilter === "valid") return !allInvalid;
     if (statusFilter === "canceled") return allInvalid;
     return true;
@@ -450,7 +459,7 @@ export default function MyPage() {
           <div className="space-y-6">
             {pagedGroups.map((group) => {
               // "일부 취소"는 두지 않는다 — 한 장이라도 유효하면 "예매완료", 전부 취소됐을 때만 "취소됨".
-              const allInvalid = group.tickets.every((t) => !t.isValid);
+              const allInvalid = group.tickets.every((t) => !isTicketValid(t));
               const statusLabel = allInvalid ? "취소됨" : "예매완료";
               const statusClass = allInvalid
                 ? "bg-gray-100 text-gray-400"
@@ -464,12 +473,15 @@ export default function MyPage() {
                   tabIndex={0}
                   className="w-full flex shadow-md rounded-2xl overflow-hidden text-left hover:shadow-lg transition cursor-pointer"
                 >
-                  <div className="flex-shrink-0 w-36 bg-gradient-to-br from-blue-200 to-indigo-300 flex items-center justify-center text-white font-bold text-sm overflow-hidden">
+                  <div className="flex-shrink-0 w-36 relative aspect-[3/4] bg-gradient-to-br from-blue-200 to-indigo-300 flex items-center justify-center text-white font-bold text-sm overflow-hidden">
                     {group.urlPoster ? (
-                      <img
+                      <Image
+                        fill
+                        unoptimized
                         src={getLocalConcertPoster(group.urlPoster)}
                         alt={group.concertName}
-                        className="w-full h-full object-cover"
+                        sizes="144px"
+                        className="object-cover"
                       />
                     ) : (
                       "포스터"

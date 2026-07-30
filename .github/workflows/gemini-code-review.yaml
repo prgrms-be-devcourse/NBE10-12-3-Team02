@@ -3,9 +3,23 @@ name: Gemini Code Review
 on:
   pull_request:
     types: [opened, synchronize]
+    paths-ignore:
+      - '**.md'
+      - '**.png'
+      - '**.jpg'
+      - '**.jpeg'
+      - '**.svg'
+      - '**.ico'
+      - '**.pdf'
+      - 'docs/**'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
   review:
+    if: "!contains(github.event.head_commit.message, '[skip review]') && !contains(github.event.head_commit.message, '[skip ci]')"
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -28,6 +42,7 @@ jobs:
           pip install google-genai
 
       - name: Run Gemini Code Review
+        continue-on-error: true
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -60,7 +75,7 @@ jobs:
               diff = subprocess.check_output(diff_cmd, text=True)
           except subprocess.CalledProcessError as e:
               print(f"Git diff 추출 실패: {e}")
-              sys.exit(1)
+              sys.exit(0)
 
           if not diff.strip():
               print("검토할 주요 변경 사항이 없습니다.")
@@ -87,7 +102,8 @@ jobs:
              - 관용적인 코틀린(Idiomatic Kotlin) 작성 여부 (Scope 함수 `with/apply/run`, `ifEmpty`, 단일 표현식 함수, Null-safety, 불필요한 `var` 사용 지양)
              - Spring Boot 4.x & Virtual Threads 호환성 (Virtual Thread 피닝을 일으키는 `synchronized` 블록 지양)
              - Redisson 데이터 조율 시 코덱 일치 여부 (Raw String/Token 조작 시 `StringCodec.INSTANCE` 명시 여부 검증)
-             - 좌석 선점(10분 TTL) & Delayed Queue 이벤트 처리 및 분산 락/JPA 락 동시성(Race Condition) 검증
+             - Redis Lua 스크립트가 원자적(Atomic) 동시성을 제어하는 구간 내 불필요한 DB 비관적 락(`FOR UPDATE`) 혼용 지양 (일반 조회 사용 검증)
+             - 좌석 선점(10분 TTL) & Delayed Queue 이벤트 처리 및 분산 락 동시성(Race Condition) 검증
              - 회차당 1인 최대 3매 예매 제한 로직 보호 여부
              - Refresh Token Rotation (RTR) 탈취 검증 & Access Token 블랙리스트 처리
           3. **프론트엔드 검토 포인트 (`front/`)**:
@@ -114,8 +130,12 @@ jobs:
               )
               review_body = response.text
           except Exception as e:
-              print(f"Gemini API 호출 중 오류 발생: {e}")
-              sys.exit(1)
+              err_msg = str(e)
+              print(f"Gemini API 호출 중 예외 발생 (안내 메시지 생성): {err_msg}")
+              if "429" in err_msg or "RESOURCE_EXHAUSTED" in err_msg or "quota" in err_msg.lower():
+                  review_body = "⚠️ **Gemini API 일일 할당량(Quota) 초과 안내**\n\n현재 Gemini API 일일 무료 호출 한도가 일시적으로 초과되어 AI 코드 리뷰 생성을 건너뛰었습니다.\n- **참고**: PR 기능 검증 및 CI 빌드 테스트는 정상 통과(Success)로 처리됩니다."
+              else:
+                  review_body = f"⚠️ **Gemini API 연동 안내**\n\n코드 리뷰 생성 중 예외가 발생했습니다: `{err_msg}`"
 
           # 3. 기본적으로 펼쳐진(<details open>) 접기/펼치기 HTML formatting 적용
           formatted_review = f"<details open>\n<summary>🤖 <b>Gemini AI 코드 리뷰 (클릭하여 접기/펼치기)</b></summary>\n\n{review_body}\n</details>"

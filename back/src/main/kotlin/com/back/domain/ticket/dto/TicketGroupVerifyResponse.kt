@@ -1,6 +1,7 @@
 package com.back.domain.ticket.dto
 
 import com.back.domain.ticket.entity.Ticket
+import com.fasterxml.jackson.annotation.JsonProperty
 import java.time.LocalDateTime
 
 data class TicketGroupVerifyResponse(
@@ -11,7 +12,7 @@ data class TicketGroupVerifyResponse(
 ) {
     data class SeatVerifyInfo(
         val seatNumber: String,
-        val isValid: Boolean
+        @get:JsonProperty("isValid") val isValid: Boolean
     )
 
     companion object {

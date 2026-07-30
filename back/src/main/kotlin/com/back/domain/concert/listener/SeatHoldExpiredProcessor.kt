@@ -43,12 +43,9 @@ class SeatHoldExpiredProcessor(
         val redisKey = SeatOccupyManager.generateSeatOccupyKey(
             event.concertId, event.scheduleId, event.seatNumber
         )
-        val indexKey = SeatOccupyManager.generateSeatOccupyIndexKey(
-            event.concertId, event.scheduleId
-        )
 
         try {
-            seatOccupyManager.cleanupRedis(redisKey, indexKey, event.seatNumber)
+            seatOccupyManager.cleanupRedis(redisKey)
             log.debug("만료 좌석 Redis 정리 완료: {}", redisKey)
         } catch (e: Exception) {
             log.warn("만료 좌석 Redis 정리 실패 (무시됨): {}", redisKey, e)

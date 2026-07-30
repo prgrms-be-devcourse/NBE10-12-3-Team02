@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 
 export default function Footer() {
@@ -8,9 +9,12 @@ export default function Footer() {
           {/* 로고 + 소개 */}
           <div>
             <Link href="/" className="flex items-center mb-3">
-              <img
+              <Image
+                unoptimized
                 src="/images/logo-horizontal.svg"
                 alt="티케팅고"
+                width={160}
+                height={32}
                 className="h-8 w-auto object-contain block"
               />
             </Link>

@@ -3,7 +3,7 @@ spring:
     compose:
       enabled: true
       file: docker-compose.yaml
-      lifecycle-management: start-and-stop
+      lifecycle-management: start-only
   datasource:
     url: jdbc:h2:./db_dev;MODE=MySQL;AUTO_SERVER=TRUE
     username: sa
