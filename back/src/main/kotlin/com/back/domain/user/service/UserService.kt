@@ -44,7 +44,11 @@ class UserService(
 
     @Transactional
     fun signup(request: SignupRequest): SignupResponse {
-        val (id, email, password, name, verificationToken) = request
+        val id = request.id ?: throw ServiceException(ErrorCode.BAD_REQUEST)
+        val email = request.email ?: throw ServiceException(ErrorCode.BAD_REQUEST)
+        val password = request.password ?: throw ServiceException(ErrorCode.BAD_REQUEST)
+        val name = request.name ?: throw ServiceException(ErrorCode.BAD_REQUEST)
+        val verificationToken = request.verificationToken ?: throw ServiceException(ErrorCode.BAD_REQUEST)
 
         if (userRepository.existsByLoginIdAndDeletedAtIsNull(id)) {
             throw ServiceException(ErrorCode.USER_ID_ALREADY_EXISTS)
@@ -55,33 +59,32 @@ class UserService(
 
         val reservationId = emailVerificationService.reserveVerification(email, verificationToken)
             ?: throw ServiceException(ErrorCode.AUTH_EMAIL_VERIFICATION_REQUIRED)
-        registerVerificationCompletion(email, verificationToken, reservationId)
 
         val encodedPassword = requireNotNull(passwordEncoder.encode(password)) { "Password encoding failed" }
+
         val user = userRepository.save(
-            User.create(loginId = id, email = email, password = encodedPassword, name = name, loginType = LoginType.NORMAL)
+            User.create(
+                loginId = id,
+                email = email,
+                password = encodedPassword,
+                name = name,
+                loginType = LoginType.NORMAL
+            )
         )
+
+        TransactionSynchronizationManager.registerSynchronization(object : TransactionSynchronization {
+            override fun afterCommit() {
+                emailVerificationService.completeVerification(email, verificationToken, reservationId)
+            }
+
+            override fun afterCompletion(status: Int) {
+                if (status != TransactionSynchronization.STATUS_COMMITTED) {
+                    emailVerificationService.restoreVerification(email, verificationToken, reservationId)
+                }
+            }
+        })
+
         return SignupResponse.from(user)
-    }
-
-    private fun registerVerificationCompletion(
-        email: String,
-        verificationToken: String,
-        reservationId: String,
-    ) {
-        TransactionSynchronizationManager.registerSynchronization(
-            object : TransactionSynchronization {
-                override fun afterCommit() {
-                    emailVerificationService.completeVerification(email, verificationToken, reservationId)
-                }
-
-                override fun afterCompletion(status: Int) {
-                    if (status != TransactionSynchronization.STATUS_COMMITTED) {
-                        emailVerificationService.restoreVerification(email, verificationToken, reservationId)
-                    }
-                }
-            },
-        )
     }
 
     @Transactional
@@ -118,7 +121,7 @@ class UserService(
             ?: throw ServiceException(ErrorCode.USER_NOT_FOUND)
 
         val ticketGroups = ticketRepository.findAllByUserWithConcert(user)
-            .groupBy { it.schedule.scheduleId }
+            .groupBy { it.groupToken ?: it.ticketId.toString() }
             .values
             .map { TicketGroupInfo.from(it) }
 

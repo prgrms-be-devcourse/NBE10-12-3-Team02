@@ -18,7 +18,7 @@ class Ticket(
     @JoinColumn(name = "schedule_id", nullable = false)
     val schedule: Schedule,
 
-    @OneToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "schedule_seat_id", nullable = false)
     val scheduleSeat: ScheduleSeat,
 

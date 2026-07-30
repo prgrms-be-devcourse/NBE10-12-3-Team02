@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, Suspense } from "react";
+import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Eye, EyeOff } from "lucide-react";
@@ -92,7 +93,15 @@ function LoginContent() {
         className="w-96 p-10 bg-white rounded-2xl shadow-xl"
       >
         <Link href="/" className="flex justify-center mb-8">
-          <img src="/images/logo.svg" alt="티케팅고" className="h-28 w-28" />
+          <Image
+            unoptimized
+            priority
+            src="/images/logo.svg"
+            alt="티케팅고"
+            width={112}
+            height={112}
+            className="h-28 w-28 object-contain"
+          />
         </Link>
 
         <input

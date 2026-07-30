@@ -86,7 +86,9 @@ function SeatSelectContent({ params }: { params: Promise<{ id: string }> }) {
   // 2인 이상이면 "짝"(나란히 붙은 좌석 2개)을 먼저 채우고, 3인이면 그 뒤에 자유석 1개를 더 받는다.
   const [pairSeats, setPairSeats] = useState<[string, string] | null>(null);
   const [freeSeats, setFreeSeats] = useState<string[]>([]);
-  const selectedSeats = [...(pairSeats ?? []), ...freeSeats];
+  const selectedSeats = Array.from(
+    new Set([...(pairSeats ?? []), ...freeSeats]),
+  );
 
   // 인원수가 변경되면 선택되어 있던 좌석을 리셋합니다.
   useEffect(() => {
@@ -309,6 +311,20 @@ function SeatSelectContent({ params }: { params: Promise<{ id: string }> }) {
           setSeatData(res.data);
           setError("");
           connectSse();
+
+          // 결제 페이지에서 뒤로가기 등으로 돌아왔을 때 백엔드의 DELETE /occupy 처리 완료 시점과의
+          // 비동기 타이밍 차이(Race Condition)를 완전히 해소하기 위해 350ms 후 최신 상태를 1회 재조회한다.
+          setTimeout(() => {
+            if (!active) return;
+            apiFetch<SeatSelectionData>(
+              `/concerts/${id}/schedules/${scheduleId}/seats`,
+              { headers: { "X-Queue-Token": entryToken } },
+            )
+              .then((refreshed) => {
+                if (active) setSeatData(refreshed.data);
+              })
+              .catch(() => {});
+          }, 350);
         }
       } catch (e) {
         // 이 회차에서 이미 3매를 구매한 경우: 재시도해봐야 결과가 안 바뀌니 안내 후 돌려보낸다.
@@ -396,7 +412,7 @@ function SeatSelectContent({ params }: { params: Promise<{ id: string }> }) {
   };
 
   const needsPair = requiredSeatCount >= 2;
-  const totalSelected = (pairSeats ? 2 : 0) + freeSeats.length;
+  const totalSelected = selectedSeats.length;
   const isSelectionFull = totalSelected >= requiredSeatCount;
 
   const handleSeatClick = (seatNumber: string) => {
@@ -420,11 +436,19 @@ function SeatSelectContent({ params }: { params: Promise<{ id: string }> }) {
       const neighbor = getRightNeighborSeat(seatNumber);
       if (!neighbor || seatStatusMap.get(neighbor) !== "AVAILABLE") return;
       setPairSeats([seatNumber, neighbor]);
+      setFreeSeats((prev) =>
+        prev.filter((s) => s !== seatNumber && s !== neighbor),
+      );
       return;
     }
 
     // 짝을 다 채웠거나(혹은 1명이라 짝이 필요 없거나), 자유석 자리 — 아무 빈 좌석이나 선택.
-    setFreeSeats((prev) => [...prev, seatNumber]);
+    setFreeSeats((prev) => {
+      if (prev.includes(seatNumber) || pairSeats?.includes(seatNumber)) {
+        return prev;
+      }
+      return [...prev, seatNumber];
+    });
   };
 
   const totalPrice = selectedSeats.reduce((sum, seatNumber) => {
@@ -434,7 +458,14 @@ function SeatSelectContent({ params }: { params: Promise<{ id: string }> }) {
   }, 0);
 
   const handleProceedToPayment = async () => {
-    if (selectedSeats.length === 0 || !scheduleId || !entryToken) return;
+    if (
+      selectedSeats.length < requiredSeatCount ||
+      !scheduleId ||
+      !entryToken
+    ) {
+      showAlert(`좌석 ${requiredSeatCount}매를 모두 선택해주세요.`);
+      return;
+    }
 
     setIsReserving(true);
     const occupied: {
@@ -467,6 +498,9 @@ function SeatSelectContent({ params }: { params: Promise<{ id: string }> }) {
         queueToken: entryToken,
       });
       proceedingToPaymentRef.current = true;
+      // eslint-disable-next-line react-hooks/purity
+      const activeTimestamp = String(Date.now());
+      sessionStorage.setItem("paymentActive", activeTimestamp);
       router.push(`/payment?${params.toString()}`);
     } catch (e) {
       await Promise.all(

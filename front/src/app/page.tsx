@@ -1,6 +1,7 @@
 "use client";
 
 import { Suspense, useState, useEffect, useRef, type ChangeEvent } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { Search, ChevronLeft, ChevronRight } from "lucide-react";
@@ -275,11 +276,14 @@ function HomeContent() {
                   >
                     {/* 배너 전체에 깔리는 흐린 포스터 배경 (왼쪽/오른쪽이 하나로 이어져 보이도록) */}
                     {concert.imageUrl && (
-                      <img
+                      <Image
+                        fill
+                        unoptimized
+                        priority
                         src={concert.imageUrl}
                         alt=""
                         aria-hidden="true"
-                        className="absolute inset-0 w-full h-full object-cover scale-110 blur-3xl opacity-60"
+                        className="object-cover scale-110 blur-3xl opacity-60"
                       />
                     )}
                     {/* 글자 가독성을 위해 어둡게 한 겹 덮는다 */}
@@ -294,10 +298,13 @@ function HomeContent() {
                       }}
                     >
                       {concert.imageUrl ? (
-                        <img
+                        <Image
+                          fill
+                          unoptimized
+                          priority
                           src={concert.imageUrl}
                           alt={concert.concertName}
-                          className="absolute inset-0 w-full h-full object-contain"
+                          className="object-contain"
                         />
                       ) : (
                         <div className="absolute inset-0 bg-gradient-to-br from-blue-500 to-indigo-600" />
@@ -440,7 +447,7 @@ function HomeContent() {
         ) : (
           <>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-              {pagedConcerts.map((concert) => (
+              {pagedConcerts.map((concert, idx) => (
                 <Link
                   href={`/concerts/${concert.concertId}`}
                   key={concert.concertId}
@@ -448,10 +455,14 @@ function HomeContent() {
                 >
                   <div className="h-48 bg-gradient-to-br from-blue-200 to-indigo-300 flex items-center justify-center text-white font-bold relative overflow-hidden">
                     {concert.imageUrl ? (
-                      <img
+                      <Image
+                        fill
+                        unoptimized
+                        loading={idx < 4 ? "eager" : "lazy"}
                         src={concert.imageUrl}
                         alt={concert.concertName}
-                        className="w-full h-full object-cover"
+                        sizes="(max-width: 768px) 100vw, 25vw"
+                        className="object-cover"
                       />
                     ) : (
                       "포스터"

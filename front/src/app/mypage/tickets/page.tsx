@@ -1,6 +1,7 @@
 "use client";
 
 import { Suspense, useState } from "react";
+import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { ChevronLeft, Printer } from "lucide-react";
@@ -16,6 +17,10 @@ interface TicketSummary {
   ticketPrice: number;
   isValid: boolean;
   createdAt: string;
+}
+
+interface LegacyTicketSummary extends TicketSummary {
+  valid?: boolean;
 }
 
 interface TicketGroupInfo {
@@ -64,7 +69,14 @@ function TicketDetailContent() {
     );
   }
 
-  const allInvalid = group.tickets.every((t) => !t.isValid);
+  const isTicketValid = (t: TicketSummary): boolean => {
+    const legacyTicket = t as LegacyTicketSummary;
+    if (t.isValid !== undefined) return t.isValid;
+    if (legacyTicket.valid !== undefined) return legacyTicket.valid;
+    return true;
+  };
+
+  const allInvalid = group.tickets.every((t) => !isTicketValid(t));
   const statusLabel = allInvalid ? "취소됨" : "예매완료";
 
   return (
@@ -152,10 +164,13 @@ function TicketDetailContent() {
               style={{ backfaceVisibility: "hidden" }}
             >
               {group.urlPoster ? (
-                <img
+                <Image
+                  fill
+                  unoptimized
                   src={getLocalConcertPoster(group.urlPoster)}
                   alt={group.concertName}
-                  className="w-full h-full object-cover"
+                  sizes="320px"
+                  className="object-cover"
                 />
               ) : (
                 <div className="w-full h-full flex items-center justify-center text-white/60 text-sm">
@@ -230,7 +245,7 @@ function TicketDetailContent() {
                       </span>
                       <span
                         className={
-                          t.isValid
+                          isTicketValid(t)
                             ? "text-blue-100"
                             : "text-blue-300 line-through"
                         }
