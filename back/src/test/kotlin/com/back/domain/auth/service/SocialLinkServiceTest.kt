@@ -1,10 +1,11 @@
 package com.back.domain.auth.service
 
+import com.back.domain.auth.dto.SocialUnlinkTarget
+import com.back.domain.auth.repository.SocialLinkIntent
+import com.back.domain.auth.repository.SocialLinkIntentRepository
 import com.back.domain.user.constant.LoginType
 import com.back.domain.user.entity.User
 import com.back.domain.user.repository.UserRepository
-import com.back.domain.auth.repository.SocialLinkIntent
-import com.back.domain.auth.repository.SocialLinkIntentRepository
 import com.back.global.exception.ErrorCode
 import com.back.global.exception.ServiceException
 import com.back.global.security.oauth2.info.GoogleOAuth2UserInfo
@@ -13,10 +14,10 @@ import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
-import org.mockito.ArgumentMatchers.any
 import org.mockito.ArgumentMatchers.anyString
 import org.mockito.Mockito.mock
 import org.mockito.Mockito.verify
+import org.mockito.Mockito.verifyNoInteractions
 import org.mockito.Mockito.`when`
 import java.time.Duration
 
@@ -24,10 +25,14 @@ class SocialLinkServiceTest {
     private val userRepository = mock(UserRepository::class.java)
     private val intentRepository = mock(SocialLinkIntentRepository::class.java)
     private val unlinkService = mock(OAuthUnlinkService::class.java)
+    private val socialLinkQueryService = mock(SocialLinkQueryService::class.java)
+    private val socialLinkCommandService = mock(SocialLinkCommandService::class.java)
     private val service = SocialLinkService(
         userRepository = userRepository,
         socialLinkIntentRepository = intentRepository,
         oAuthUnlinkService = unlinkService,
+        socialLinkQueryService = socialLinkQueryService,
+        socialLinkCommandService = socialLinkCommandService,
         linkIntentExpirationSeconds = 300,
     )
 
@@ -148,44 +153,31 @@ class SocialLinkServiceTest {
     }
 
     @Test
-    @DisplayName("소셜 계정 연동 해제 시 Provider 연결 해제 후 회원의 소셜 정보를 제거한다")
+    @DisplayName("소셜 계정 연동 해제 시 Provider 연결 해제 후 조건부 DB 갱신을 요청한다")
     fun t7() {
-        val user = normalUser().apply {
-            linkSocialAccount(LoginType.NAVER, PROVIDER_ID, OAUTH_REFRESH_TOKEN)
-        }
-        `when`(userRepository.findByUserIdAndDeletedAtIsNull(USER_ID)).thenReturn(user)
+        val target = unlinkTarget()
+        `when`(socialLinkQueryService.getUnlinkTarget(USER_ID)).thenReturn(target)
         `when`(unlinkService.unlink(LoginType.NAVER, OAUTH_REFRESH_TOKEN)).thenReturn(true)
 
         service.unlink(USER_ID)
 
         verify(unlinkService).unlink(LoginType.NAVER, OAUTH_REFRESH_TOKEN)
-        assertThat(user.socialProvider).isNull()
-        assertThat(user.socialProviderId).isNull()
-        assertThat(user.oauthRefreshToken).isNull()
+        verify(socialLinkCommandService).completeUnlink(target)
     }
 
     @Test
-    @DisplayName("소셜 로그인으로 가입한 회원은 유일한 로그인 수단인 소셜 연동을 해제할 수 없다")
+    @DisplayName("Provider 연결 해제가 실패하면 내부 소셜 정보 갱신을 요청하지 않는다")
     fun t8() {
-        val user = User.createOAuth(
-            loginId = "KAKAO_$PROVIDER_ID",
-            email = EMAIL,
-            password = "random-encoded-password",
-            name = "카카오회원",
-            loginType = LoginType.KAKAO,
-            providerId = PROVIDER_ID,
-            oauthRefreshToken = OAUTH_REFRESH_TOKEN,
-        )
-        `when`(userRepository.findByUserIdAndDeletedAtIsNull(USER_ID)).thenReturn(user)
+        val target = unlinkTarget()
+        `when`(socialLinkQueryService.getUnlinkTarget(USER_ID)).thenReturn(target)
+        `when`(unlinkService.unlink(LoginType.NAVER, OAUTH_REFRESH_TOKEN)).thenReturn(false)
 
         assertThatThrownBy { service.unlink(USER_ID) }
             .isInstanceOfSatisfying(ServiceException::class.java) {
-                assertThat(it.errorCode).isEqualTo(ErrorCode.OAUTH_UNLINK_NOT_ALLOWED)
+                assertThat(it.errorCode).isEqualTo(ErrorCode.OAUTH_UNLINK_FAILED)
             }
 
-        assertThat(user.socialProvider).isEqualTo(LoginType.KAKAO)
-        assertThat(user.socialProviderId).isEqualTo(PROVIDER_ID)
-        assertThat(user.oauthRefreshToken).isEqualTo(OAUTH_REFRESH_TOKEN)
+        verifyNoInteractions(socialLinkCommandService)
     }
 
     private fun normalUser(): User =
@@ -204,6 +196,14 @@ class SocialLinkServiceTest {
                 "email" to email,
                 "email_verified" to true,
             ),
+        )
+
+    private fun unlinkTarget(): SocialUnlinkTarget =
+        SocialUnlinkTarget(
+            userId = USER_ID,
+            provider = LoginType.NAVER,
+            providerId = PROVIDER_ID,
+            oauthRefreshToken = OAUTH_REFRESH_TOKEN,
         )
 
     private fun assertOAuth2Error(errorCode: String, action: () -> Unit) {

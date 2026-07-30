@@ -14,6 +14,7 @@ import org.springframework.beans.factory.annotation.Value
 import org.springframework.dao.DataIntegrityViolationException
 import org.springframework.security.oauth2.core.OAuth2AuthenticationException
 import org.springframework.stereotype.Service
+import org.springframework.transaction.annotation.Propagation
 import org.springframework.transaction.annotation.Transactional
 import java.time.Duration
 import java.util.UUID
@@ -24,6 +25,8 @@ class SocialLinkService(
     private val userRepository: UserRepository,
     private val socialLinkIntentRepository: SocialLinkIntentRepository,
     private val oAuthUnlinkService: OAuthUnlinkService,
+    private val socialLinkQueryService: SocialLinkQueryService,
+    private val socialLinkCommandService: SocialLinkCommandService,
     @Value("\${custom.oauth2.link-intent-expiration-seconds:300}")
     private val linkIntentExpirationSeconds: Long,
 ) {
@@ -105,21 +108,15 @@ class SocialLinkService(
         }
     }
 
-    @Transactional
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
     fun unlink(userId: Long) {
-        val user = findUser(userId)
+        val target = socialLinkQueryService.getUnlinkTarget(userId)
 
-        if (user.loginType != LoginType.NORMAL) {
-            throw ServiceException(ErrorCode.OAUTH_UNLINK_NOT_ALLOWED)
-        }
-
-        val provider = user.socialProvider
-            ?: throw ServiceException(ErrorCode.OAUTH_ACCOUNT_NOT_LINKED)
-
-        if (!oAuthUnlinkService.unlink(provider, user.oauthRefreshToken)) {
+        if (!oAuthUnlinkService.unlink(target.provider, target.oauthRefreshToken)) {
             throw ServiceException(ErrorCode.OAUTH_UNLINK_FAILED)
         }
-        user.unlinkSocialAccount()
+
+        socialLinkCommandService.completeUnlink(target)
     }
 
     private fun parseProvider(providerName: String): LoginType {
