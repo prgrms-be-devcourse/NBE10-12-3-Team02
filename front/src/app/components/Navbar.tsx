@@ -4,7 +4,12 @@ import { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { User } from "lucide-react";
-import { apiFetch, decodeToken, setAccessToken, restoreSession } from "@/lib/api";
+import {
+  apiFetch,
+  decodeToken,
+  setAccessToken,
+  restoreSession,
+} from "@/lib/api";
 import { showConfirm } from "@/lib/alert";
 
 export default function Navbar() {
