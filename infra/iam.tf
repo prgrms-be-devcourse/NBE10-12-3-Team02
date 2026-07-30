@@ -121,10 +121,16 @@ data "aws_iam_policy_document" "github_actions_assume_role" {
       values   = ["sts.amazonaws.com"]
     }
 
+    # GitHub OIDC sub claim이 조직/리포지토리 불변 ID를 포함하는 형태로 발급됨
+    # (repo 이름 변경/재생성을 통한 trust policy 우회 방지를 위한 GitHub 측 하드닝)
+    # repo:prgrms-be-devcourse@88020948/NBE10-12-3-Team02@1313451004:ref:refs/heads/<branch>
+    # — CloudTrail의 AssumeRoleWithWebIdentity AccessDenied 이벤트에서 실측 확인한 값
     condition {
       test     = "StringEquals"
       variable = "token.actions.githubusercontent.com:sub"
-      values   = ["repo:${var.github_repository}:ref:refs/heads/main"]
+      values = [
+        "repo:prgrms-be-devcourse@88020948/NBE10-12-3-Team02@1313451004:ref:refs/heads/main",
+      ]
     }
   }
 }
