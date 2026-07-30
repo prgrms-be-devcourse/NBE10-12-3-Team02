@@ -29,7 +29,8 @@ class RedissonVsLettuceBenchmarkTest {
     @DisplayName("Redisson Pub/Sub 분산 락 vs StringRedisTemplate 스핀락 1,000건 동시 경합 벤치마크")
     fun compareRedissonAndSpinLock() {
         val taskCount = 1000
-        val lockKey = "benchmark:seat:lock"
+        val spinLockKey = "benchmark:seat:spin_lock"
+        val redissonLockKey = "benchmark:seat:redisson_lock"
 
         println("==================================================")
         println("Redisson Pub/Sub 락 vs StringRedisTemplate 스핀락 벤치마크 테스트")
@@ -47,7 +48,7 @@ class RedissonVsLettuceBenchmarkTest {
                             var acquired = false
                             while (!acquired) {
                                 acquired = stringRedisTemplate.opsForValue()
-                                    .setIfAbsent(lockKey, "LOCKED", Duration.ofMillis(500)) == true
+                                    .setIfAbsent(spinLockKey, "LOCKED", Duration.ofMillis(500)) == true
                                 if (!acquired) {
                                     spinRetryCount.incrementAndGet()
                                     Thread.sleep(5) // 5ms polling retry
@@ -55,7 +56,7 @@ class RedissonVsLettuceBenchmarkTest {
                             }
                             // Critical Section (약 1ms 작업)
                             Thread.sleep(1)
-                            stringRedisTemplate.delete(lockKey)
+                            stringRedisTemplate.delete(spinLockKey)
                         } finally {
                             spinLatch.countDown()
                         }
@@ -68,25 +69,29 @@ class RedissonVsLettuceBenchmarkTest {
 
         println("\n[1] StringRedisTemplate (Lettuce SETNX 스핀락)")
         println("- 소요시간: ${spinTime}ms")
-        println("- 총 스핀락 재시도 횟수 (Polling Count): ${spinRetryCount.get()} 회")
+        println("- 총 스핀락 재시도 횟수 (Polling Query Count): ${spinRetryCount.get()} 회")
         println("- 초당 처리량 (TPS): $spinTps TPS")
 
-        // 2. Redisson Pub/Sub Distributed Lock
+        // 2. Redisson Pub/Sub Distributed Lock (동적 락 획득 시도 횟수 측정)
+        val redissonAcquireCount = AtomicLong(0)
         val redissonLatch = CountDownLatch(taskCount)
         val redissonTime = Executors.newVirtualThreadPerTaskExecutor().use { executor ->
             measureTimeMillis {
                 repeat(taskCount) {
                     executor.submit {
-                        val lock = redissonClient.getLock("benchmark:redisson:lock")
+                        val lock = redissonClient.getLock(redissonLockKey)
                         try {
-                            if (lock.tryLock(10, 1, TimeUnit.SECONDS)) {
-                                try {
-                                    // Critical Section (약 1ms 작업)
-                                    Thread.sleep(1)
-                                } finally {
-                                    if (lock.isHeldByCurrentThread) {
-                                        lock.unlock()
-                                    }
+                            var acquired = false
+                            while (!acquired) {
+                                redissonAcquireCount.incrementAndGet()
+                                acquired = lock.tryLock(100, 1000, TimeUnit.MILLISECONDS)
+                            }
+                            try {
+                                // Critical Section (약 1ms 작업)
+                                Thread.sleep(1)
+                            } finally {
+                                if (lock.isHeldByCurrentThread) {
+                                    lock.unlock()
                                 }
                             }
                         } finally {
@@ -98,16 +103,18 @@ class RedissonVsLettuceBenchmarkTest {
             }
         }
         val redissonTps = String.format("%.2f", (taskCount.toDouble() / redissonTime) * 1000)
+        val queryReductionRatio = String.format("%.2f", (spinRetryCount.get().toDouble() / redissonAcquireCount.get()))
 
         println("\n[2] Redisson Pub/Sub 분산 락")
         println("- 소요시간: ${redissonTime}ms")
-        println("- 총 스핀락 재시도 횟수 (Polling Count): 0 회 (Pub/Sub 이벤트를 통한 대기)")
+        println("- 총 락 획득 시도 횟수 (Acquire Count): ${redissonAcquireCount.get()} 회")
         println("- 초당 처리량 (TPS): $redissonTps TPS")
 
         println("\n==================================================")
         println("[최종 비교 요약]")
-        println("StringRedisTemplate 스핀락 재시도 횟수: ${spinRetryCount.get()}회 레디스 쿼리 폭주")
-        println("Redisson Pub/Sub 락 재시도 횟수: 0회 (레디스 쿼리 및 네트워크 Overhead 99% 감축)")
+        println("1. StringRedisTemplate 스핀락 레디스 쿼리 시도 횟수: ${spinRetryCount.get()}회")
+        println("2. Redisson Pub/Sub 락 시도 횟수: ${redissonAcquireCount.get()}회")
+        println("➔ Redisson Pub/Sub 락 도입으로 레디스 쿼리 및 네트워크 Overhead 약 ${queryReductionRatio}배 감축!")
         println("==================================================")
     }
 
