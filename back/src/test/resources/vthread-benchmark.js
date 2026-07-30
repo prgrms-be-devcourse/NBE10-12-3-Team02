@@ -1,6 +1,8 @@
 import http from 'k6/http';
 import { check, sleep } from 'k6';
 
+const BASE_URL = __ENV.BASE_URL || 'http://localhost:8080';
+
 // k6 부하 테스트 옵션 설정 (가상 스레드 대용량 동시성 검증)
 export const options = {
   stages: [
@@ -15,9 +17,9 @@ export const options = {
   },
 };
 
-// GET /api/v1/concerts 공개 API 전용 (X-Test-Delay 50ms 운영 I/O 대기 부하 주입)
+// GET /api/v1/concerts 공개 API 전용 (X-Test-Delay 100ms 운영 I/O 대기 부하 주입)
 export default function () {
-  const res = http.get('http://localhost:8080/api/v1/concerts', {
+  const res = http.get(`${BASE_URL}/api/v1/concerts`, {
     headers: {
       'X-Test-Delay': '100', // 100ms 운영 환경 I/O 대기 시뮬레이션
     },

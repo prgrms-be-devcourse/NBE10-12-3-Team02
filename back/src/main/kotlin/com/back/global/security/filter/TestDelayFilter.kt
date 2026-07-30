@@ -8,8 +8,12 @@ import org.springframework.stereotype.Component
 import org.springframework.web.filter.OncePerRequestFilter
 
 @Component
-@Profile("dev", "test") // 운영(prod) 환경 배포 방지
+@Profile("dev", "test")
 class TestDelayFilter : OncePerRequestFilter() {
+
+    companion object {
+        private const val MAX_DELAY_MS = 30000L // 최대 30초로 제한
+    }
 
     override fun doFilterInternal(
         request: HttpServletRequest,
@@ -19,6 +23,7 @@ class TestDelayFilter : OncePerRequestFilter() {
         request.getHeader("X-Test-Delay")
             ?.toLongOrNull()
             ?.takeIf { it > 0 }
+            ?.coerceAtMost(MAX_DELAY_MS)
             ?.let { delayMs -> Thread.sleep(delayMs) }
 
         filterChain.doFilter(request, response)
