@@ -46,25 +46,25 @@ class VirtualThreadBenchmarkTest {
         ioDelayMs: Long,
         executorSupplier: () -> java.util.concurrent.ExecutorService
     ): Long {
-        val executor = executorSupplier()
         val latch = CountDownLatch(taskCount)
         val completedCount = AtomicLong(0)
 
-        val totalTime = measureTimeMillis {
-            for (i in 0 until taskCount) {
-                executor.submit {
-                    try {
-                        Thread.sleep(ioDelayMs) // I/O 블로킹 대기 시뮬레이션
-                        completedCount.incrementAndGet()
-                    } finally {
-                        latch.countDown()
+        val totalTime = executorSupplier().use { executor ->
+            measureTimeMillis {
+                repeat(taskCount) {
+                    executor.submit {
+                        try {
+                            Thread.sleep(ioDelayMs) // I/O 블로킹 대기 시뮬레이션
+                            completedCount.incrementAndGet()
+                        } finally {
+                            latch.countDown()
+                        }
                     }
                 }
+                latch.await()
             }
-            latch.await()
         }
 
-        executor.shutdown()
         val tps = String.format("%.2f", (taskCount.toDouble() / totalTime) * 1000)
         println("[$name] 소요시간: ${totalTime}ms, 완료 작업: ${completedCount.get()}건, 처리량: ${tps} TPS")
         return totalTime
