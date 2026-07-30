@@ -4,6 +4,7 @@ import com.back.domain.concert.repository.ConcertRepository
 import com.back.domain.review.dto.ConcertReviewCreateRequest
 import com.back.domain.review.dto.ConcertReviewResponse
 import com.back.domain.review.dto.ConcertReviewUpdateRequest
+import com.back.domain.review.dto.EligibleConcertResponse
 import com.back.domain.review.entity.ConcertReview
 import com.back.domain.review.repository.ConcertReviewRepository
 import com.back.domain.ticket.repository.TicketRepository
@@ -80,6 +81,18 @@ class ConcertReviewService(
         }
         review.update(request.title, request.content)
         return ConcertReviewResponse.of(review, userId)
+    }
+
+    fun getAllReviews(currentUserId: Long?): List<ConcertReviewResponse> {
+        return concertReviewRepository.findAllWithConcertAndUser()
+            .map { ConcertReviewResponse.of(it, currentUserId) }
+    }
+
+    fun getEligibleConcerts(userId: Long): List<EligibleConcertResponse> {
+        val now = LocalDateTime.now()
+        val sixMonthsAgo = now.minusMonths(6)
+        return concertReviewRepository.findEligibleConcertsForUser(userId, sixMonthsAgo, now)
+            .map { EligibleConcertResponse.of(it) }
     }
 
     @Transactional

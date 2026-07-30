@@ -67,6 +67,7 @@ class SecurityConfig(
                         "/api/*/concerts/*",
                         "/api/*/concerts/*/reviews",
                         "/api/*/concerts/*/reviews/*",
+                        "/api/*/reviews",
                         "/api/*/schedules/**",
                         "/api/*/users/check-id",
                         "/api/*/tickets/verify/*",

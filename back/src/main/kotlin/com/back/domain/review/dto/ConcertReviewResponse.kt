@@ -12,7 +12,9 @@ data class ConcertReviewResponse(
     val content: String,
     val isMine: Boolean,
     val createdAt: LocalDateTime?,
-    val updatedAt: LocalDateTime?
+    val updatedAt: LocalDateTime?,
+    val concertName: String,
+    val posterUrl: String?
 ) {
     companion object {
         fun of(review: ConcertReview, currentUserId: Long?): ConcertReviewResponse =
@@ -25,7 +27,9 @@ data class ConcertReviewResponse(
                 content = review.content,
                 isMine = currentUserId != null && review.user.userId == currentUserId,
                 createdAt = review.createDate,
-                updatedAt = review.modifyDate
+                updatedAt = review.modifyDate,
+                concertName = review.concert.concertName,
+                posterUrl = review.concert.urlPoster
             )
     }
 }
