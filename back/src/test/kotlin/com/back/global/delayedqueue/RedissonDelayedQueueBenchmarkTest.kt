@@ -1,7 +1,6 @@
 package com.back.global.delayedqueue
 
 import com.back.global.RedisTestConfig
-import com.back.domain.concert.listener.SeatHoldExpiredHandler
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
@@ -42,16 +41,8 @@ class RedissonDelayedQueueBenchmarkTest {
     private val testQueueKey = "test:delayed:queue:benchmark"
 
     @BeforeEach
-    fun cleanup() {
-        // 테스트 전 큐 초기화
-        val blockingQueue = redissonClient.getBlockingQueue<String>(testQueueKey, StringCodec.INSTANCE)
-        val delayedQueue = redissonClient.getDelayedQueue(blockingQueue)
-        delayedQueue.clear()
-        blockingQueue.clear()
-    }
-
     @AfterEach
-    fun cleanupAfter() {
+    fun clearQueue() {
         val blockingQueue = redissonClient.getBlockingQueue<String>(testQueueKey, StringCodec.INSTANCE)
         val delayedQueue = redissonClient.getDelayedQueue(blockingQueue)
         delayedQueue.clear()
@@ -184,14 +175,14 @@ class RedissonDelayedQueueBenchmarkTest {
         }
         println("- ${duplicateCount}회 동일 메시지 offer() 완료")
 
-        // 최대 (TTL + 3초) 동안 수신된 이벤트 수 카운팅
+        // 최대 (TTL + 3초) 동안 수신된 이벤트 수 카운팅 (모두 수신 시 즉시 조기 탈출)
         val receivedCount = AtomicInteger(0)
         val deadline = System.currentTimeMillis() + (ttlSeconds + 3) * 1000
 
         while (System.currentTimeMillis() < deadline) {
             val msg = blockingQueue.poll(500, TimeUnit.MILLISECONDS) ?: continue
             if (msg == message) {
-                receivedCount.incrementAndGet()
+                if (receivedCount.incrementAndGet() >= duplicateCount) break
             }
         }
 
@@ -204,9 +195,5 @@ class RedissonDelayedQueueBenchmarkTest {
         println("✓ 중복 안전성 검증 통과: ${receivedCount.get()}건 수신 확인")
     }
 
-    private fun buildTestMessage(index: Int): String {
-        val seatRow = ('A' + (index % 5)).toString()
-        val seatNum = (index % 30) + 1
-        return "1:21:$seatRow-$seatNum"
-    }
+    private fun buildTestMessage(index: Int): String = "1:21:${'A' + (index % 5)}-${(index % 30) + 1}"
 }
