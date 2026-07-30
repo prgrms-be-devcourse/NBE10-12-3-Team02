@@ -46,13 +46,12 @@ class WebConfig(
         registry.addInterceptor(rateLimitInterceptor)
             .addPathPatterns("/api/v1/concerts/*/schedules/*/seats/status")
 
-        // 부하 테스트용 임시 비활성화:
-        // registry.addInterceptor(queueInterceptor)
-        //     .addPathPatterns(
-        //         "/api/v1/concerts/*/schedules/*/seats",
-        //         "/api/v1/concerts/*/schedules/*/seats/occupy",
-        //         "/api/v1/tickets/reserve/schedule/*"
-        //     )
+        registry.addInterceptor(queueInterceptor)
+            .addPathPatterns(
+                "/api/v1/concerts/*/schedules/*/seats",
+                "/api/v1/concerts/*/schedules/*/seats/occupy",
+                "/api/v1/tickets/reserve/schedule/*"
+            )
     }
     //로컬 저장소 서빙용, S3로 옮기면 삭제 예정
     override fun addResourceHandlers(registry: ResourceHandlerRegistry) {

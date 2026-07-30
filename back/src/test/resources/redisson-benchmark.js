@@ -2,17 +2,26 @@ import http from 'k6/http';
 import { check, sleep } from 'k6';
 
 /**
- * Redisson Pub/Sub 분산 락 실서버 고동시성 k6 부하 테스트
+ * Redisson Pub/Sub 분산 락 실서버 고동시성 k6 부하 테스트 스크립트
  *
- * [임시 비활성화 항목 - 부하 테스트 전용]
- * 아래 항목은 테스트 목적으로 임시 비활성화되어 있습니다.
- * 테스트 완료 후 커밋 '4a41044' 이전으로 git revert 하여 반드시 복구해야 합니다.
+ * [📌 추후 부하 테스트 재실행 시 사전 작업 가이드]
+ * 이 스크립트로 백엔드 부하 테스트를 재실행할 경우, 아래 항목을 순서대로 확인/조정해야 합니다.
  *
- * 1. QueueInterceptor (대기열 검증):
- *    파일: back/src/main/kotlin/com/back/global/config/WebConfig.kt
- *    변경: addInterceptors 내 queueInterceptor 등록 주석 처리됨
+ * 1. QueueInterceptor (대기열 검증) 임시 비활성화:
+ *    - 대상 파일: back/src/main/kotlin/com/back/global/config/WebConfig.kt
+ *    - 작업: addInterceptors() 메서드 내부의 queueInterceptor 등록 코드를 주석 처리합니다.
+ *    - 이유: k6 동시성 주입 시 대기열 토큰 미발급으로 인한 403 Forbidden 즉시 반사 방지.
  *
- * ※ 로그인 인증은 setup()에서 JWT 토큰을 발급받아 정상 처리됩니다. (복구 완료)
+ * 2. 테스트용 계정 준비:
+ *    - setup() 함수에서 id: 'test', password: '12345678' 계정으로 자동 로그인합니다.
+ *    - DB(H2)에 해당 계정이 존재하지 않으면 401 Unauthorized 오류가 발생합니다.
+ *
+ * 3. 예매 가능 미래 회차 ID 및 좌석 번호 지정:
+ *    - 요청 URL: POST /api/v1/concerts/10/schedules/21/seats/occupy (2027-02-24 미래 회차)
+ *    - 좌석 포맷: DB 실물 포맷인 `${row}-${seatNum}` (예: A-1 ~ E-30) 지정.
+ *
+ * 4. 부하 테스트 완료 후 필수 원복:
+ *    - WebConfig.kt의 queueInterceptor 주석을 반드시 다시 해제(원복)해야 합니다.
  */
 
 const BASE_URL = __ENV.BASE_URL || 'http://localhost:8080';
