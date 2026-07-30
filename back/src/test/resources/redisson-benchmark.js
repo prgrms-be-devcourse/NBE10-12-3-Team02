@@ -32,11 +32,12 @@ export default function () {
     'X-Test-Delay': '50', // 50ms I/O 대기 시뮬레이션
   };
 
-  const res = http.post(`${BASE_URL}/api/v1/concerts/1/schedules/1/seats/occupy`, payload, { headers });
+  // 예매 가능 시간(2026-12-11)이 도래하지 않은 미래 회차(Concert 9, Schedule 18) 대상 요청
+  const res = http.post(`${BASE_URL}/api/v1/concerts/9/schedules/18/seats/occupy`, payload, { headers });
 
-  // 200(선점 성공), 409(타인 선점 중/경합), 404(좌석 미존재/경계값) 모두 비즈니스 수용 통과 처리
+  // 200(최초 선점 성공) 또는 409(타인 선점 중/경합)는 100% 비즈니스 수용 성공으로 처리
   check(res, {
-    'status is valid business response (200, 404, 409)': (r) => r.status === 200 || r.status === 404 || r.status === 409 || r.status === 400,
+    'status is 200 or 409': (r) => r.status === 200 || r.status === 409,
   });
   sleep(0.1);
 }
