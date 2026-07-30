@@ -3,6 +3,8 @@ package com.back.global.security.oauth2.service
 import com.back.domain.user.constant.LoginType
 import com.back.domain.user.entity.User
 import com.back.domain.user.repository.UserRepository
+import com.back.domain.auth.service.SocialLinkService
+import com.back.domain.auth.repository.SocialLinkCookieRepository
 import com.back.global.security.oauth2.info.GoogleOAuth2UserInfo
 import com.back.global.security.oauth2.info.KakaoOAuth2UserInfo
 import com.back.global.security.oauth2.info.NaverOAuth2UserInfo
@@ -23,7 +25,9 @@ import java.util.UUID
 @Transactional
 class CustomOAuth2UserService(
     private val userRepository: UserRepository,
-    private val passwordEncoder: PasswordEncoder
+    private val passwordEncoder: PasswordEncoder,
+    private val socialLinkService: SocialLinkService,
+    private val socialLinkCookieRepository: SocialLinkCookieRepository,
 ) : DefaultOAuth2UserService() {
 
     override fun loadUser(userRequest: OAuth2UserRequest): OAuth2User {
@@ -34,12 +38,22 @@ class CustomOAuth2UserService(
         @Suppress("UNCHECKED_CAST")
         val attributes = oAuth2User.attributes as Map<String, Any>
 
-        val user = when (registrationId) {
-            "kakao" -> getOrCreateUser(attributes, LoginType.KAKAO, refreshToken)
-            "naver" -> getOrCreateUser(oAuth2User.attributes, LoginType.NAVER, refreshToken)
-            "google" -> getOrCreateUser(attributes, LoginType.GOOGLE, refreshToken)
+        val (loginType, userInfo) = when (registrationId) {
+            "kakao" -> LoginType.KAKAO to createUserInfo(attributes, LoginType.KAKAO)
+            "naver" -> LoginType.NAVER to createUserInfo(oAuth2User.attributes, LoginType.NAVER)
+            "google" -> LoginType.GOOGLE to createUserInfo(attributes, LoginType.GOOGLE)
             else -> throw OAuth2AuthenticationException("oauth2_provider_not_supported")
         }
+        val user = socialLinkCookieRepository.load()
+            ?.let { intentId ->
+                socialLinkService.complete(
+                    intentId = intentId,
+                    provider = loginType,
+                    userInfo = userInfo,
+                    oauthRefreshToken = refreshToken.ifBlank { null },
+                )
+            }
+            ?: getOrCreateUser(userInfo, loginType, refreshToken)
 
         val userId = user.userId ?: throw IllegalStateException("User ID must not be null")
 
@@ -63,28 +77,39 @@ class CustomOAuth2UserService(
             else -> throw OAuth2AuthenticationException("oauth2_provider_not_supported")
         }
 
-    private fun getOrCreateUser(attributes: Map<String, Any>, loginType: LoginType, refreshToken: String): User {
-        val userInfo = createUserInfo(attributes, loginType)
-
+    private fun getOrCreateUser(userInfo: OAuth2UserInfo, loginType: LoginType, refreshToken: String): User {
         val platformId = userInfo.providerId
-        val loginId = "${loginType.name}_$platformId"
         val email = userInfo.email
-        val name = userInfo.name ?: ""
+        val name = userInfo.name
 
         validateRequired(platformId, "oauth2_provider_id_missing")
         validateRequired(email, "oauth2_email_missing")
 
+        val safePlatformId = platformId ?: throw OAuth2AuthenticationException("oauth2_provider_id_missing")
         val safeEmail = email ?: throw OAuth2AuthenticationException("oauth2_email_missing")
+        val loginId = "${loginType.name}_$safePlatformId"
 
-        val existingUser = userRepository.findByLoginIdAndDeletedAtIsNull(loginId)
+        val existingUser =
+            userRepository.findBySocialProviderAndSocialProviderIdAndDeletedAtIsNull(
+                loginType,
+                safePlatformId,
+            )
+                ?: userRepository.findByLoginIdAndDeletedAtIsNull(loginId)
         if (existingUser != null) {
+            if (existingUser.socialProvider == null) {
+                existingUser.linkSocialAccount(
+                    loginType,
+                    safePlatformId,
+                    refreshToken.ifBlank { null },
+                )
+            }
             if (refreshToken.isNotBlank()) {
                 existingUser.updateOauthRefreshToken(refreshToken)
             }
             return existingUser
         }
 
-        return createOAuthUser(loginId, safeEmail, name, loginType, refreshToken)
+        return createOAuthUser(loginId, safeEmail, name, loginType, safePlatformId, refreshToken)
     }
 
     private fun createOAuthUser(
@@ -92,6 +117,7 @@ class CustomOAuth2UserService(
         email: String,
         name: String,
         loginType: LoginType,
+        providerId: String,
         refreshToken: String
     ): User {
         if (userRepository.existsByEmailAndDeletedAtIsNull(email)) {
@@ -107,6 +133,7 @@ class CustomOAuth2UserService(
             password = randomPassword,
             name = name,
             loginType = loginType,
+            providerId = providerId,
             oauthRefreshToken = refreshToken.ifBlank { null }
         )
 

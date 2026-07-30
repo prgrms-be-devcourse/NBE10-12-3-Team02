@@ -7,6 +7,7 @@ data class MyPageResponse(
     val id: String,
     val email: String,
     val loginType: String,
+    val socialProvider: String?,
     val profileImageUrl: String,
     val ticketGroups: List<TicketGroupInfo>
 ) {
@@ -16,6 +17,7 @@ data class MyPageResponse(
             id = user.loginId,
             email = user.email,
             loginType = user.loginType.name,
+            socialProvider = user.socialProvider?.name,
             profileImageUrl = user.redirectToProfileImgUrlOrDefault,
             ticketGroups = ticketGroups
         )

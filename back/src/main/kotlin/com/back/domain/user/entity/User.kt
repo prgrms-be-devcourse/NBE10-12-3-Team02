@@ -11,7 +11,15 @@ import java.time.LocalDate
 import java.util.UUID
 
 @Entity
-@Table(name = "users")
+@Table(
+    name = "users",
+    uniqueConstraints = [
+        UniqueConstraint(
+            name = "uk_users_social_account",
+            columnNames = ["social_provider", "social_provider_id"],
+        ),
+    ],
+)
 class User(
     loginId: String,
     email: String,
@@ -22,7 +30,9 @@ class User(
     @Column(nullable = false)
     val loginType: LoginType,
 
-    oauthRefreshToken: String? = null
+    oauthRefreshToken: String? = null,
+    socialProvider: LoginType? = null,
+    socialProviderId: String? = null,
 ) : BaseEntity() {
 
     @Column(name = "id", nullable = false, unique = true)
@@ -44,6 +54,15 @@ class User(
     @Column(columnDefinition = "TEXT")
     @Convert(converter = EncryptedStringConverter::class)
     var oauthRefreshToken: String? = oauthRefreshToken
+        protected set
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "social_provider")
+    var socialProvider: LoginType? = socialProvider
+        protected set
+
+    @Column(name = "social_provider_id")
+    var socialProviderId: String? = socialProviderId
         protected set
 
     @Id
@@ -76,11 +95,35 @@ class User(
         this.loginId = uuid
         this.email = "$uuid@deleted.local"
         this.oauthRefreshToken = null
+        this.socialProvider = null
+        this.socialProviderId = null
         this.profileImgUrl = null
     }
 
     fun updateOauthRefreshToken(oauthRefreshToken: String?) {
         this.oauthRefreshToken = oauthRefreshToken
+    }
+
+    fun linkSocialAccount(
+        provider: LoginType,
+        providerId: String,
+        oauthRefreshToken: String?,
+    ) {
+        require(provider != LoginType.NORMAL) { "NORMAL은 소셜 제공자가 아닙니다." }
+        require(providerId.isNotBlank()) { "소셜 제공자 사용자 ID는 비어 있을 수 없습니다." }
+        require(socialProvider == null && socialProviderId == null) {
+            "이미 소셜 계정이 연결되어 있습니다."
+        }
+
+        this.socialProvider = provider
+        this.socialProviderId = providerId
+        this.oauthRefreshToken = oauthRefreshToken
+    }
+
+    fun unlinkSocialAccount() {
+        this.socialProvider = null
+        this.socialProviderId = null
+        this.oauthRefreshToken = null
     }
 
     fun updateName(name: String) {
@@ -89,10 +132,6 @@ class User(
             throw ServiceException(ErrorCode.USER_NAME_INVALID)
         }
         this.name = trimmed
-    }
-
-    fun updateEmail(email: String) {
-        this.email = email
     }
 
     fun updatePassword(password: String) {
@@ -107,11 +146,20 @@ class User(
 
         fun create(
             loginId: String, email: String, password: String, name: String, loginType: LoginType
-        ): User = User(loginId, email, password, name, loginType, null)
+        ): User = User(loginId, email, password, name, loginType)
 
         fun createOAuth(
             loginId: String, email: String, password: String, name: String,
-            loginType: LoginType, oauthRefreshToken: String?
-        ): User = User(loginId, email, password, name, loginType, oauthRefreshToken)
+            loginType: LoginType, providerId: String, oauthRefreshToken: String?
+        ): User = User(
+            loginId = loginId,
+            email = email,
+            password = password,
+            name = name,
+            loginType = loginType,
+            oauthRefreshToken = oauthRefreshToken,
+            socialProvider = loginType,
+            socialProviderId = providerId,
+        )
     }
 }

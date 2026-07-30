@@ -2,6 +2,7 @@ package com.back.domain.auth.controller
 
 import com.back.domain.auth.dto.TokenResponse
 import com.back.domain.auth.service.AuthService
+import com.back.domain.auth.repository.SocialLinkCookieRepository
 import com.back.domain.user.constant.LoginType
 import com.back.domain.user.entity.User
 import com.back.domain.user.repository.UserRepository
@@ -81,7 +82,8 @@ class OAuth2LoginHandlerTest {
             userRepository,
             authService,
             requestContext,
-            redirectHandler
+            redirectHandler,
+            mock(SocialLinkCookieRepository::class.java),
         )
 
         val user = User.create(
@@ -199,7 +201,10 @@ class OAuth2LoginHandlerTest {
     @Test
     @DisplayName("OAuth2 로그인 실패 시 OAuth2 에러 코드로 redirect")
     fun t8() {
-        val failureHandler = OAuth2LoginFailureHandler(redirectHandler)
+        val failureHandler = OAuth2LoginFailureHandler(
+            redirectHandler,
+            mock(SocialLinkCookieRepository::class.java),
+        )
         val response = MockHttpServletResponse()
 
         failureHandler.onAuthenticationFailure(
@@ -235,7 +240,13 @@ class OAuth2LoginHandlerTest {
         authService: AuthService,
         requestContext: RequestContext
     ): OAuth2LoginSuccessHandler {
-        return OAuth2LoginSuccessHandler(userRepository, authService, requestContext, redirectHandler)
+        return OAuth2LoginSuccessHandler(
+            userRepository,
+            authService,
+            requestContext,
+            redirectHandler,
+            mock(SocialLinkCookieRepository::class.java),
+        )
     }
 
     private fun authentication(oAuth2User: OAuth2User): Authentication {

@@ -99,6 +99,9 @@ custom:
     refresh-token:
       prefix: "auth:refresh:"
       index-prefix: "auth:refresh:index:"
+  oauth2:
+    link-intent-prefix: "auth:oauth2:link:"
+    link-intent-expiration-seconds: 300
   upload:
     path: ${CUSTOM_UPLOAD_PATH:./uploads}
 

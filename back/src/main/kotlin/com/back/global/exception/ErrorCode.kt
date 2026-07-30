@@ -23,6 +23,10 @@ enum class ErrorCode(
     AUTH_EMAIL_VERIFICATION_RESEND_NOT_ALLOWED("429-3", "이메일 인증번호 재전송 대기 시간이 지나지 않았습니다."),
     AUTH_EMAIL_SEND_FAILED("500-3", "인증 이메일 전송에 실패했습니다."),
     AUTH_REFRESH_TOKEN_ROTATION_FAILED("500-1", "리프레시 토큰 교체 처리 중 오류가 발생했습니다."),
+    OAUTH_PROVIDER_NOT_SUPPORTED("400-11", "지원하지 않는 소셜 로그인 제공자입니다."),
+    OAUTH_ACCOUNT_ALREADY_LINKED("409-8", "이미 소셜 계정이 연결되어 있습니다."),
+    OAUTH_ACCOUNT_NOT_LINKED("404-9", "연결된 소셜 계정이 없습니다."),
+    OAUTH_UNLINK_FAILED("502-1", "소셜 제공자 연결 해제에 실패했습니다."),
 
     // User
     USER_NOT_FOUND("404-1", "회원이 존재하지 않습니다."),
@@ -30,6 +34,7 @@ enum class ErrorCode(
     USER_EMAIL_ALREADY_EXISTS("409-2", "이미 사용 중인 이메일입니다."),
     USER_NOT_FOUND_OR_DELETED("404-2", "존재하지 않거나 이미 탈퇴한 회원입니다."),
     USER_NAME_INVALID("400-6", "이름에 공백을 포함할 수 없습니다."),
+    USER_EMAIL_CHANGE_NOT_ALLOWED("400-12", "이메일은 변경할 수 없습니다."),
     FILE_EMPTY("400-7", "업로드할 파일이 비어있습니다."),
     FILE_TOO_LARGE("400-8", "파일 크기가 5MB를 초과합니다."),
     FILE_INVALID_TYPE("400-10", "허용되지 않는 파일 형식입니다. (jpg, jpeg, png, webp만 가능)"),

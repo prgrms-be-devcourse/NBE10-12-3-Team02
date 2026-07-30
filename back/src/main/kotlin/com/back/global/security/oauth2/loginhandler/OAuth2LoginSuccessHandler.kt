@@ -1,6 +1,7 @@
 package com.back.global.security.oauth2.loginhandler
 
 import com.back.domain.auth.service.AuthService
+import com.back.domain.auth.repository.SocialLinkCookieRepository
 import com.back.domain.user.repository.UserRepository
 import com.back.global.requestcontext.RequestContext
 import jakarta.servlet.http.HttpServletRequest
@@ -15,7 +16,8 @@ class OAuth2LoginSuccessHandler(
     private val userRepository: UserRepository,
     private val authService: AuthService,
     private val requestContext: RequestContext,
-    private val redirectHandler: OAuth2RedirectHandler
+    private val redirectHandler: OAuth2RedirectHandler,
+    private val socialLinkCookieRepository: SocialLinkCookieRepository,
 ) : AuthenticationSuccessHandler {
 
     override fun onAuthenticationSuccess(
@@ -23,6 +25,7 @@ class OAuth2LoginSuccessHandler(
         response: HttpServletResponse,
         authentication: Authentication
     ) {
+        socialLinkCookieRepository.remove()
         val oAuth2User = authentication.principal as OAuth2User
         val userIdAttribute = oAuth2User.getAttribute<Any>("userId")
 

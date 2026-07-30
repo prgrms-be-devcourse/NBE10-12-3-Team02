@@ -21,21 +21,23 @@ class OAuthUnlinkService(
     @Value("\${spring.security.oauth2.client.registration.naver.client-secret:}") private val naverClientSecret: String,
 ) {
 
-    fun unlink(loginType: LoginType, oauthRefreshToken: String?) {
+    fun unlink(loginType: LoginType, oauthRefreshToken: String?): Boolean {
         if (oauthRefreshToken.isNullOrBlank()) {
             log.warn("OAuth Refresh Token 없음, 언링크 스킵: {}", loginType)
-            return
+            return false
         }
 
-        try {
+        return try {
             when (loginType) {
                 LoginType.NAVER -> revokeNaverToken(oauthRefreshToken)
                 LoginType.GOOGLE -> revokeGoogleToken(oauthRefreshToken)
                 LoginType.KAKAO -> unlinkKakao(reissueKakaoAccessToken(oauthRefreshToken))
-                else -> log.warn("지원하지 않는 OAuth 플랫폼: {}", loginType)
+                LoginType.NORMAL -> return false
             }
+            true
         } catch (e: Exception) {
             log.warn("OAuth 언링크 실패 - loginType: {}, error: {}", loginType, e.message)
+            false
         }
     }
 

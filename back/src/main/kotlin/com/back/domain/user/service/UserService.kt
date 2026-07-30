@@ -95,8 +95,10 @@ class UserService(
 
         user.profileImgUrl?.let { fileStorage.delete(it) }
 
-        if (user.loginType != LoginType.NORMAL) {
-            oAuthUnlinkService.unlink(user.loginType, user.oauthRefreshToken)
+        val socialProvider = user.socialProvider
+            ?: user.loginType.takeIf { it != LoginType.NORMAL }
+        if (socialProvider != null) {
+            oAuthUnlinkService.unlink(socialProvider, user.oauthRefreshToken)
         }
 
         val activeTickets = ticketRepository.findAllByUserWithConcert(user).filter { it.isValid }
@@ -135,10 +137,9 @@ class UserService(
 
         request.name?.let { user.updateName(it) }
         request.email?.let { email ->
-            if (user.email != email && userRepository.existsByEmailAndDeletedAtIsNull(email)) {
-                throw ServiceException(ErrorCode.USER_EMAIL_ALREADY_EXISTS)
+            if (!user.email.equals(email.trim(), ignoreCase = true)) {
+                throw ServiceException(ErrorCode.USER_EMAIL_CHANGE_NOT_ALLOWED)
             }
-            user.updateEmail(email)
         }
         request.password?.let { password ->
             val encoded = requireNotNull(passwordEncoder.encode(password)) { "Password encoding failed" }
