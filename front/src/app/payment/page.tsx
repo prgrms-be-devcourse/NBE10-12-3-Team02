@@ -61,9 +61,11 @@ function PaymentContent() {
     if (releasedRef.current || paymentCompletedRef.current) return;
     if (!concertId || !scheduleId) return;
     releasedRef.current = true;
+    sessionStorage.removeItem("paymentActive");
     seats.forEach(({ seatNumber }) => {
       apiFetch(`/concerts/${concertId}/schedules/${scheduleId}/seats/occupy`, {
         method: "DELETE",
+        keepalive: true,
         body: JSON.stringify({ seatNumber }),
       }).catch(() => {});
     });

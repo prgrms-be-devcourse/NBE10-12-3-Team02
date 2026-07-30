@@ -311,6 +311,20 @@ function SeatSelectContent({ params }: { params: Promise<{ id: string }> }) {
           setSeatData(res.data);
           setError("");
           connectSse();
+
+          // 결제 페이지에서 뒤로가기 등으로 돌아왔을 때 백엔드의 DELETE /occupy 처리 완료 시점과의
+          // 비동기 타이밍 차이(Race Condition)를 완전히 해소하기 위해 350ms 후 최신 상태를 1회 재조회한다.
+          setTimeout(() => {
+            if (!active) return;
+            apiFetch<SeatSelectionData>(
+              `/concerts/${id}/schedules/${scheduleId}/seats`,
+              { headers: { "X-Queue-Token": entryToken } },
+            )
+              .then((refreshed) => {
+                if (active) setSeatData(refreshed.data);
+              })
+              .catch(() => {});
+          }, 350);
         }
       } catch (e) {
         // 이 회차에서 이미 3매를 구매한 경우: 재시도해봐야 결과가 안 바뀌니 안내 후 돌려보낸다.
