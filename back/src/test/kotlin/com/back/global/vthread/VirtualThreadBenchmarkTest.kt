@@ -7,9 +7,6 @@ import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicLong
 import kotlin.system.measureTimeMillis
 
-import org.springframework.boot.test.context.SpringBootTest
-
-@SpringBootTest(properties = ["spring.jpa.show-sql=false", "spring.jpa.properties.hibernate.format_sql=false", "logging.level.org.hibernate.SQL=OFF"])
 class VirtualThreadBenchmarkTest {
 
     @Test
@@ -33,10 +30,10 @@ class VirtualThreadBenchmarkTest {
             Executors.newVirtualThreadPerTaskExecutor()
         }
 
+        val speedup = String.format("%.2f", platformTime.toDouble() / virtualTime)
         println("\n==================================================")
-        println("[성능 비교 측정 결과]")
-        println("1. Platform ThreadPool (200개 제한): ${platformTime}ms")
-        println("2. Virtual Thread (VirtualThreadPerTask): ${virtualTime}ms")
+        println("[최종 벤치마크 요약]")
+        println("가상 스레드가 플랫폼 스레드 대비 약 ${speedup}배 빠른 처리 속도를 보였습니다.")
         println("==================================================")
     }
 
@@ -49,12 +46,13 @@ class VirtualThreadBenchmarkTest {
         val latch = CountDownLatch(taskCount)
         val completedCount = AtomicLong(0)
 
-        val totalTime = executorSupplier().use { executor ->
+        val time = executorSupplier().use { executor ->
             measureTimeMillis {
                 repeat(taskCount) {
                     executor.submit {
                         try {
-                            Thread.sleep(ioDelayMs) // I/O 블로킹 대기 시뮬레이션
+                            // Non-blocking I/O대기 시뮬레이션
+                            Thread.sleep(ioDelayMs)
                             completedCount.incrementAndGet()
                         } finally {
                             latch.countDown()
@@ -65,8 +63,12 @@ class VirtualThreadBenchmarkTest {
             }
         }
 
-        val tps = String.format("%.2f", (taskCount.toDouble() / totalTime) * 1000)
-        println("[$name] 소요시간: ${totalTime}ms, 완료 작업: ${completedCount.get()}건, 처리량: ${tps} TPS")
-        return totalTime
+        val tps = String.format("%.2f", (completedCount.get().toDouble() / time) * 1000)
+        println("\n[$name]")
+        println("- 총 완료 작업 수: ${completedCount.get()} / $taskCount")
+        println("- 총 소요 시간: ${time}ms")
+        println("- 초당 처리량 (TPS): $tps TPS")
+
+        return time
     }
 }
