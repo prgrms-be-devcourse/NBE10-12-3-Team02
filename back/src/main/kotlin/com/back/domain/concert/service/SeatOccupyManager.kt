@@ -26,6 +26,7 @@ class SeatOccupyManager(
     private val ticketRepository: TicketRepository,
     private val scheduleSeatRepository: ScheduleSeatRepository,
     private val redissonClient: RedissonClient,
+    private val stringRedisTemplate: org.springframework.data.redis.core.StringRedisTemplate,
     private val eventPublisher: ApplicationEventPublisher
 ) {
     private val log = LoggerFactory.getLogger(javaClass)
@@ -38,18 +39,19 @@ class SeatOccupyManager(
         val redisKey = generateSeatOccupyKey(concertId, scheduleId, seatNumber)
         val occupyToken = UUID.randomUUID().toString()
 
-        val result: Long? = redissonClient.getScript(StringCodec.INSTANCE).eval(
-            RScript.Mode.READ_WRITE,
-            OCCUPY_SCRIPT,
-            RScript.ReturnType.LONG,
-            listOf(redisKey),
-            userId.toString(),
-            occupyToken,
-            OCCUPY_TTL_SECONDS.toString()
-        )
-
-        if (result == null || result == 0L) {
-            throw ServiceException(ErrorCode.SEAT_HELD_BY_OTHER_USER)
+        // [비교 부하 테스트용 임시 Lettuce 스핀락 (SETNX + 5ms Polling Retry)]
+        val lockKey = "benchmark:spin_lock:$redisKey"
+        var acquired = false
+        val startTime = System.currentTimeMillis()
+        while (!acquired) {
+            acquired = stringRedisTemplate.opsForValue()
+                .setIfAbsent(lockKey, userId.toString(), java.time.Duration.ofSeconds(30)) == true
+            if (!acquired) {
+                if (System.currentTimeMillis() - startTime > 1000) { // 1초 타임아웃
+                    throw ServiceException(ErrorCode.SEAT_HELD_BY_OTHER_USER)
+                }
+                Thread.sleep(5) // 5ms 스핀락 폴링 재시도
+            }
         }
 
         try {
