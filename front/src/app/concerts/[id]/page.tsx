@@ -1,7 +1,7 @@
 "use client";
 
 import { showAlert } from "@/lib/alert";
-import ConcertReviewSection from "./ConcertReviewSection";
+import ConcertPostSection from "./ConcertPostSection";
 import { apiFetch, decodeToken } from "@/lib/api";
 import {
   getConcertDetailImages,
@@ -317,7 +317,7 @@ export default function ConcertDetailPage({
           </div>
         </section>
 
-        <ConcertReviewSection concertId={concert.concertId} />
+        <ConcertPostSection concertId={concert.concertId} />
       </div>
     </div>
   );
