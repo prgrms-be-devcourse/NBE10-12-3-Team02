@@ -8,6 +8,9 @@ import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito.doThrow
 import org.mockito.Mockito.mock
+import org.mockito.Mockito.never
+import org.mockito.Mockito.times
+import org.mockito.Mockito.verify
 import org.mockito.Mockito.`when`
 import org.springframework.dao.DataIntegrityViolationException
 
@@ -28,6 +31,7 @@ class PostInteractionServiceTest {
 
         assertThat(result.isLiked).isTrue
         assertThat(result.likeCount).isEqualTo(1L)
+        verify(repository, times(1)).existsByPostPostIdAndUserUserId(1L, 2L)
     }
 
     @Test
@@ -74,5 +78,21 @@ class PostInteractionServiceTest {
 
         assertThatThrownBy { service.bookmark(1L, 2L) }
             .isSameAs(exception)
+    }
+
+    @Test
+    @DisplayName("좋아요 저장 성공 후 좋아요 존재 여부를 다시 조회하지 않는다")
+    fun t5() {
+        val commandService = mock(PostLikeCommandService::class.java)
+        val repository = mock(PostLikeRepository::class.java)
+        val service = PostLikeService(commandService, repository)
+
+        `when`(repository.countByPostPostId(1L)).thenReturn(3L)
+
+        val result = service.like(1L, 2L)
+
+        assertThat(result.isLiked).isTrue
+        assertThat(result.likeCount).isEqualTo(3L)
+        verify(repository, never()).existsByPostPostIdAndUserUserId(1L, 2L)
     }
 }

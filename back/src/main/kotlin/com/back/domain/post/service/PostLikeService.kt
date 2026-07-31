@@ -19,7 +19,10 @@ class PostLikeService(
                 throw e
             }
         }
-        return getStatus(postId, userId)
+        return PostLikeStatusResponse(
+            isLiked = true,
+            likeCount = postLikeRepository.countByPostPostId(postId),
+        )
     }
 
     fun unlike(postId: Long, userId: Long): PostLikeStatusResponse {
@@ -30,9 +33,4 @@ class PostLikeService(
         )
     }
 
-    private fun getStatus(postId: Long, userId: Long): PostLikeStatusResponse =
-        PostLikeStatusResponse(
-            isLiked = postLikeRepository.existsByPostPostIdAndUserUserId(postId, userId),
-            likeCount = postLikeRepository.countByPostPostId(postId),
-        )
 }
