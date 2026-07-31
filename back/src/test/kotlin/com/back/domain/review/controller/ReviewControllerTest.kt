@@ -1,0 +1,210 @@
+package com.back.domain.review.controller
+
+import com.back.domain.concert.entity.Concert
+import com.back.domain.concert.repository.ConcertRepository
+import com.back.domain.review.entity.ConcertReview
+import com.back.domain.review.repository.ConcertReviewRepository
+import com.back.domain.schedule.entity.Schedule
+import com.back.domain.schedule.entity.ScheduleSeat
+import com.back.domain.schedule.constant.SeatStatus.HOLD
+import com.back.domain.schedule.repository.ScheduleRepository
+import com.back.domain.schedule.repository.ScheduleSeatRepository
+import com.back.domain.ticket.entity.Ticket
+import com.back.domain.ticket.repository.TicketRepository
+import com.back.domain.user.constant.LoginType
+import com.back.domain.user.entity.User
+import com.back.domain.user.repository.UserRepository
+import com.back.domain.venue.entity.Venue
+import com.back.domain.venue.repository.VenueRepository
+import com.back.global.security.SecurityUser
+import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.DisplayName
+import org.junit.jupiter.api.Test
+import org.mockito.ArgumentMatchers.any
+import org.mockito.ArgumentMatchers.anyString
+import org.mockito.Mockito.doReturn
+import org.mockito.Mockito.mock
+import org.mockito.Mockito.`when`
+import org.redisson.api.RBucket
+import org.redisson.api.RScoredSortedSet
+import org.redisson.api.RedissonClient
+import org.redisson.client.codec.Codec
+import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.boot.test.context.SpringBootTest
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
+import org.springframework.http.MediaType
+import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user
+import org.springframework.test.context.ActiveProfiles
+import org.springframework.test.context.bean.override.mockito.MockitoBean
+import org.springframework.test.web.servlet.MockMvc
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
+import org.springframework.test.web.servlet.result.MockMvcResultHandlers.print
+import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
+import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
+import org.springframework.transaction.annotation.Transactional
+import java.time.LocalDateTime
+
+@ActiveProfiles("test")
+@SpringBootTest
+@AutoConfigureMockMvc
+@Transactional
+class ReviewControllerTest @Autowired constructor(
+    private val mockMvc: MockMvc,
+    private val userRepository: UserRepository,
+    private val concertRepository: ConcertRepository,
+    private val venueRepository: VenueRepository,
+    private val scheduleRepository: ScheduleRepository,
+    private val scheduleSeatRepository: ScheduleSeatRepository,
+    private val ticketRepository: TicketRepository,
+    private val concertReviewRepository: ConcertReviewRepository
+) {
+    private lateinit var userEntity: User
+    private lateinit var securityUser: SecurityUser
+    private lateinit var concert: Concert
+    private lateinit var schedule: Schedule
+    private lateinit var venue: Venue
+
+    @MockitoBean
+    private lateinit var redissonClient: RedissonClient
+
+    @BeforeEach
+    @Suppress("UNCHECKED_CAST")
+    fun setUp() {
+        val activeSet = mock(RScoredSortedSet::class.java) as RScoredSortedSet<String>
+        doReturn(activeSet).`when`(redissonClient).getScoredSortedSet<String>(anyString(), any(Codec::class.java))
+        `when`(activeSet.getScore(anyString())).thenReturn((System.currentTimeMillis() + 600000).toDouble())
+
+        val tokenBucket = mock(RBucket::class.java) as RBucket<String>
+        doReturn(tokenBucket).`when`(redissonClient).getBucket<String>(anyString(), any(Codec::class.java))
+        `when`(tokenBucket.get()).thenReturn("test-queue-token")
+
+        userEntity = userRepository.save(User.create("reviewer1", "reviewer1@test.com", "0000", "리뷰어", LoginType.NORMAL))
+        securityUser = SecurityUser(userEntity.userId!!, userEntity.name)
+
+        concert = concertRepository.save(
+            Concert.create("테스트 콘서트", "설명", LocalDateTime.now().minusDays(30), LocalDateTime.now().minusDays(1), "poster.jpg")
+        )
+        venue = venueRepository.save(Venue.create("공연장", "서울", 1000L))
+        schedule = scheduleRepository.save(
+            Schedule.create(concert, venue, LocalDateTime.now().minusDays(10), 1)
+        )
+        val seat = scheduleSeatRepository.save(ScheduleSeat.create(schedule, "VIP", "A-1", 150000, HOLD))
+        seat.sell()
+        ticketRepository.save(Ticket.create(userEntity, schedule, seat, "ticket-review-board-001", 150000, "group-review-board-001"))
+    }
+
+    @Test
+    @DisplayName("전체 리뷰 피드 조회 성공 (비로그인)")
+    fun getAllReviews() {
+        concertReviewRepository.save(ConcertReview.create(concert, userEntity, "좋은 공연", "감동이었어요."))
+
+        mockMvc.perform(
+            get("/api/v1/reviews")
+                .contentType(MediaType.APPLICATION_JSON)
+        )
+            .andDo(print())
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.resultCode").value("200-1"))
+            .andExpect(jsonPath("$.data").isArray)
+            .andExpect(jsonPath("$.data[0].title").value("좋은 공연"))
+            .andExpect(jsonPath("$.data[0].concertName").value("테스트 콘서트"))
+            .andExpect(jsonPath("$.data[0].isMine").value(false))
+    }
+
+    @Test
+    @DisplayName("전체 리뷰 피드 조회 - 로그인 시 isMine 반영")
+    fun getAllReviewsLoggedIn() {
+        concertReviewRepository.save(ConcertReview.create(concert, userEntity, "내 리뷰", "내가 쓴 리뷰입니다."))
+
+        mockMvc.perform(
+            get("/api/v1/reviews")
+                .with(user(securityUser))
+                .contentType(MediaType.APPLICATION_JSON)
+        )
+            .andDo(print())
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.data[0].isMine").value(true))
+    }
+
+    @Test
+    @DisplayName("자격 있는 콘서트 목록 조회 성공")
+    fun getEligibleConcerts() {
+        mockMvc.perform(
+            get("/api/v1/reviews/eligible-concerts")
+                .with(user(securityUser))
+                .contentType(MediaType.APPLICATION_JSON)
+        )
+            .andDo(print())
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.resultCode").value("200-1"))
+            .andExpect(jsonPath("$.data").isArray)
+            .andExpect(jsonPath("$.data[0].concertTitle").value("테스트 콘서트"))
+    }
+
+    @Test
+    @DisplayName("자격 있는 콘서트 목록 - 이미 리뷰 쓴 콘서트는 제외")
+    fun getEligibleConcertsExcludesAlreadyReviewed() {
+        concertReviewRepository.save(ConcertReview.create(concert, userEntity, "이미 쓴 리뷰", "내용"))
+
+        mockMvc.perform(
+            get("/api/v1/reviews/eligible-concerts")
+                .with(user(securityUser))
+                .contentType(MediaType.APPLICATION_JSON)
+        )
+            .andDo(print())
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.data").isArray)
+            .andExpect(jsonPath("$.data.length()").value(0))
+    }
+
+    @Test
+    @DisplayName("자격 있는 콘서트 목록 - 6개월 초과 공연은 제외")
+    fun getEligibleConcertsExcludesExpired() {
+        val oldConcert = concertRepository.save(
+            Concert.create("오래된 콘서트", "설명", LocalDateTime.now().minusYears(2), LocalDateTime.now().minusYears(2).plusDays(1), "old.jpg")
+        )
+        val oldSchedule = scheduleRepository.save(
+            Schedule.create(oldConcert, venue, LocalDateTime.now().minusMonths(7), 1)
+        )
+        val oldSeat = scheduleSeatRepository.save(ScheduleSeat.create(oldSchedule, "VIP", "B-1", 150000, HOLD))
+        oldSeat.sell()
+        ticketRepository.save(Ticket.create(userEntity, oldSchedule, oldSeat, "old-board-ticket-001", 150000, "old-board-group-001"))
+
+        mockMvc.perform(
+            get("/api/v1/reviews/eligible-concerts")
+                .with(user(securityUser))
+                .contentType(MediaType.APPLICATION_JSON)
+        )
+            .andDo(print())
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.data").isArray)
+            .andExpect(jsonPath("$.data[?(@.concertTitle == '오래된 콘서트')]").isEmpty)
+    }
+
+    @Test
+    @DisplayName("자격 있는 콘서트 목록 - 티켓 없는 사용자는 빈 목록")
+    fun getEligibleConcertsNoTicket() {
+        val otherUser = userRepository.save(User.create("noticket", "noticket@board.com", "0000", "무티켓", LoginType.NORMAL))
+
+        mockMvc.perform(
+            get("/api/v1/reviews/eligible-concerts")
+                .with(user(SecurityUser(otherUser.userId!!, otherUser.name)))
+                .contentType(MediaType.APPLICATION_JSON)
+        )
+            .andDo(print())
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.data").isArray)
+            .andExpect(jsonPath("$.data.length()").value(0))
+    }
+
+    @Test
+    @DisplayName("자격 있는 콘서트 목록 - 비로그인 시 401")
+    fun getEligibleConcertsUnauthorized() {
+        mockMvc.perform(
+            get("/api/v1/reviews/eligible-concerts")
+                .contentType(MediaType.APPLICATION_JSON)
+        )
+            .andDo(print())
+            .andExpect(status().isUnauthorized)
+    }
+}

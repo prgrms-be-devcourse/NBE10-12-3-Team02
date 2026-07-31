@@ -51,7 +51,7 @@ export default function Navbar() {
   };
 
   return (
-    <nav className="print:hidden sticky top-0 z-50 bg-white border-b border-gray-100 shadow-sm">
+    <nav className="print:hidden sticky top-0 z-50 bg-white shadow-sm">
       <div className="max-w-5xl mx-auto px-6 h-16 flex items-center justify-between">
         <Link href="/" onClick={handleLogoClick} className="flex items-center">
           <Image
