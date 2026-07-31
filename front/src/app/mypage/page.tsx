@@ -77,6 +77,7 @@ export default function MyPage() {
   const [selectedProfileFile, setSelectedProfileFile] = useState<File | null>(null);
   const [isUploadingProfile, setIsUploadingProfile] = useState(false);
   const [profileCacheKey, setProfileCacheKey] = useState(() => Date.now());
+  const [profileImgError, setProfileImgError] = useState(false);
 
   useEffect(() => {
     if (hasCheckedAuth.current) return;
@@ -231,6 +232,7 @@ export default function MyPage() {
       if (profilePreviewUrl) URL.revokeObjectURL(profilePreviewUrl);
       setProfilePreviewUrl(null);
       setSelectedProfileFile(null);
+      setProfileImgError(false);
       setProfileCacheKey(Date.now());
       showSuccess("프로필 사진이 변경되었습니다.");
     } catch (e) {
@@ -251,7 +253,7 @@ export default function MyPage() {
       if (profilePreviewUrl) URL.revokeObjectURL(profilePreviewUrl);
       setProfilePreviewUrl(null);
       setSelectedProfileFile(null);
-      setProfileCacheKey(Date.now());
+      setProfileImgError(true);
       showSuccess("기본 이미지로 변경되었습니다.");
     } catch (e) {
       showError(e instanceof Error ? e.message : "삭제에 실패했습니다.");
@@ -407,10 +409,16 @@ export default function MyPage() {
           <div className="flex flex-col items-center mb-6">
             <div className="relative w-20 h-20 rounded-full overflow-hidden border-2 border-gray-100 mb-2">
               <Image
-                src={profilePreviewUrl || `${data.profileImageUrl}?t=${profileCacheKey}`}
+                src={
+                  profilePreviewUrl ||
+                  (!data.profileImageUrl || profileImgError
+                    ? "/default-avatar.svg"
+                    : `${data.profileImageUrl}?t=${profileCacheKey}`)
+                }
                 alt="프로필 사진"
                 fill
                 unoptimized
+                onError={() => setProfileImgError(true)}
                 className="object-cover"
               />
               <button
