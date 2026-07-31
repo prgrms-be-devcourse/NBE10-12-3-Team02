@@ -6,8 +6,8 @@ import { apiFetch, decodeToken, ApiError, restoreSession } from "@/lib/api";
 import { getLocalConcertPoster } from "@/lib/concertDetailImages";
 import { formatDateTime } from "@/lib/date";
 
-interface ReviewDetail {
-  reviewId: number;
+interface PostDetail {
+  postId: number;
   concertId: number;
   userId: number;
   userName: string;
@@ -28,16 +28,16 @@ interface Comment {
   isMine: boolean;
 }
 
-export default function ReviewDetailPage({
+export default function PostDetailPage({
   params,
 }: {
-  params: Promise<{ reviewId: string }>;
+  params: Promise<{ postId: string }>;
 }) {
-  const { reviewId } = use(params);
+  const { postId } = use(params);
   const router = useRouter();
 
-  const [review, setReview] = useState<ReviewDetail | null>(null);
-  const [reviewLoading, setReviewLoading] = useState(true);
+  const [post, setPost] = useState<PostDetail | null>(null);
+  const [postLoading, setPostLoading] = useState(true);
   const [editMode, setEditMode] = useState(false);
   const [editForm, setEditForm] = useState({ title: "", content: "" });
   const [editError, setEditError] = useState("");
@@ -53,22 +53,22 @@ export default function ReviewDetailPage({
 
   useEffect(() => {
     restoreSession().then(() => {
-      setReviewLoading(true);
-      apiFetch<ReviewDetail>(`/reviews/${reviewId}`)
+      setPostLoading(true);
+      apiFetch<PostDetail>(`/posts/${postId}`)
         .then((res) => {
-          setReview(res.data);
+          setPost(res.data);
           setEditForm({ title: res.data.title, content: res.data.content });
         })
-        .catch(() => setReview(null))
-        .finally(() => setReviewLoading(false));
+        .catch(() => setPost(null))
+        .finally(() => setPostLoading(false));
     });
-  }, [reviewId]);
+  }, [postId]);
 
   useEffect(() => {
-    apiFetch<Comment[]>(`/reviews/${reviewId}/comments`)
+    apiFetch<Comment[]>(`/posts/${postId}/comments`)
       .then((res) => setComments(res.data))
       .catch(() => setComments([]));
-  }, [reviewId, commentRefreshKey]);
+  }, [postId, commentRefreshKey]);
 
   const handleUpdate = async () => {
     if (!editForm.title.trim() || !editForm.content.trim()) {
@@ -78,11 +78,11 @@ export default function ReviewDetailPage({
     setEditSubmitting(true);
     setEditError("");
     try {
-      const updated = await apiFetch<ReviewDetail>(
-        `/concerts/${review!.concertId}/reviews/${reviewId}`,
+      const updated = await apiFetch<PostDetail>(
+        `/concerts/${post!.concertId}/posts/${postId}`,
         { method: "PUT", body: JSON.stringify(editForm) }
       );
-      setReview(updated.data);
+      setPost(updated.data);
       setEditMode(false);
     } catch (e) {
       setEditError(e instanceof ApiError ? e.message : "수정 중 오류가 발생했습니다.");
@@ -92,9 +92,9 @@ export default function ReviewDetailPage({
   };
 
   const handleDelete = async () => {
-    if (!confirm("리뷰를 삭제하시겠습니까?")) return;
+    if (!confirm("게시글을 삭제하시겠습니까?")) return;
     try {
-      await apiFetch(`/concerts/${review!.concertId}/reviews/${reviewId}`, { method: "DELETE" });
+      await apiFetch(`/concerts/${post!.concertId}/posts/${postId}`, { method: "DELETE" });
       router.push("/board");
     } catch {
       alert("삭제에 실패했습니다.");
@@ -109,7 +109,7 @@ export default function ReviewDetailPage({
     setCommentSubmitting(true);
     setCommentError("");
     try {
-      await apiFetch(`/reviews/${reviewId}/comments`, {
+      await apiFetch(`/posts/${postId}/comments`, {
         method: "POST",
         body: JSON.stringify({ content: commentInput }),
       });
@@ -125,14 +125,14 @@ export default function ReviewDetailPage({
   const handleCommentDelete = async (commentId: number) => {
     if (!confirm("댓글을 삭제하시겠습니까?")) return;
     try {
-      await apiFetch(`/reviews/${reviewId}/comments/${commentId}`, { method: "DELETE" });
+      await apiFetch(`/posts/${postId}/comments/${commentId}`, { method: "DELETE" });
       setCommentRefreshKey((k) => k + 1);
     } catch {
       alert("댓글 삭제에 실패했습니다.");
     }
   };
 
-  if (reviewLoading) {
+  if (postLoading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <p className="text-gray-400">불러오는 중...</p>
@@ -140,21 +140,21 @@ export default function ReviewDetailPage({
     );
   }
 
-  if (!review) {
+  if (!post) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <p className="text-red-400">리뷰를 찾을 수 없습니다.</p>
+        <p className="text-red-400">게시글을 찾을 수 없습니다.</p>
       </div>
     );
   }
 
-  const posterUrl = getLocalConcertPoster(review.posterUrl);
+  const posterUrl = getLocalConcertPoster(post.posterUrl);
 
   return (
     <div className="min-h-screen bg-gray-50 py-10">
       <div className="max-w-2xl mx-auto px-4 space-y-6">
 
-        {/* 리뷰 본문 */}
+        {/* 게시글 본문 */}
         <div className="bg-white rounded-2xl shadow-sm p-6">
           <button
             onClick={() => router.push("/board")}
@@ -166,14 +166,14 @@ export default function ReviewDetailPage({
           <div className="flex gap-4 mb-5">
             <div className="shrink-0 w-14 h-18 rounded-lg overflow-hidden bg-gradient-to-br from-blue-100 to-indigo-200 flex items-center justify-center">
               {posterUrl ? (
-                <img src={posterUrl} alt={review.concertName} className="w-full h-full object-cover" />
+                <img src={posterUrl} alt={post.concertName} className="w-full h-full object-cover" />
               ) : (
                 <span className="text-xs text-gray-400">포스터</span>
               )}
             </div>
             <div>
-              <p className="text-xs text-blue-600 font-semibold mb-0.5">{review.concertName}</p>
-              <p className="text-xs text-gray-400">{review.userName} · {formatDateTime(review.createdAt)}</p>
+              <p className="text-xs text-blue-600 font-semibold mb-0.5">{post.concertName}</p>
+              <p className="text-xs text-gray-400">{post.userName} · {formatDateTime(post.createdAt)}</p>
             </div>
           </div>
 
@@ -213,11 +213,11 @@ export default function ReviewDetailPage({
           ) : (
             <>
               <div className="flex items-start justify-between">
-                <h1 className="text-xl font-bold text-gray-800">{review.title}</h1>
-                {review.isMine && (
+                <h1 className="text-xl font-bold text-gray-800">{post.title}</h1>
+                {post.isMine && (
                   <div className="flex gap-2 ml-4 shrink-0">
                     <button
-                      onClick={() => { setEditForm({ title: review.title, content: review.content }); setEditMode(true); }}
+                      onClick={() => { setEditForm({ title: post.title, content: post.content }); setEditMode(true); }}
                       className="text-xs text-blue-500 hover:text-blue-700"
                     >
                       수정
@@ -228,7 +228,7 @@ export default function ReviewDetailPage({
                   </div>
                 )}
               </div>
-              <p className="text-gray-600 text-sm mt-4 leading-relaxed whitespace-pre-wrap">{review.content}</p>
+              <p className="text-gray-600 text-sm mt-4 leading-relaxed whitespace-pre-wrap">{post.content}</p>
             </>
           )}
         </div>

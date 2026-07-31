@@ -6,8 +6,8 @@ import { apiFetch, decodeToken, restoreSession } from "@/lib/api";
 import { getLocalConcertPoster } from "@/lib/concertDetailImages";
 import { formatDateTime } from "@/lib/date";
 
-interface ReviewCard {
-  reviewId: number;
+interface PostCard {
+  postId: number;
   concertId: number;
   userId: number;
   userName: string;
@@ -21,15 +21,15 @@ interface ReviewCard {
 
 export default function BoardPage() {
   const router = useRouter();
-  const [reviews, setReviews] = useState<ReviewCard[]>([]);
+  const [posts, setPosts] = useState<PostCard[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     // accessToken이 준비된 이후 fetch해야 isMine이 정확히 내려옴
     restoreSession().then(() => {
-      apiFetch<ReviewCard[]>("/reviews")
-        .then((res) => setReviews(res.data))
-        .catch(() => setReviews([]))
+      apiFetch<PostCard[]>("/posts")
+        .then((res) => setPosts(res.data))
+        .catch(() => setPosts([]))
         .finally(() => setLoading(false));
     });
   }, []);
@@ -49,21 +49,21 @@ export default function BoardPage() {
 
         {loading ? (
           <p className="text-gray-400 text-sm">불러오는 중...</p>
-        ) : reviews.length === 0 ? (
+        ) : posts.length === 0 ? (
           <p className="text-gray-400 text-sm">아직 작성된 후기가 없습니다.</p>
         ) : (
           <ul className="space-y-4">
-            {reviews.map((review) => (
+            {posts.map((post) => (
               <li
-                key={review.reviewId}
-                onClick={() => router.push(`/board/${review.reviewId}`)}
+                key={post.postId}
+                onClick={() => router.push(`/board/${post.postId}`)}
                 className="bg-white rounded-2xl shadow-sm border border-gray-100 flex gap-4 p-4 cursor-pointer hover:shadow-md transition"
               >
                 <div className="shrink-0 w-16 h-20 rounded-lg overflow-hidden bg-gradient-to-br from-blue-100 to-indigo-200 flex items-center justify-center">
-                  {review.posterUrl ? (
+                  {post.posterUrl ? (
                     <img
-                      src={getLocalConcertPoster(review.posterUrl)}
-                      alt={review.concertName}
+                      src={getLocalConcertPoster(post.posterUrl)}
+                      alt={post.concertName}
                       className="w-full h-full object-cover"
                     />
                   ) : (
@@ -74,20 +74,20 @@ export default function BoardPage() {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-0.5">
                     <p className="text-xs text-blue-600 font-semibold truncate">
-                      {review.concertName}
+                      {post.concertName}
                     </p>
-                    {review.isMine && (
+                    {post.isMine && (
                       <span className="shrink-0 text-[10px] font-semibold text-blue-600 bg-blue-50 border border-blue-200 rounded px-1.5 py-0.5">
                         내 글
                       </span>
                     )}
                   </div>
-                  <p className="font-semibold text-gray-800 truncate">{review.title}</p>
+                  <p className="font-semibold text-gray-800 truncate">{post.title}</p>
                   <p className="text-sm text-gray-500 mt-1 line-clamp-2 leading-relaxed">
-                    {review.content}
+                    {post.content}
                   </p>
                   <p className="text-xs text-gray-400 mt-2">
-                    {review.userName} · {formatDateTime(review.createdAt)}
+                    {post.userName} · {formatDateTime(post.createdAt)}
                   </p>
                 </div>
               </li>

@@ -24,7 +24,7 @@ export default function BoardWritePage() {
       router.replace("/login");
       return;
     }
-    apiFetch<EligibleConcert[]>("/reviews/eligible-concerts")
+    apiFetch<EligibleConcert[]>("/posts/eligible-concerts")
       .then((res) => setConcerts(res.data))
       .catch(() => setConcerts([]))
       .finally(() => setLoading(false));
@@ -43,7 +43,7 @@ export default function BoardWritePage() {
     setSubmitting(true);
     setError("");
     try {
-      await apiFetch(`/concerts/${selectedId}/reviews`, {
+      await apiFetch(`/concerts/${selectedId}/posts`, {
         method: "POST",
         body: JSON.stringify(form),
       });

@@ -3,8 +3,8 @@
 import { useState, useEffect } from "react";
 import { apiFetch, decodeToken, ApiError } from "@/lib/api";
 
-interface ConcertReview {
-  reviewId: number;
+interface ConcertPost {
+  postId: number;
   concertId: number;
   userId: number;
   userName: string;
@@ -16,13 +16,13 @@ interface ConcertReview {
 }
 
 const ELIGIBILITY_MESSAGES: Record<string, string> = {
-  "403-4": "해당 콘서트에 대한 유효한 티켓이 없어 리뷰를 작성할 수 없습니다.",
-  "403-5": "리뷰 작성 가능 기간이 지났습니다. (콘서트 종료 후 6개월 이내)",
-  "409-4": "이미 해당 콘서트에 리뷰를 작성했습니다.",
+  "403-4": "해당 콘서트에 대한 유효한 티켓이 없어 게시글을 작성할 수 없습니다.",
+  "403-5": "게시글 작성 가능 기간이 지났습니다. (콘서트 종료 후 6개월 이내)",
+  "409-4": "이미 해당 콘서트에 게시글을 작성했습니다.",
 };
 
-export default function ConcertReviewSection({ concertId }: { concertId: number }) {
-  const [reviews, setReviews] = useState<ConcertReview[]>([]);
+export default function ConcertPostSection({ concertId }: { concertId: number }) {
+  const [posts, setPosts] = useState<ConcertPost[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -35,10 +35,10 @@ export default function ConcertReviewSection({ concertId }: { concertId: number 
   useEffect(() => {
     const doFetch = async () => {
       try {
-        const res = await apiFetch<ConcertReview[]>(`/concerts/${concertId}/reviews`);
-        setReviews(res.data);
+        const res = await apiFetch<ConcertPost[]>(`/concerts/${concertId}/posts`);
+        setPosts(res.data);
       } catch {
-        setReviews([]);
+        setPosts([]);
       } finally {
         setLoading(false);
       }
@@ -62,12 +62,12 @@ export default function ConcertReviewSection({ concertId }: { concertId: number 
     setFormError("");
     try {
       if (editingId !== null) {
-        await apiFetch(`/concerts/${concertId}/reviews/${editingId}`, {
+        await apiFetch(`/concerts/${concertId}/posts/${editingId}`, {
           method: "PUT",
           body: JSON.stringify(form),
         });
       } else {
-        await apiFetch(`/concerts/${concertId}/reviews`, {
+        await apiFetch(`/concerts/${concertId}/posts`, {
           method: "POST",
           body: JSON.stringify(form),
         });
@@ -85,17 +85,17 @@ export default function ConcertReviewSection({ concertId }: { concertId: number 
     }
   };
 
-  const handleEdit = (review: ConcertReview) => {
-    setForm({ title: review.title, content: review.content });
-    setEditingId(review.reviewId);
+  const handleEdit = (post: ConcertPost) => {
+    setForm({ title: post.title, content: post.content });
+    setEditingId(post.postId);
     setShowForm(true);
     setFormError("");
   };
 
-  const handleDelete = async (reviewId: number) => {
-    if (!confirm("리뷰를 삭제하시겠습니까?")) return;
+  const handleDelete = async (postId: number) => {
+    if (!confirm("게시글을 삭제하시겠습니까?")) return;
     try {
-      await apiFetch(`/concerts/${concertId}/reviews/${reviewId}`, { method: "DELETE" });
+      await apiFetch(`/concerts/${concertId}/posts/${postId}`, { method: "DELETE" });
       setRefreshKey((k) => k + 1);
     } catch {
       alert("삭제에 실패했습니다.");
@@ -103,12 +103,12 @@ export default function ConcertReviewSection({ concertId }: { concertId: number 
   };
 
   return (
-    <section id="reviews" className="mt-10 bg-white rounded-2xl shadow-sm overflow-hidden">
+    <section id="posts" className="mt-10 bg-white rounded-2xl shadow-sm overflow-hidden">
       <div className="p-8">
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-xl font-bold text-gray-800">
             관람 후기
-            <span className="ml-2 text-base font-normal text-gray-400">({reviews.length}개)</span>
+            <span className="ml-2 text-base font-normal text-gray-400">({posts.length}개)</span>
           </h2>
           {me && !showForm && (
             <button
@@ -120,7 +120,7 @@ export default function ConcertReviewSection({ concertId }: { concertId: number 
               }}
               className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
             >
-              리뷰 작성
+              게시글 작성
             </button>
           )}
         </div>
@@ -128,7 +128,7 @@ export default function ConcertReviewSection({ concertId }: { concertId: number 
         {showForm && (
           <div className="mb-8 p-5 bg-slate-50 rounded-xl border border-slate-200">
             <h3 className="font-semibold text-gray-700 mb-4">
-              {editingId !== null ? "리뷰 수정" : "리뷰 작성"}
+              {editingId !== null ? "게시글 수정" : "게시글 작성"}
             </h3>
             <div className="mb-3">
               <input
@@ -171,29 +171,29 @@ export default function ConcertReviewSection({ concertId }: { concertId: number 
 
         {loading ? (
           <p className="text-gray-400 text-sm">불러오는 중...</p>
-        ) : reviews.length === 0 ? (
+        ) : posts.length === 0 ? (
           <p className="text-gray-400 text-sm">아직 작성된 후기가 없습니다.</p>
         ) : (
           <ul className="space-y-5">
-            {reviews.map((review) => (
-              <li key={review.reviewId} className="border-b border-gray-100 pb-5 last:border-0">
+            {posts.map((post) => (
+              <li key={post.postId} className="border-b border-gray-100 pb-5 last:border-0">
                 <div className="flex items-start justify-between">
                   <div>
-                    <p className="font-semibold text-gray-800">{review.title}</p>
+                    <p className="font-semibold text-gray-800">{post.title}</p>
                     <p className="text-xs text-gray-400 mt-0.5">
-                      {review.userName} · {review.createdAt?.slice(0, 10)}
+                      {post.userName} · {post.createdAt?.slice(0, 10)}
                     </p>
                   </div>
-                  {review.isMine && (
+                  {post.isMine && (
                     <div className="flex gap-2 shrink-0 ml-4">
                       <button
-                        onClick={() => handleEdit(review)}
+                        onClick={() => handleEdit(post)}
                         className="text-xs text-blue-500 hover:text-blue-700"
                       >
                         수정
                       </button>
                       <button
-                        onClick={() => handleDelete(review.reviewId)}
+                        onClick={() => handleDelete(post.postId)}
                         className="text-xs text-red-400 hover:text-red-600"
                       >
                         삭제
@@ -202,7 +202,7 @@ export default function ConcertReviewSection({ concertId }: { concertId: number 
                   )}
                 </div>
                 <p className="text-gray-600 text-sm mt-2 leading-relaxed whitespace-pre-wrap">
-                  {review.content}
+                  {post.content}
                 </p>
               </li>
             ))}
