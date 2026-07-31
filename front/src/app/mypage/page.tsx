@@ -54,29 +54,22 @@ interface MyPageData {
 type StatusFilter = "all" | "valid" | "canceled";
 
 function SocialBadge({ provider }: { provider: string }) {
-  if (provider === "KAKAO") return (
-    <svg width="18" height="18" viewBox="0 0 18 18" aria-label="카카오">
-      <rect width="18" height="18" rx="4" fill="#FEE500"/>
-      <path fill="#3B1E1E" d="M9 3.5C5.4 3.5 2.5 5.8 2.5 8.7c0 1.9 1.1 3.5 2.8 4.5L4.5 15.5l3.2-1.5c.43.06.86.1 1.3.1 3.6 0 6.5-2.3 6.5-5.3S12.6 3.5 9 3.5z"/>
-    </svg>
+  const iconMap: Record<string, string> = {
+    KAKAO: "/icons/kakao.png",
+    NAVER: "/icons/naver.png",
+    GOOGLE: "/icons/google.png",
+  };
+  const src = iconMap[provider];
+  if (!src) return null;
+  return (
+    <Image
+      src={src}
+      alt={provider}
+      width={18}
+      height={18}
+      unoptimized
+    />
   );
-  if (provider === "NAVER") return (
-    <svg width="18" height="18" viewBox="0 0 18 18" aria-label="네이버">
-      <rect width="18" height="18" rx="4" fill="#03C75A"/>
-      <path fill="white" d="M4 4h2.5v6.5l5-6.5H14v10h-2.5V7.5l-5 6.5H4z"/>
-    </svg>
-  );
-  if (provider === "GOOGLE") return (
-    <svg width="18" height="18" viewBox="0 0 18 18" aria-label="구글">
-      <rect width="18" height="18" rx="4" fill="white" stroke="#ddd" strokeWidth="1"/>
-      <path fill="#EA4335" d="M9 5.63c.81 0 1.54.28 2.12.82l1.59-1.59A5.5 5.5 0 0 0 9 3.5a5.5 5.5 0 0 0-4.93 3l1.86 1.44C6.36 6.1 7.57 5.63 9 5.63z"/>
-      <path fill="#FBBC05" d="M5.93 10.5a3.3 3.3 0 0 1 0-2.1L4.07 7.04A5.5 5.5 0 0 0 3.5 9.5c0 .88.2 1.72.57 2.47l1.86-1.47z"/>
-      <path fill="#34A853" d="M9 15a5.5 5.5 0 0 0 3.69-1.36l-1.83-1.42c-.5.34-1.15.54-1.86.54-1.43 0-2.64-.97-3.07-2.27H4.07v1.46C4.97 13.83 6.87 15 9 15z"/>
-      <path fill="#4285F4" d="M14.5 9.18c0-.46-.04-.89-.11-1.31H9v2.48h3.04c-.14.7-.54 1.3-1.13 1.69v1.4h1.83c1.07-.98 1.76-2.42 1.76-4.26z"/>
-      <rect fill="#4285F4" x="9" y="8.7" width="5" height="1.4" rx=".7"/>
-    </svg>
-  );
-  return null;
 }
 
 export default function MyPage() {
@@ -579,11 +572,17 @@ export default function MyPage() {
                 <span className="inline-block w-20 text-gray-400">이름</span>
                 {data.name}
               </p>
-              <p className="flex items-center gap-1.5">
-                <span className="inline-block w-20 shrink-0 text-gray-400">아이디</span>
-                <span>{data.id}</span>
-                {isSocialLogin && <SocialBadge provider={data.loginType} />}
-              </p>
+              {isSocialLogin ? (
+                <p className="flex items-center gap-1.5">
+                  <span className="inline-block w-20 shrink-0 text-gray-400">로그인 방식</span>
+                  <SocialBadge provider={data.loginType} />
+                </p>
+              ) : (
+                <p>
+                  <span className="inline-block w-20 text-gray-400">아이디</span>
+                  {data.id}
+                </p>
+              )}
               <p>
                 <span className="inline-block w-20 text-gray-400">이메일</span>
                 {data.email}
