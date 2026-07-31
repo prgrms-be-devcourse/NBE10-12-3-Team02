@@ -61,6 +61,7 @@ class SecurityConfig(
             .authorizeHttpRequests { auth ->
                 auth
                     .requestMatchers("/h2-console/**").permitAll()
+                    .requestMatchers("/actuator/**").permitAll()
                     .requestMatchers(
                         HttpMethod.GET,
                         "/api/*/concerts",
