@@ -7,6 +7,7 @@ import com.back.domain.review.dto.ConcertReviewUpdateRequest
 import com.back.domain.review.dto.EligibleConcertResponse
 import com.back.domain.review.entity.ConcertReview
 import com.back.domain.review.repository.ConcertReviewRepository
+import com.back.domain.review.repository.ReviewLikeRepository
 import com.back.domain.ticket.repository.TicketRepository
 import com.back.domain.user.repository.UserRepository
 import com.back.global.exception.ErrorCode
@@ -22,7 +23,8 @@ class ConcertReviewService(
     private val concertReviewRepository: ConcertReviewRepository,
     private val concertRepository: ConcertRepository,
     private val userRepository: UserRepository,
-    private val ticketRepository: TicketRepository
+    private val ticketRepository: TicketRepository,
+    private val reviewLikeRepository: ReviewLikeRepository,
 ) {
 
     @Transactional
@@ -58,27 +60,27 @@ class ConcertReviewService(
         } catch (e: DataIntegrityViolationException) {
             throw ServiceException(ErrorCode.REVIEW_ALREADY_EXISTS)
         }
-        return ConcertReviewResponse.of(saved, userId)
+        return toResponse(saved, userId)
     }
 
     fun getList(concertId: Long, currentUserId: Long?): List<ConcertReviewResponse> {
         if (!concertRepository.existsById(concertId)) {
             throw ServiceException(ErrorCode.CONCERT_NOT_FOUND)
         }
-        return concertReviewRepository.findAllByConcertIdWithUser(concertId)
-            .map { ConcertReviewResponse.of(it, currentUserId) }
+        val reviews = concertReviewRepository.findAllByConcertIdWithUser(concertId)
+        return toResponses(reviews, currentUserId)
     }
 
     fun getDetail(reviewId: Long, currentUserId: Long?): ConcertReviewResponse {
         val review = concertReviewRepository.findById(reviewId).orElseThrow {
             ServiceException(ErrorCode.REVIEW_NOT_FOUND)
         }
-        return ConcertReviewResponse.of(review, currentUserId)
+        return toResponse(review, currentUserId)
     }
 
     fun getDetail(concertId: Long, reviewId: Long, currentUserId: Long?): ConcertReviewResponse {
         val review = findByConcertIdAndReviewId(concertId, reviewId)
-        return ConcertReviewResponse.of(review, currentUserId)
+        return toResponse(review, currentUserId)
     }
 
     @Transactional
@@ -93,12 +95,12 @@ class ConcertReviewService(
             throw ServiceException(ErrorCode.REVIEW_FORBIDDEN)
         }
         review.update(request.title, request.content)
-        return ConcertReviewResponse.of(review, userId)
+        return toResponse(review, userId)
     }
 
     fun getAllReviews(currentUserId: Long?): List<ConcertReviewResponse> {
-        return concertReviewRepository.findAllWithConcertAndUser()
-            .map { ConcertReviewResponse.of(it, currentUserId) }
+        val reviews = concertReviewRepository.findAllWithConcertAndUser()
+        return toResponses(reviews, currentUserId)
     }
 
     fun getEligibleConcerts(userId: Long): List<EligibleConcertResponse> {
@@ -114,10 +116,52 @@ class ConcertReviewService(
         if (review.user.userId != userId) {
             throw ServiceException(ErrorCode.REVIEW_FORBIDDEN)
         }
+        reviewLikeRepository.deleteAllByReviewReviewId(reviewId)
         concertReviewRepository.delete(review)
     }
 
     private fun findByConcertIdAndReviewId(concertId: Long, reviewId: Long): ConcertReview =
         concertReviewRepository.findByReviewIdAndConcertConcertId(reviewId, concertId)
             ?: throw ServiceException(ErrorCode.REVIEW_NOT_FOUND)
+
+    private fun toResponse(
+        review: ConcertReview,
+        currentUserId: Long?,
+    ): ConcertReviewResponse {
+        val reviewId = review.reviewId!!
+        val isLiked = currentUserId != null &&
+            reviewLikeRepository.existsByReviewReviewIdAndUserUserId(reviewId, currentUserId)
+        return ConcertReviewResponse.of(
+            review = review,
+            currentUserId = currentUserId,
+            likeCount = reviewLikeRepository.countByReviewReviewId(reviewId),
+            isLiked = isLiked,
+        )
+    }
+
+    private fun toResponses(
+        reviews: List<ConcertReview>,
+        currentUserId: Long?,
+    ): List<ConcertReviewResponse> {
+        if (reviews.isEmpty()) {
+            return emptyList()
+        }
+
+        val reviewIds = reviews.map { it.reviewId!! }
+        val likeCounts = reviewLikeRepository.countByReviewIds(reviewIds)
+            .associate { it.reviewId to it.likeCount }
+        val likedReviewIds = currentUserId
+            ?.let { reviewLikeRepository.findLikedReviewIds(reviewIds, it).toSet() }
+            ?: emptySet()
+
+        return reviews.map { review ->
+            val reviewId = review.reviewId!!
+            ConcertReviewResponse.of(
+                review = review,
+                currentUserId = currentUserId,
+                likeCount = likeCounts[reviewId] ?: 0L,
+                isLiked = reviewId in likedReviewIds,
+            )
+        }
+    }
 }

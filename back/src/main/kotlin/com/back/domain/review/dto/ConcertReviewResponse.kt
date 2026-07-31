@@ -12,13 +12,20 @@ data class ConcertReviewResponse(
     val title: String,
     val content: String,
     @get:JsonProperty("isMine") val isMine: Boolean,
+    val likeCount: Long,
+    @get:JsonProperty("isLiked") val isLiked: Boolean,
     val createdAt: LocalDateTime?,
     val updatedAt: LocalDateTime?,
     val concertName: String,
     val posterUrl: String?
 ) {
     companion object {
-        fun of(review: ConcertReview, currentUserId: Long?): ConcertReviewResponse =
+        fun of(
+            review: ConcertReview,
+            currentUserId: Long?,
+            likeCount: Long = 0L,
+            isLiked: Boolean = false,
+        ): ConcertReviewResponse =
             ConcertReviewResponse(
                 reviewId = review.reviewId!!,
                 concertId = review.concert.concertId!!,
@@ -27,6 +34,8 @@ data class ConcertReviewResponse(
                 title = review.title,
                 content = review.content,
                 isMine = currentUserId != null && review.user.userId == currentUserId,
+                likeCount = likeCount,
+                isLiked = isLiked,
                 createdAt = review.createDate,
                 updatedAt = review.modifyDate,
                 concertName = review.concert.concertName,
