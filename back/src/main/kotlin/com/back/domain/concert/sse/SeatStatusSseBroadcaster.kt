@@ -40,4 +40,3 @@ class SeatStatusSseBroadcaster(
         log.debug("SSE 브로드캐스트 (결제 완료): scheduleId={}", event.scheduleId)
     }
 }
-
