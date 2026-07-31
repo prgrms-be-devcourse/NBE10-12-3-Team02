@@ -36,11 +36,17 @@ class SeatHoldExpiredScheduler(
                 continue
             }
 
-            try {
-                val concertId = parts[0].toLong()
-                val scheduleId = parts[1].toLong()
-                val seatNumber = parts[2]
+            val (concertIdStr, scheduleIdStr, seatNumber) = parts
+            val concertId = concertIdStr.toLongOrNull()
+            val scheduleId = scheduleIdStr.toLongOrNull()
 
+            if (concertId == null || scheduleId == null) {
+                log.warn("잘못된 만료 큐 멤버 ID 형식, 제거: {}", member)
+                stringRedisTemplate.opsForZSet().remove(SeatOccupyManager.EXPIRE_QUEUE_KEY, member)
+                continue
+            }
+
+            try {
                 seatHoldExpiredProcessor.processExpiredSeat(concertId, scheduleId, seatNumber)
             } catch (e: Exception) {
                 log.error("좌석 만료 처리 실패 (다음 주기 재시도): {}, error={}", member, e.message)

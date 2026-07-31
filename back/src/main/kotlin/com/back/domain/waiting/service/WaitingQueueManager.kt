@@ -89,7 +89,7 @@ class WaitingQueueManager(
         if (userIds.isNullOrEmpty()) {
             return emptyList()
         }
-        return userIds.map { it.toLong() }
+        return userIds.mapNotNull { it.toLongOrNull() }
     }
 
     fun issueToken(scheduleId: Long, userId: Long, ttl: Duration): String {
