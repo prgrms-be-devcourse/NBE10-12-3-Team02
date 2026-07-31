@@ -1,22 +1,4 @@
 services:
-  app:
-    image: ${ECR_REGISTRY}/nbe10-12-3-team02:${IMAGE_TAG}
-    container_name: app
-    restart: unless-stopped
-    ports:
-      - "8080:8080"
-    env_file:
-      - .env
-    depends_on:
-      - mysql
-      - redis-primary
-      - redis-replica
-      - redis-sentinel-1
-      - redis-sentinel-2
-      - redis-sentinel-3
-    networks:
-      - redis-net
-
   mysql:
     image: mysql:8.0
     container_name: mysql

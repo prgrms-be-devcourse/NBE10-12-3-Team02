@@ -1,3 +1,4 @@
+
 #!/bin/bash
 set -eux
 
@@ -39,18 +40,15 @@ chmod 600 "$APP_DIR/.env"
 chown -R ec2-user:ec2-user "$APP_DIR"
 
 cd "$APP_DIR"
-export ECR_REGISTRY="${ecr_registry}"
-export IMAGE_TAG="${image_tag}"
 
-# ── MySQL + Redis Sentinel 스택 우선 기동 (ECR 자격 증명과 무관하게 항상 성공해야 함) ──
+# ── MySQL + Redis Sentinel 스택 기동 ──
 # mysql은 .env의 MYSQL_ROOT_PASSWORD가 비어 있으면 컨테이너 자체가 재시작을 반복할 수 있음
 # (docker compose up 명령 자체는 성공하며, 이후 .env를 채우고 재기동하면 정상화됨)
 docker compose --env-file .env up -d mysql redis-primary redis-replica redis-sentinel-1 redis-sentinel-2 redis-sentinel-3
 
-# ── 앱 이미지 pull & 기동 (.env가 placeholder 상태면 실패할 수 있음 — CD가 재배포) ──
-aws ecr get-login-password --region ${aws_region} | docker login --username AWS --password-stdin "${ecr_registry}" || true
-docker compose --env-file .env pull app || echo "[bootstrap] app 이미지 pull 실패 - CD 파이프라인에서 재배포 필요"
-docker compose --env-file .env up -d app || echo "[bootstrap] app 컨테이너 기동 실패 - .env 값 설정 후 CD로 재배포 필요"
+# app 컨테이너(app-blue/app-green)는 더 이상 docker compose가 관리하지 않음.
+# 배포 스크립트가 docker run으로 blue/green을 직접 기동/전환하고, nginx가
+# upstream.conf를 통해 현재 활성 컨테이너의 포트로 프록시한다.
 
 # ── nginx 설치 + HTTPS 리버스 프록시 (sslip.io + Let's Encrypt) ──
 dnf install -y nginx
@@ -70,14 +68,20 @@ fi
 /opt/certbot/bin/pip install certbot certbot-nginx
 ln -sf /opt/certbot/bin/certbot /usr/bin/certbot
 
-# ── nginx 리버스 프록시 설정 (8080으로 프록시, WebSocket/STOMP 업그레이드 헤더 포함) ──
+# ── nginx 리버스 프록시 설정 (upstream.conf로 백엔드 대상 분리, blue/green 전환 대비) ──
+cat > /etc/nginx/conf.d/upstream.conf <<'UPSTREAM_EOF'
+upstream app_backend {
+    server 127.0.0.1:8080;
+}
+UPSTREAM_EOF
+
 cat > /etc/nginx/conf.d/app.conf <<NGINX_EOF
 server {
     listen 80;
     server_name $DOMAIN;
 
     location / {
-        proxy_pass http://127.0.0.1:8080;
+        proxy_pass http://app_backend;
         proxy_http_version 1.1;
         proxy_set_header Upgrade \$http_upgrade;
         proxy_set_header Connection "upgrade";
