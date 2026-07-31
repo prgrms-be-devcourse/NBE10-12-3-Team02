@@ -17,9 +17,8 @@ class EmailVerificationRepository(
         codeTtl: Duration,
         resendCooldown: Duration,
     ): Boolean {
-        val script = DefaultRedisScript(EmailVerificationLuaScripts.saveChallengeScript(), Long::class.java)
         val result = stringRedisTemplate.execute(
-            script,
+            SAVE_CHALLENGE_SCRIPT,
             listOf(
                 cooldownKey(emailHash),
                 codeKey(emailHash),
@@ -41,9 +40,8 @@ class EmailVerificationRepository(
         maxAttempts: Long,
         verificationTtl: Duration,
     ): EmailVerificationConfirmResult {
-        val script = DefaultRedisScript(EmailVerificationLuaScripts.confirmScript(), Long::class.java)
         val result = stringRedisTemplate.execute(
-            script,
+            CONFIRM_SCRIPT,
             listOf(
                 codeKey(emailHash),
                 attemptKey(emailHash),
@@ -65,7 +63,7 @@ class EmailVerificationRepository(
 
     fun reserveVerification(emailHash: String, tokenHash: String, reservationId: String): Boolean =
         executeStateTransition(
-            scriptText = EmailVerificationLuaScripts.reserveScript(),
+            script = RESERVE_SCRIPT,
             tokenHash = tokenHash,
             expectedValue = availableValue(emailHash),
             newValue = reservedValue(emailHash, reservationId),
@@ -73,23 +71,22 @@ class EmailVerificationRepository(
 
     fun completeVerification(emailHash: String, tokenHash: String, reservationId: String): Boolean =
         executeStateTransition(
-            scriptText = EmailVerificationLuaScripts.completeReservationScript(),
+            script = COMPLETE_RESERVATION_SCRIPT,
             tokenHash = tokenHash,
             expectedValue = reservedValue(emailHash, reservationId),
         )
 
     fun restoreVerification(emailHash: String, tokenHash: String, reservationId: String): Boolean =
         executeStateTransition(
-            scriptText = EmailVerificationLuaScripts.restoreReservationScript(),
+            script = RESTORE_RESERVATION_SCRIPT,
             tokenHash = tokenHash,
             expectedValue = reservedValue(emailHash, reservationId),
             newValue = availableValue(emailHash),
         )
 
     fun clearChallenge(emailHash: String) {
-        val script = DefaultRedisScript(EmailVerificationLuaScripts.clearChallengeScript(), Long::class.java)
         stringRedisTemplate.execute(
-            script,
+            CLEAR_CHALLENGE_SCRIPT,
             listOf(
                 codeKey(emailHash),
                 attemptKey(emailHash),
@@ -112,12 +109,11 @@ class EmailVerificationRepository(
         "$RESERVED_PREFIX$reservationId:$emailHash"
 
     private fun executeStateTransition(
-        scriptText: String,
+        script: DefaultRedisScript<Long>,
         tokenHash: String,
         expectedValue: String,
         newValue: String? = null,
     ): Boolean {
-        val script = DefaultRedisScript(scriptText, Long::class.java)
         val args = if (newValue == null) {
             arrayOf(expectedValue)
         } else {
@@ -135,5 +131,12 @@ class EmailVerificationRepository(
         private const val ACTIVE_VALUE = "1"
         private const val AVAILABLE_PREFIX = "AVAILABLE:"
         private const val RESERVED_PREFIX = "RESERVED:"
+
+        private val SAVE_CHALLENGE_SCRIPT = DefaultRedisScript(EmailVerificationLuaScripts.saveChallengeScript(), Long::class.java)
+        private val CONFIRM_SCRIPT = DefaultRedisScript(EmailVerificationLuaScripts.confirmScript(), Long::class.java)
+        private val RESERVE_SCRIPT = DefaultRedisScript(EmailVerificationLuaScripts.reserveScript(), Long::class.java)
+        private val COMPLETE_RESERVATION_SCRIPT = DefaultRedisScript(EmailVerificationLuaScripts.completeReservationScript(), Long::class.java)
+        private val RESTORE_RESERVATION_SCRIPT = DefaultRedisScript(EmailVerificationLuaScripts.restoreReservationScript(), Long::class.java)
+        private val CLEAR_CHALLENGE_SCRIPT = DefaultRedisScript(EmailVerificationLuaScripts.clearChallengeScript(), Long::class.java)
     }
 }

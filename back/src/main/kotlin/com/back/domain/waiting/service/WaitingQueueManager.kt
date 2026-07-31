@@ -20,9 +20,8 @@ class WaitingQueueManager(
 
         stringRedisTemplate.opsForSet().add(ACTIVE_SCHEDULES_KEY, scheduleId.toString())
 
-        val script = DefaultRedisScript(REGISTER_WAIT_SCRIPT, Long::class.java)
         val rank: Long? = stringRedisTemplate.execute(
-            script,
+            REGISTER_WAIT_REDIS_SCRIPT,
             listOf(waitKey, seqKey),
             user
         )
@@ -77,9 +76,8 @@ class WaitingQueueManager(
         val now = System.currentTimeMillis()
         val expiredAt = now + ttl.toMillis()
 
-        val script = DefaultRedisScript(ADD_ACTIVE_USER_SCRIPT, List::class.java)
         val userIds: List<String>? = stringRedisTemplate.execute(
-            script,
+            ADD_ACTIVE_USER_REDIS_SCRIPT,
             listOf(waitKey, activeKey),
             capacity.toString(),
             batchSize.toString(),
@@ -183,6 +181,9 @@ class WaitingQueueManager(
             end
             return users
         """.trimIndent()
+
+        private val REGISTER_WAIT_REDIS_SCRIPT = DefaultRedisScript(REGISTER_WAIT_SCRIPT, Long::class.java)
+        private val ADD_ACTIVE_USER_REDIS_SCRIPT = DefaultRedisScript(ADD_ACTIVE_USER_SCRIPT, List::class.java)
 
         @JvmStatic
         fun generateActiveTokenKey(scheduleId: Long, userId: Long): String =

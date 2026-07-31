@@ -35,9 +35,8 @@ class SeatOccupyManager(
         val redisKey = generateSeatOccupyKey(concertId, scheduleId, seatNumber)
         val occupyToken = UUID.randomUUID().toString()
 
-        val script = DefaultRedisScript(OCCUPY_SCRIPT, Long::class.java)
         val result: Long? = stringRedisTemplate.execute(
-            script,
+            OCCUPY_REDIS_SCRIPT,
             listOf(redisKey),
             userId.toString(),
             occupyToken,
@@ -178,6 +177,8 @@ class SeatOccupyManager(
               return 1
             end
         """.trimIndent()
+
+        private val OCCUPY_REDIS_SCRIPT = DefaultRedisScript(OCCUPY_SCRIPT, Long::class.java)
 
         const val EXPIRE_QUEUE_KEY = "seat:hold:expire:queue"
 

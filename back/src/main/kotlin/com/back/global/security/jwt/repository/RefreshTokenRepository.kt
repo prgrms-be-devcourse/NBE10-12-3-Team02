@@ -27,9 +27,8 @@ class RefreshTokenRepository(
         newRefreshTokenHash: String,
         ttl: Duration,
     ): RefreshTokenValidationResult {
-        val script = DefaultRedisScript(RefreshTokenLuaScripts.rotateScript(), Long::class.java)
         val result = stringRedisTemplate.execute(
-            script,
+            ROTATE_REDIS_SCRIPT,
             listOf(
                 generateKey(RefreshTokenKeyType.TOKEN, userId, oldJti),
                 generateKey(RefreshTokenKeyType.TOKEN, userId, newJti),
@@ -100,4 +99,8 @@ class RefreshTokenRepository(
                 "$indexPrefix$userId"
             }
         }
+
+    companion object {
+        private val ROTATE_REDIS_SCRIPT = DefaultRedisScript(RefreshTokenLuaScripts.rotateScript(), Long::class.java)
+    }
 }
