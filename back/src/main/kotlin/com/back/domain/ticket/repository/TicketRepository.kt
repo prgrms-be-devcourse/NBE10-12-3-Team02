@@ -5,6 +5,7 @@ import com.back.domain.user.entity.User
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.data.jpa.repository.Query
 import org.springframework.data.repository.query.Param
+import java.time.LocalDateTime
 
 interface TicketRepository : JpaRepository<Ticket, Long> {
 
@@ -30,4 +31,12 @@ interface TicketRepository : JpaRepository<Ticket, Long> {
         WHERE t.groupToken = :groupToken
     """)
     fun findAllByGroupTokenWithDetails(@Param("groupToken") groupToken: String): List<Ticket>
+
+    fun existsByUser_UserIdAndSchedule_Concert_ConcertIdAndSchedule_ScheduleDateBeforeAndIsValidTrue(
+        userId: Long, concertId: Long, now: LocalDateTime
+    ): Boolean
+
+    fun existsByUser_UserIdAndSchedule_Concert_ConcertIdAndSchedule_ScheduleDateBetweenAndIsValidTrue(
+        userId: Long, concertId: Long, from: LocalDateTime, to: LocalDateTime
+    ): Boolean
 }

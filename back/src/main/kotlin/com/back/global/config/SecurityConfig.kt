@@ -62,10 +62,17 @@ class SecurityConfig(
                 auth
                     .requestMatchers("/h2-console/**").permitAll()
                     .requestMatchers("/actuator/**").permitAll()
+                    // eligible-concerts는 인증 필요 — reviews/* permitAll보다 먼저 선언해야 first-match-wins가 작동함
+                    .requestMatchers(HttpMethod.GET, "/api/*/reviews/eligible-concerts").authenticated()
                     .requestMatchers(
                         HttpMethod.GET,
                         "/api/*/concerts",
                         "/api/*/concerts/*",
+                        "/api/*/concerts/*/reviews",
+                        "/api/*/concerts/*/reviews/*",
+                        "/api/*/reviews",
+                        "/api/*/reviews/*",
+                        "/api/*/reviews/*/comments",
                         "/api/*/concerts/*/schedules/*/seats/status",
                         "/api/*/schedules/**",
                         "/api/*/users/check-id",
