@@ -11,6 +11,7 @@ import com.back.domain.ticket.repository.TicketRepository
 import com.back.domain.user.repository.UserRepository
 import com.back.global.exception.ErrorCode
 import com.back.global.exception.ServiceException
+import org.springframework.dao.DataIntegrityViolationException
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.LocalDateTime
@@ -52,7 +53,11 @@ class ConcertReviewService(
         }
 
         val review = ConcertReview.create(concert, user, request.title, request.content)
-        val saved = concertReviewRepository.save(review)
+        val saved = try {
+            concertReviewRepository.saveAndFlush(review)
+        } catch (e: DataIntegrityViolationException) {
+            throw ServiceException(ErrorCode.REVIEW_ALREADY_EXISTS)
+        }
         return ConcertReviewResponse.of(saved, userId)
     }
 

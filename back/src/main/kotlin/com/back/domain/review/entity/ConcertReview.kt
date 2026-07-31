@@ -6,6 +6,15 @@ import com.back.global.jpa.entity.BaseEntity
 import jakarta.persistence.*
 
 @Entity
+@Table(
+    name = "concert_review",
+    uniqueConstraints = [
+        UniqueConstraint(
+            name = "uk_concert_review_concert_user",
+            columnNames = ["concert_id", "user_id"],
+        ),
+    ],
+)
 open class ConcertReview protected constructor() : BaseEntity() {
 
     @Id
