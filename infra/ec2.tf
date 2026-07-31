@@ -21,9 +21,6 @@ resource "aws_instance" "app" {
   }
 
   user_data = templatefile("${path.module}/templates/user_data.sh.tftpl", {
-    aws_region             = var.aws_region
-    ecr_registry           = local.ecr_registry
-    image_tag              = var.image_tag
     letsencrypt_email      = var.letsencrypt_email
     docker_compose_content = file("${path.module}/templates/docker-compose.yaml")
     env_file_content       = file("${path.module}/templates/env.example")
