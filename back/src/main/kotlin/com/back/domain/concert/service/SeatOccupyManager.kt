@@ -141,7 +141,7 @@ class SeatOccupyManager(
     }
 
      // 좌석 선점 시 만료 ZSET에 등록함
-     // Score = 만료 예정 Unix 타임스탬프(ms), Member = concertId:scheduleId:seatNumber
+     // Score = 만료 예정 Unix 타임스탬프, Member = concertId:scheduleId:seatNumber
     fun addToExpireQueue(concertId: Long, scheduleId: Long, seatNumber: String, ttlSeconds: Long) {
         val expireAt = System.currentTimeMillis() + ttlSeconds * 1000
         val member = buildExpireMember(concertId, scheduleId, seatNumber)

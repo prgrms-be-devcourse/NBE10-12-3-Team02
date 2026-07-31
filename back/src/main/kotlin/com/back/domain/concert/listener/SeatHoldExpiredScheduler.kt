@@ -10,7 +10,7 @@ import org.springframework.stereotype.Component
 // 1초 주기로 Redis ZSET(seat:hold:expire:queue)을 폴링하여 만료된 좌석 선점을 자동 해제함
 // Score <= 현재 시각인 항목을 만료된 좌석으로 판단함
 // DB 처리는 SKIP LOCKED를 사용하여 결제/선점 트랜잭션과의 충돌을 방지함
-// SKIP된 좌석은 다음 주기(1초 후)에 재시도
+// SKIP된 좌석은 다음 주기에 재시도
 // 서버 재부팅 후에도 Redis ZSET이 영속화되어 있어 100% 누락 없이 복구
 @Component
 class SeatHoldExpiredScheduler(
@@ -24,7 +24,7 @@ class SeatHoldExpiredScheduler(
         val now = System.currentTimeMillis().toDouble()
         val expireSet = redissonClient.getScoredSortedSet<String>(SeatOccupyManager.EXPIRE_QUEUE_KEY, StringCodec.INSTANCE)
 
-        // Score(만료 타임스탬프) <= 현재 시각인 항목 전체 조회
+        // Score <= 현재 시각인 항목 전체 조회
         val expiredMembers = expireSet.valueRange(0.0, true, now, true)
         if (expiredMembers.isEmpty()) return
 
