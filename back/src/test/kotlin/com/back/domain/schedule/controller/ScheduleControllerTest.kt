@@ -13,7 +13,7 @@ import com.back.global.RedisTestConfig
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
-import org.redisson.api.RedissonClient
+import org.springframework.data.redis.core.StringRedisTemplate
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
@@ -44,7 +44,7 @@ class ScheduleControllerTest @Autowired constructor(
     private lateinit var schedule: Schedule
 
     @MockitoBean
-    private lateinit var redissonClient: RedissonClient
+    private lateinit var stringRedisTemplate: StringRedisTemplate
 
     @BeforeEach
     fun setUp() {

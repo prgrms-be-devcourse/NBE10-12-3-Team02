@@ -1,13 +1,11 @@
 package com.back.global
 
 import jakarta.annotation.PreDestroy
-import org.redisson.Redisson
-import org.redisson.api.RedissonClient
-import org.redisson.config.Config
-import org.redisson.spring.data.connection.RedissonConnectionFactory
 import org.springframework.boot.test.context.TestConfiguration
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Primary
+import org.springframework.data.redis.connection.RedisConnectionFactory
+import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory
 import org.springframework.data.redis.core.StringRedisTemplate
 import org.springframework.data.redis.serializer.StringRedisSerializer
 import redis.embedded.RedisServer
@@ -19,7 +17,7 @@ class RedisTestConfig {
 
     @Bean
     @Primary
-    fun redissonClient(): RedissonClient {
+    fun redisConnectionFactory(): RedisConnectionFactory {
         if (isPortActive(6379)) {
             redisPort = 6379
         } else {
@@ -34,21 +32,12 @@ class RedisTestConfig {
             }
         }
 
-        val config = Config().apply {
-            useSingleServer().address = "redis://127.0.0.1:$redisPort"
-        }
-        return Redisson.create(config)
+        return LettuceConnectionFactory("127.0.0.1", redisPort)
     }
 
     @Bean
     @Primary
-    fun redisConnectionFactory(redissonClient: RedissonClient): RedissonConnectionFactory {
-        return RedissonConnectionFactory(redissonClient)
-    }
-
-    @Bean
-    @Primary
-    fun stringRedisTemplate(connectionFactory: RedissonConnectionFactory): StringRedisTemplate {
+    fun stringRedisTemplate(connectionFactory: RedisConnectionFactory): StringRedisTemplate {
         return StringRedisTemplate().apply {
             setConnectionFactory(connectionFactory)
             keySerializer = StringRedisSerializer()

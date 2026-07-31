@@ -4,17 +4,15 @@ import com.back.domain.concert.dto.SeatOccupyResponse
 import com.back.domain.concert.dto.SeatSelectionResponse
 import com.back.domain.concert.event.SeatOccupiedEvent
 import com.back.domain.concert.event.SeatReleasedEvent
-
 import com.back.domain.schedule.repository.ScheduleSeatRepository
 import com.back.domain.ticket.dto.SeatHoldInfo
 import com.back.domain.ticket.repository.TicketRepository
 import com.back.global.exception.ErrorCode
 import com.back.global.exception.ServiceException
-import org.redisson.api.RScript
-import org.redisson.api.RedissonClient
-import org.redisson.client.codec.StringCodec
 import org.slf4j.LoggerFactory
 import org.springframework.context.ApplicationEventPublisher
+import org.springframework.data.redis.core.StringRedisTemplate
+import org.springframework.data.redis.core.script.DefaultRedisScript
 import org.springframework.stereotype.Component
 import org.springframework.transaction.annotation.Transactional
 import java.util.*
@@ -24,7 +22,7 @@ class SeatOccupyManager(
     private val concertService: ConcertService,
     private val ticketRepository: TicketRepository,
     private val scheduleSeatRepository: ScheduleSeatRepository,
-    private val redissonClient: RedissonClient,
+    private val stringRedisTemplate: StringRedisTemplate,
     private val eventPublisher: ApplicationEventPublisher
 ) {
     private val log = LoggerFactory.getLogger(javaClass)
@@ -37,10 +35,9 @@ class SeatOccupyManager(
         val redisKey = generateSeatOccupyKey(concertId, scheduleId, seatNumber)
         val occupyToken = UUID.randomUUID().toString()
 
-        val result: Long? = redissonClient.getScript(StringCodec.INSTANCE).eval(
-            RScript.Mode.READ_WRITE,
-            OCCUPY_SCRIPT,
-            RScript.ReturnType.LONG,
+        val script = DefaultRedisScript(OCCUPY_SCRIPT, Long::class.java)
+        val result: Long? = stringRedisTemplate.execute(
+            script,
             listOf(redisKey),
             userId.toString(),
             occupyToken,
@@ -77,9 +74,9 @@ class SeatOccupyManager(
         concertService.validateConcertScheduleMatch(concertId, scheduleId)
 
         val redisKey = generateSeatOccupyKey(concertId, scheduleId, seatNumber)
-        val hashMap = redissonClient.getMap<String, String>(redisKey, StringCodec.INSTANCE)
+        val entries = stringRedisTemplate.opsForHash<String, String>().entries(redisKey)
 
-        val occupyUserId = hashMap["userId"]
+        val occupyUserId = entries["userId"]
         if (occupyUserId != null && occupyUserId != userId.toString()) {
             throw ServiceException(ErrorCode.SEAT_HELD_BY_OTHER_USER)
         }
@@ -118,15 +115,17 @@ class SeatOccupyManager(
         return SeatSelectionResponse.of(concertId, scheduleId, pricesMap, seatResponses)
     }
 
-    fun cleanupRedis(redisKey: String) = redissonClient.getMap<String, String>(redisKey, StringCodec.INSTANCE).delete()
+    fun cleanupRedis(redisKey: String) {
+        stringRedisTemplate.delete(redisKey)
+    }
 
     fun validateSeatHolds(userId: Long, concertId: Long, scheduleId: Long, seatHolds: List<SeatHoldInfo>) {
         for (hold in seatHolds) {
             val redisKey = generateSeatOccupyKey(concertId, scheduleId, hold.seatNumber)
-            val hashMap = redissonClient.getMap<String, String>(redisKey, StringCodec.INSTANCE)
+            val entries = stringRedisTemplate.opsForHash<String, String>().entries(redisKey)
 
-            val holdUserId = hashMap["userId"]
-            val holdOccupyToken = hashMap["occupyToken"]
+            val holdUserId = entries["userId"]
+            val holdOccupyToken = entries["occupyToken"]
 
             if (holdUserId == null || holdOccupyToken == null) {
                 throw ServiceException(ErrorCode.SEAT_HOLD_EXPIRED)
@@ -140,21 +139,24 @@ class SeatOccupyManager(
         }
     }
 
-     // 좌석 선점 시 만료 ZSET에 등록함
-     // Score = 만료 예정 Unix 타임스탬프, Member = concertId:scheduleId:seatNumber
+    /**
+     * 좌석 선점 시 만료 ZSET에 등록한다.
+     * Score = 만료 예정 Unix 타임스탬프(ms), Member = concertId:scheduleId:seatNumber
+     */
     fun addToExpireQueue(concertId: Long, scheduleId: Long, seatNumber: String, ttlSeconds: Long) {
         val expireAt = System.currentTimeMillis() + ttlSeconds * 1000
         val member = buildExpireMember(concertId, scheduleId, seatNumber)
-        redissonClient.getScoredSortedSet<String>(EXPIRE_QUEUE_KEY, StringCodec.INSTANCE)
-            .add(expireAt.toDouble(), member)
+        stringRedisTemplate.opsForZSet().add(EXPIRE_QUEUE_KEY, member, expireAt.toDouble())
         log.debug("만료 큐 등록: {}, expireAt={}", member, expireAt)
     }
 
-     // 결제 완료 또는 수동 취소 시 만료 ZSET에서 해당 좌석 메시지를 제거함
+    /**
+     * 결제 완료 또는 수동 취소 시 만료 ZSET에서 해당 좌석 메시지를 제거한다.
+     */
     fun removeFromExpireQueue(concertId: Long, scheduleId: Long, seatNumber: String) {
         try {
             val member = buildExpireMember(concertId, scheduleId, seatNumber)
-            redissonClient.getScoredSortedSet<String>(EXPIRE_QUEUE_KEY, StringCodec.INSTANCE).remove(member)
+            stringRedisTemplate.opsForZSet().remove(EXPIRE_QUEUE_KEY, member)
             log.debug("만료 큐 제거: {}", member)
         } catch (e: Exception) {
             log.warn("만료 큐 제거 실패 (무시됨): {}", e.message)

@@ -28,10 +28,9 @@ import org.mockito.ArgumentMatchers.anyString
 import org.mockito.Mockito.doReturn
 import org.mockito.Mockito.mock
 import org.mockito.Mockito.`when`
-import org.redisson.api.RBucket
-import org.redisson.api.RScoredSortedSet
-import org.redisson.api.RedissonClient
-import org.redisson.client.codec.Codec
+import org.springframework.data.redis.core.StringRedisTemplate
+import org.springframework.data.redis.core.ValueOperations
+import org.springframework.data.redis.core.ZSetOperations
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
@@ -40,7 +39,10 @@ import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequ
 import org.springframework.test.context.ActiveProfiles
 import org.springframework.test.context.bean.override.mockito.MockitoBean
 import org.springframework.test.web.servlet.MockMvc
-import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put
 import org.springframework.test.web.servlet.result.MockMvcResultHandlers.print
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
@@ -68,18 +70,17 @@ class PostCommentControllerTest @Autowired constructor(
     private lateinit var post: ConcertPost
 
     @MockitoBean
-    private lateinit var redissonClient: RedissonClient
+    private lateinit var stringRedisTemplate: StringRedisTemplate
 
     @BeforeEach
     @Suppress("UNCHECKED_CAST")
     fun setUp() {
-        val activeSet = mock(RScoredSortedSet::class.java) as RScoredSortedSet<String>
-        doReturn(activeSet).`when`(redissonClient).getScoredSortedSet<String>(anyString(), any(Codec::class.java))
-        `when`(activeSet.getScore(anyString())).thenReturn((System.currentTimeMillis() + 600000).toDouble())
-
-        val tokenBucket = mock(RBucket::class.java) as RBucket<String>
-        doReturn(tokenBucket).`when`(redissonClient).getBucket<String>(anyString(), any(Codec::class.java))
-        `when`(tokenBucket.get()).thenReturn("test-queue-token")
+        val zSetOps = mock(ZSetOperations::class.java) as ZSetOperations<String, String>
+        val valOps = mock(ValueOperations::class.java) as ValueOperations<String, String>
+        doReturn(zSetOps).`when`(stringRedisTemplate).opsForZSet()
+        doReturn(valOps).`when`(stringRedisTemplate).opsForValue()
+        `when`(zSetOps.score(anyString(), anyString())).thenReturn((System.currentTimeMillis() + 600000).toDouble())
+        `when`(valOps.get(anyString())).thenReturn("test-queue-token")
 
         userEntity = userRepository.save(User.create("commenter1", "commenter1@test.com", "0000", "댓글러", LoginType.NORMAL))
         securityUser = SecurityUser(userEntity.userId!!, userEntity.name)

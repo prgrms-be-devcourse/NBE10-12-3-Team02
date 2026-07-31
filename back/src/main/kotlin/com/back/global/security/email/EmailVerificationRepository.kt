@@ -1,15 +1,14 @@
 package com.back.global.security.email
 
 import com.back.global.security.email.constant.EmailVerificationConfirmResult
-import org.redisson.api.RedissonClient
-import org.redisson.api.RScript
-import org.redisson.client.codec.StringCodec
+import org.springframework.data.redis.core.StringRedisTemplate
+import org.springframework.data.redis.core.script.DefaultRedisScript
 import org.springframework.stereotype.Repository
 import java.time.Duration
 
 @Repository
 class EmailVerificationRepository(
-    private val redissonClient: RedissonClient,
+    private val stringRedisTemplate: StringRedisTemplate,
     private val properties: EmailVerificationProperties,
 ) {
     fun saveChallenge(
@@ -18,10 +17,9 @@ class EmailVerificationRepository(
         codeTtl: Duration,
         resendCooldown: Duration,
     ): Boolean {
-        val result = redissonClient.getScript(StringCodec.INSTANCE).eval<Long>(
-            RScript.Mode.READ_WRITE,
-            EmailVerificationLuaScripts.saveChallengeScript(),
-            RScript.ReturnType.LONG,
+        val script = DefaultRedisScript(EmailVerificationLuaScripts.saveChallengeScript(), Long::class.java)
+        val result = stringRedisTemplate.execute(
+            script,
             listOf(
                 cooldownKey(emailHash),
                 codeKey(emailHash),
@@ -43,10 +41,9 @@ class EmailVerificationRepository(
         maxAttempts: Long,
         verificationTtl: Duration,
     ): EmailVerificationConfirmResult {
-        val result = redissonClient.getScript(StringCodec.INSTANCE).eval<Long>(
-            RScript.Mode.READ_WRITE,
-            EmailVerificationLuaScripts.confirmScript(),
-            RScript.ReturnType.LONG,
+        val script = DefaultRedisScript(EmailVerificationLuaScripts.confirmScript(), Long::class.java)
+        val result = stringRedisTemplate.execute(
+            script,
             listOf(
                 codeKey(emailHash),
                 attemptKey(emailHash),
@@ -68,7 +65,7 @@ class EmailVerificationRepository(
 
     fun reserveVerification(emailHash: String, tokenHash: String, reservationId: String): Boolean =
         executeStateTransition(
-            script = EmailVerificationLuaScripts.reserveScript(),
+            scriptText = EmailVerificationLuaScripts.reserveScript(),
             tokenHash = tokenHash,
             expectedValue = availableValue(emailHash),
             newValue = reservedValue(emailHash, reservationId),
@@ -76,29 +73,28 @@ class EmailVerificationRepository(
 
     fun completeVerification(emailHash: String, tokenHash: String, reservationId: String): Boolean =
         executeStateTransition(
-            script = EmailVerificationLuaScripts.completeReservationScript(),
+            scriptText = EmailVerificationLuaScripts.completeReservationScript(),
             tokenHash = tokenHash,
             expectedValue = reservedValue(emailHash, reservationId),
         )
 
     fun restoreVerification(emailHash: String, tokenHash: String, reservationId: String): Boolean =
         executeStateTransition(
-            script = EmailVerificationLuaScripts.restoreReservationScript(),
+            scriptText = EmailVerificationLuaScripts.restoreReservationScript(),
             tokenHash = tokenHash,
             expectedValue = reservedValue(emailHash, reservationId),
             newValue = availableValue(emailHash),
         )
 
     fun clearChallenge(emailHash: String) {
-        redissonClient.getScript(StringCodec.INSTANCE).eval<Long>(
-            RScript.Mode.READ_WRITE,
-            EmailVerificationLuaScripts.clearChallengeScript(),
-            RScript.ReturnType.LONG,
+        val script = DefaultRedisScript(EmailVerificationLuaScripts.clearChallengeScript(), Long::class.java)
+        stringRedisTemplate.execute(
+            script,
             listOf(
                 codeKey(emailHash),
                 attemptKey(emailHash),
                 cooldownKey(emailHash),
-            ),
+            )
         )
     }
 
@@ -116,22 +112,21 @@ class EmailVerificationRepository(
         "$RESERVED_PREFIX$reservationId:$emailHash"
 
     private fun executeStateTransition(
-        script: String,
+        scriptText: String,
         tokenHash: String,
         expectedValue: String,
         newValue: String? = null,
     ): Boolean {
-        val arguments = if (newValue == null) {
+        val script = DefaultRedisScript(scriptText, Long::class.java)
+        val args = if (newValue == null) {
             arrayOf(expectedValue)
         } else {
             arrayOf(expectedValue, newValue)
         }
-        val result = redissonClient.getScript(StringCodec.INSTANCE).eval<Long>(
-            RScript.Mode.READ_WRITE,
+        val result = stringRedisTemplate.execute(
             script,
-            RScript.ReturnType.LONG,
             listOf(verifiedKey(tokenHash)),
-            *arguments,
+            *args
         )
         return result == 1L
     }

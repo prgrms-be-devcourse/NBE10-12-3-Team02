@@ -5,18 +5,15 @@ import com.back.global.exception.ServiceException
 import com.back.global.security.jwt.RefreshTokenLuaScripts
 import com.back.global.security.jwt.constant.RefreshTokenKeyType
 import com.back.global.security.jwt.constant.RefreshTokenValidationResult
-import org.redisson.api.RScript
-import org.redisson.api.RedissonClient
-import org.redisson.client.codec.StringCodec
 import org.springframework.beans.factory.annotation.Value
-import org.springframework.context.annotation.Lazy
+import org.springframework.data.redis.core.StringRedisTemplate
+import org.springframework.data.redis.core.script.DefaultRedisScript
 import org.springframework.stereotype.Repository
 import java.time.Duration
 
 @Repository
 class RefreshTokenRepository(
-    @Lazy
-    private val redissonClient: RedissonClient,
+    private val stringRedisTemplate: StringRedisTemplate,
     @Value("\${custom.redis.refresh-token.prefix}")
     private val prefix: String,
     @Value("\${custom.redis.refresh-token.index-prefix}")
@@ -30,10 +27,9 @@ class RefreshTokenRepository(
         newRefreshTokenHash: String,
         ttl: Duration,
     ): RefreshTokenValidationResult {
-        val result = redissonClient.getScript(StringCodec.INSTANCE).eval<Long>(
-            RScript.Mode.READ_WRITE,
-            RefreshTokenLuaScripts.rotateScript(),
-            RScript.ReturnType.LONG,
+        val script = DefaultRedisScript(RefreshTokenLuaScripts.rotateScript(), Long::class.java)
+        val result = stringRedisTemplate.execute(
+            script,
             listOf(
                 generateKey(RefreshTokenKeyType.TOKEN, userId, oldJti),
                 generateKey(RefreshTokenKeyType.TOKEN, userId, newJti),
@@ -55,22 +51,17 @@ class RefreshTokenRepository(
     }
 
     fun save(userId: Long, jti: String, refreshTokenHash: String, ttl: Duration) {
-        redissonClient
-            .getBucket<String>(generateKey(RefreshTokenKeyType.TOKEN, userId, jti), StringCodec.INSTANCE)
-            .set(refreshTokenHash, ttl)
+        val tokenKey = generateKey(RefreshTokenKeyType.TOKEN, userId, jti)
+        val indexKey = generateKey(RefreshTokenKeyType.INDEX, userId)
 
-        redissonClient
-            .getSet<String>(generateKey(RefreshTokenKeyType.INDEX, userId), StringCodec.INSTANCE)
-            .apply {
-                add(jti)
-                expire(ttl)
-            }
+        stringRedisTemplate.opsForValue().set(tokenKey, refreshTokenHash, ttl)
+        stringRedisTemplate.opsForSet().add(indexKey, jti)
+        stringRedisTemplate.expire(indexKey, ttl)
     }
 
     fun verify(userId: Long, jti: String, requestRefreshTokenHash: String): RefreshTokenValidationResult {
-        val savedHash = redissonClient
-            .getBucket<String>(generateKey(RefreshTokenKeyType.TOKEN, userId, jti), StringCodec.INSTANCE)
-            .get()
+        val tokenKey = generateKey(RefreshTokenKeyType.TOKEN, userId, jti)
+        val savedHash = stringRedisTemplate.opsForValue().get(tokenKey)
 
         return when {
             savedHash == null -> RefreshTokenValidationResult.NOT_FOUND
@@ -80,24 +71,21 @@ class RefreshTokenRepository(
     }
 
     fun delete(userId: Long, jti: String) {
-        redissonClient
-            .getBucket<String>(generateKey(RefreshTokenKeyType.TOKEN, userId, jti), StringCodec.INSTANCE)
-            .delete()
+        val tokenKey = generateKey(RefreshTokenKeyType.TOKEN, userId, jti)
+        val indexKey = generateKey(RefreshTokenKeyType.INDEX, userId)
 
-        redissonClient
-            .getSet<String>(generateKey(RefreshTokenKeyType.INDEX, userId), StringCodec.INSTANCE)
-            .remove(jti)
+        stringRedisTemplate.delete(tokenKey)
+        stringRedisTemplate.opsForSet().remove(indexKey, jti)
     }
 
     fun deleteAllByUserId(userId: Long) {
-        val index = redissonClient.getSet<String>(generateKey(RefreshTokenKeyType.INDEX, userId), StringCodec.INSTANCE)
-        val jtis = index.readAll().ifEmpty { return }
+        val indexKey = generateKey(RefreshTokenKeyType.INDEX, userId)
+        val jtis = stringRedisTemplate.opsForSet().members(indexKey) ?: emptySet()
+        if (jtis.isEmpty()) return
 
-        jtis.forEach { jti ->
-            redissonClient.getBucket<String>(generateKey(RefreshTokenKeyType.TOKEN, userId, jti), StringCodec.INSTANCE).delete()
-        }
-
-        index.delete()
+        val keysToDelete = jtis.map { jti -> generateKey(RefreshTokenKeyType.TOKEN, userId, jti) }
+        stringRedisTemplate.delete(keysToDelete)
+        stringRedisTemplate.delete(indexKey)
     }
 
     private fun generateKey(type: RefreshTokenKeyType, userId: Long, jti: String? = null): String =

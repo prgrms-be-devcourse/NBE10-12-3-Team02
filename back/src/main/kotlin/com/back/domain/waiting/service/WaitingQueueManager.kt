@@ -3,15 +3,14 @@ package com.back.domain.waiting.service
 import com.back.domain.waiting.dto.QueueStatusDto
 import com.back.global.exception.ErrorCode
 import com.back.global.exception.ServiceException
-import org.redisson.api.RScript
-import org.redisson.api.RedissonClient
-import org.redisson.client.codec.StringCodec
+import org.springframework.data.redis.core.StringRedisTemplate
+import org.springframework.data.redis.core.script.DefaultRedisScript
 import org.springframework.stereotype.Component
 import java.time.Duration
 
 @Component
 class WaitingQueueManager(
-    private val redissonClient: RedissonClient
+    private val stringRedisTemplate: StringRedisTemplate
 ) {
 
     fun registerWaiting(scheduleId: Long, userId: Long): Long {
@@ -19,25 +18,11 @@ class WaitingQueueManager(
         val seqKey = generateSequenceKey(scheduleId)
         val user = userId.toString()
 
-        val activeSchedules = redissonClient.getSet<String>(ACTIVE_SCHEDULES_KEY, StringCodec.INSTANCE)
-        activeSchedules.add(scheduleId.toString())
+        stringRedisTemplate.opsForSet().add(ACTIVE_SCHEDULES_KEY, scheduleId.toString())
 
-        val script = redissonClient.getScript(StringCodec.INSTANCE)
-        val rank: Long? = script.eval(
-            RScript.Mode.READ_WRITE,
-            """
-            local exists = redis.call('ZSCORE', KEYS[1], ARGV[1])
-            if not exists then
-              local sequence = redis.call('INCR', KEYS[2])
-              redis.call('ZADD', KEYS[1], sequence, ARGV[1])
-            end
-            local rank = redis.call('ZRANK', KEYS[1], ARGV[1])
-            if not rank then
-              return -1
-            end
-            return rank + 1
-            """.trimIndent(),
-            RScript.ReturnType.LONG,
+        val script = DefaultRedisScript(REGISTER_WAIT_SCRIPT, Long::class.java)
+        val rank: Long? = stringRedisTemplate.execute(
+            script,
             listOf(waitKey, seqKey),
             user
         )
@@ -49,14 +34,13 @@ class WaitingQueueManager(
     }
 
     fun showWaitingRank(scheduleId: Long, userId: Long): Long =
-        redissonClient.getScoredSortedSet<String>(generateWaitKey(scheduleId), StringCodec.INSTANCE)
-            .rank(userId.toString())
+        stringRedisTemplate.opsForZSet()
+            .rank(generateWaitKey(scheduleId), userId.toString())
             ?.let { it + 1L }
             ?: throw ServiceException(ErrorCode.WAITING_QUEUE_NOT_FOUND)
 
     fun cancelWaiting(scheduleId: Long, userId: Long): Boolean =
-        redissonClient.getScoredSortedSet<String>(generateWaitKey(scheduleId), StringCodec.INSTANCE)
-            .remove(userId.toString())
+        (stringRedisTemplate.opsForZSet().remove(generateWaitKey(scheduleId), userId.toString()) ?: 0L) > 0L
 
     fun cancelActiveUser(scheduleId: Long, userId: Long): Boolean =
         deleteActiveUser(scheduleId, userId)
@@ -66,38 +50,122 @@ class WaitingQueueManager(
     }
 
     private fun deleteActiveUser(scheduleId: Long, userId: Long): Boolean {
-        val activeSet = redissonClient.getScoredSortedSet<String>(generateQueueActiveKey(scheduleId), StringCodec.INSTANCE)
-        val removed = activeSet.remove(userId.toString())
-        redissonClient.getBucket<String>(generateActiveTokenKey(scheduleId, userId), StringCodec.INSTANCE).delete()
+        val removed = (stringRedisTemplate.opsForZSet().remove(generateQueueActiveKey(scheduleId), userId.toString()) ?: 0L) > 0L
+        stringRedisTemplate.delete(generateActiveTokenKey(scheduleId, userId))
         return removed
     }
 
     fun hasValidSession(scheduleId: Long, userId: Long): Boolean {
-        val expiresAt = redissonClient
-            .getScoredSortedSet<String>(generateQueueActiveKey(scheduleId), StringCodec.INSTANCE)
-            .getScore(userId.toString()) ?: return false
+        val expiresAt = stringRedisTemplate.opsForZSet()
+            .score(generateQueueActiveKey(scheduleId), userId.toString()) ?: return false
         return expiresAt >= System.currentTimeMillis()
     }
 
     fun getStoredToken(scheduleId: Long, userId: Long): String? =
-        redissonClient.getBucket<String>(generateActiveTokenKey(scheduleId, userId), StringCodec.INSTANCE).get()
+        stringRedisTemplate.opsForValue().get(generateActiveTokenKey(scheduleId, userId))
 
     fun removeExpiredActiveUsers(scheduleId: Long): Long {
-        val activeSet = redissonClient.getScoredSortedSet<String>(generateQueueActiveKey(scheduleId), StringCodec.INSTANCE)
-        val removed = activeSet.removeRangeByScore(0.0, true, System.currentTimeMillis().toDouble(), true)
-        return removed.toLong()
+        val removed = stringRedisTemplate.opsForZSet()
+            .removeRangeByScore(generateQueueActiveKey(scheduleId), 0.0, System.currentTimeMillis().toDouble()) ?: 0L
+        return removed
     }
 
+    @Suppress("UNCHECKED_CAST")
     fun addActiveUser(scheduleId: Long, capacity: Long, batchSize: Int, ttl: Duration): List<Long> {
         val waitKey = generateWaitKey(scheduleId)
         val activeKey = generateQueueActiveKey(scheduleId)
         val now = System.currentTimeMillis()
         val expiredAt = now + ttl.toMillis()
 
-        val script = redissonClient.getScript(StringCodec.INSTANCE)
-        val userIds: List<String>? = script.eval(
-            RScript.Mode.READ_WRITE,
-            """
+        val script = DefaultRedisScript(ADD_ACTIVE_USER_SCRIPT, List::class.java)
+        val userIds: List<String>? = stringRedisTemplate.execute(
+            script,
+            listOf(waitKey, activeKey),
+            capacity.toString(),
+            batchSize.toString(),
+            now.toString(),
+            expiredAt.toString()
+        ) as? List<String>
+
+        if (userIds.isNullOrEmpty()) {
+            return emptyList()
+        }
+        return userIds.map { it.toLong() }
+    }
+
+    fun issueToken(scheduleId: Long, userId: Long, ttl: Duration): String {
+        val entryToken = java.util.UUID.randomUUID().toString()
+        stringRedisTemplate.opsForValue().set(generateActiveTokenKey(scheduleId, userId), entryToken, ttl)
+        return entryToken
+    }
+
+    fun getActiveToken(scheduleId: Long, userId: Long): String? {
+        val score = stringRedisTemplate.opsForZSet().score(generateQueueActiveKey(scheduleId), userId.toString())
+        if (score == null || score <= System.currentTimeMillis()) {
+            return null
+        }
+        return stringRedisTemplate.opsForValue().get(generateActiveTokenKey(scheduleId, userId))
+    }
+
+    fun getQueueStatus(scheduleId: Long): QueueStatusDto {
+        val waitKey = generateWaitKey(scheduleId)
+        val totalWaitingCount = stringRedisTemplate.opsForZSet().size(waitKey) ?: 0L
+        if (totalWaitingCount == 0L) {
+            return QueueStatusDto(0L, 0L)
+        }
+
+        val rangeWithScores = stringRedisTemplate.opsForZSet().rangeWithScores(waitKey, 0, 0)
+        val firstScore = rangeWithScores?.firstOrNull()?.score
+        val currentAllowedSequence = if (firstScore != null) firstScore.toLong() - 1 else 0L
+        return QueueStatusDto(currentAllowedSequence, totalWaitingCount)
+    }
+
+    fun getQueueSequence(scheduleId: Long, userId: Long): Long {
+        val score = stringRedisTemplate.opsForZSet().score(generateWaitKey(scheduleId), userId.toString())
+        return score?.toLong() ?: 0L
+    }
+
+    fun isQueueEmpty(scheduleId: Long): Boolean {
+        val waitSize = stringRedisTemplate.opsForZSet().size(generateWaitKey(scheduleId)) ?: 0L
+        val activeSize = stringRedisTemplate.opsForZSet().size(generateQueueActiveKey(scheduleId)) ?: 0L
+        return waitSize == 0L && activeSize == 0L
+    }
+
+    fun clearWaitingQueue(scheduleId: Long) {
+        stringRedisTemplate.delete(generateWaitKey(scheduleId))
+    }
+
+    fun getActiveScheduleIds(): Set<String> {
+        return stringRedisTemplate.opsForSet().members(ACTIVE_SCHEDULES_KEY) ?: emptySet()
+    }
+
+    fun removeFromActiveSchedules(scheduleIdStr: String) {
+        stringRedisTemplate.opsForSet().remove(ACTIVE_SCHEDULES_KEY, scheduleIdStr)
+    }
+
+    private fun generateWaitKey(scheduleId: Long): String = "$WAIT_KEY_PREFIX$scheduleId"
+    private fun generateSequenceKey(scheduleId: Long): String = "$SEQUENCE_KEY_PREFIX$scheduleId"
+
+    companion object {
+        private const val WAIT_KEY_PREFIX = "queue:wait:schedule:"
+        private const val SEQUENCE_KEY_PREFIX = "queue:wait:sequence:schedule:"
+        private const val ACTIVE_TOKEN_KEY_PREFIX = "queue:active:token:"
+        private const val ACTIVE_SCHEDULES_KEY = "queue:active:schedules"
+
+        private val REGISTER_WAIT_SCRIPT = """
+            local exists = redis.call('ZSCORE', KEYS[1], ARGV[1])
+            if not exists then
+              local sequence = redis.call('INCR', KEYS[2])
+              redis.call('ZADD', KEYS[1], sequence, ARGV[1])
+            end
+            local rank = redis.call('ZRANK', KEYS[1], ARGV[1])
+            if not rank then
+              return -1
+            end
+            return rank + 1
+        """.trimIndent()
+
+        private val ADD_ACTIVE_USER_SCRIPT = """
             redis.call('ZREMRANGEBYSCORE', KEYS[2], '-inf', tonumber(ARGV[3]))
             local activeCount = redis.call('ZCARD', KEYS[2])
             local availableSlots = tonumber(ARGV[1]) - activeCount
@@ -114,84 +182,7 @@ class WaitingQueueManager(
               redis.call('ZADD', KEYS[2], tonumber(ARGV[4]), u)
             end
             return users
-            """.trimIndent(),
-            RScript.ReturnType.LIST,
-            listOf(waitKey, activeKey),
-            capacity.toString(),
-            batchSize.toString(),
-            now.toString(),
-            expiredAt.toString()
-        )
-
-        if (userIds.isNullOrEmpty()) {
-            return emptyList()
-        }
-        return userIds.map { it.toLong() }
-    }
-
-    fun issueToken(scheduleId: Long, userId: Long, ttl: Duration): String {
-        val entryToken = java.util.UUID.randomUUID().toString()
-        val bucket = redissonClient.getBucket<String>(generateActiveTokenKey(scheduleId, userId), StringCodec.INSTANCE)
-        bucket.set(entryToken, ttl)
-        return entryToken
-    }
-
-    fun getActiveToken(scheduleId: Long, userId: Long): String? {
-        val activeSet = redissonClient.getScoredSortedSet<String>(generateQueueActiveKey(scheduleId), StringCodec.INSTANCE)
-        val score = activeSet.getScore(userId.toString())
-        if (score == null || score <= System.currentTimeMillis()) {
-            return null
-        }
-        val bucket = redissonClient.getBucket<String>(generateActiveTokenKey(scheduleId, userId), StringCodec.INSTANCE)
-        return bucket.get()
-    }
-
-    fun getQueueStatus(scheduleId: Long): QueueStatusDto {
-        val waitSet = redissonClient.getScoredSortedSet<String>(generateWaitKey(scheduleId), StringCodec.INSTANCE)
-        val totalWaitingCount = waitSet.size().toLong()
-        if (totalWaitingCount == 0L) {
-            return QueueStatusDto(0L, 0L)
-        }
-
-        val firstScore = waitSet.firstScore()
-        val currentAllowedSequence = if (firstScore != null) firstScore.toLong() - 1 else 0L
-        return QueueStatusDto(currentAllowedSequence, totalWaitingCount)
-    }
-
-    fun getQueueSequence(scheduleId: Long, userId: Long): Long {
-        val waitSet = redissonClient.getScoredSortedSet<String>(generateWaitKey(scheduleId), StringCodec.INSTANCE)
-        val score = waitSet.getScore(userId.toString())
-        return score?.toLong() ?: 0L
-    }
-
-    fun isQueueEmpty(scheduleId: Long): Boolean {
-        val waitSet = redissonClient.getScoredSortedSet<String>(generateWaitKey(scheduleId), StringCodec.INSTANCE)
-        val activeSet = redissonClient.getScoredSortedSet<String>(generateQueueActiveKey(scheduleId), StringCodec.INSTANCE)
-        return waitSet.isEmpty && activeSet.isEmpty
-    }
-
-    fun clearWaitingQueue(scheduleId: Long) {
-        redissonClient.getScoredSortedSet<String>(generateWaitKey(scheduleId), StringCodec.INSTANCE).delete()
-    }
-
-    fun getActiveScheduleIds(): Set<String> {
-        val activeSchedules = redissonClient.getSet<String>(ACTIVE_SCHEDULES_KEY, StringCodec.INSTANCE)
-        return activeSchedules.readAll() ?: emptySet()
-    }
-
-    fun removeFromActiveSchedules(scheduleIdStr: String) {
-        val activeSchedules = redissonClient.getSet<String>(ACTIVE_SCHEDULES_KEY, StringCodec.INSTANCE)
-        activeSchedules.remove(scheduleIdStr)
-    }
-
-    private fun generateWaitKey(scheduleId: Long): String = "$WAIT_KEY_PREFIX$scheduleId"
-    private fun generateSequenceKey(scheduleId: Long): String = "$SEQUENCE_KEY_PREFIX$scheduleId"
-
-    companion object {
-        private const val WAIT_KEY_PREFIX = "queue:wait:schedule:"
-        private const val SEQUENCE_KEY_PREFIX = "queue:wait:sequence:schedule:"
-        private const val ACTIVE_TOKEN_KEY_PREFIX = "queue:active:token:"
-        private const val ACTIVE_SCHEDULES_KEY = "queue:active:schedules"
+        """.trimIndent()
 
         @JvmStatic
         fun generateActiveTokenKey(scheduleId: Long, userId: Long): String =

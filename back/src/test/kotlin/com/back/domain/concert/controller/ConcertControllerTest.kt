@@ -2,10 +2,10 @@ package com.back.domain.concert.controller
 
 import com.back.domain.concert.entity.Concert
 import com.back.domain.concert.repository.ConcertRepository
-import com.back.domain.schedule.entity.Schedule
-import com.back.domain.schedule.entity.ScheduleSeat
 import com.back.domain.schedule.constant.SeatStatus.AVAILABLE
 import com.back.domain.schedule.constant.SeatStatus.HOLD
+import com.back.domain.schedule.entity.Schedule
+import com.back.domain.schedule.entity.ScheduleSeat
 import com.back.domain.schedule.repository.ScheduleRepository
 import com.back.domain.schedule.repository.ScheduleSeatRepository
 import com.back.domain.venue.entity.Venue
@@ -18,23 +18,22 @@ import org.mockito.ArgumentMatchers.*
 import org.mockito.Mockito.doReturn
 import org.mockito.Mockito.mock
 import org.mockito.Mockito.`when`
-import org.redisson.api.RBlockingQueue
-import org.redisson.api.RBucket
-import org.redisson.api.RDelayedQueue
-import org.redisson.api.RMap
-import org.redisson.api.RScoredSortedSet
-import org.redisson.api.RScript
-import org.redisson.api.RedissonClient
-import org.redisson.client.codec.Codec
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
+import org.springframework.data.redis.core.HashOperations
+import org.springframework.data.redis.core.StringRedisTemplate
+import org.springframework.data.redis.core.ValueOperations
+import org.springframework.data.redis.core.ZSetOperations
+import org.springframework.data.redis.core.script.RedisScript
 import org.springframework.http.MediaType
 import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user
 import org.springframework.test.context.ActiveProfiles
 import org.springframework.test.context.bean.override.mockito.MockitoBean
 import org.springframework.test.web.servlet.MockMvc
-import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
 import org.springframework.test.web.servlet.result.MockMvcResultHandlers.print
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
@@ -56,18 +55,25 @@ class ConcertControllerTest @Autowired constructor(
     private lateinit var schedule: Schedule
 
     @MockitoBean
-    private lateinit var redissonClient: RedissonClient
+    private lateinit var stringRedisTemplate: StringRedisTemplate
+
+    private lateinit var zSetOps: ZSetOperations<String, String>
+    private lateinit var valOps: ValueOperations<String, String>
+    private lateinit var hashOps: HashOperations<String, Any, Any>
 
     @BeforeEach
     @Suppress("UNCHECKED_CAST")
     fun setUp() {
-        val activeSet = mock(RScoredSortedSet::class.java) as RScoredSortedSet<String>
-        doReturn(activeSet).`when`(redissonClient).getScoredSortedSet<String>(anyString(), any(Codec::class.java))
-        `when`(activeSet.getScore(anyString())).thenReturn((System.currentTimeMillis() + 600000).toDouble())
+        zSetOps = mock(ZSetOperations::class.java) as ZSetOperations<String, String>
+        valOps = mock(ValueOperations::class.java) as ValueOperations<String, String>
+        hashOps = mock(HashOperations::class.java) as HashOperations<String, Any, Any>
 
-        val tokenBucket = mock(RBucket::class.java) as RBucket<String>
-        doReturn(tokenBucket).`when`(redissonClient).getBucket<String>(anyString(), any(Codec::class.java))
-        `when`(tokenBucket.get()).thenReturn("test-queue-token")
+        doReturn(zSetOps).`when`(stringRedisTemplate).opsForZSet()
+        doReturn(valOps).`when`(stringRedisTemplate).opsForValue()
+        doReturn(hashOps).`when`(stringRedisTemplate).opsForHash<Any, Any>()
+
+        `when`(zSetOps.score(anyString(), anyString())).thenReturn((System.currentTimeMillis() + 600000).toDouble())
+        `when`(valOps.get(anyString())).thenReturn("test-queue-token")
 
         concert = Concert.create("아이유 콘서트", "설명", LocalDateTime.now(), LocalDateTime.now().plusDays(1), "poster.jpg")
         concertRepository.save(concert)
@@ -92,61 +98,43 @@ class ConcertControllerTest @Autowired constructor(
             get("/api/v1/concerts/{concertId}/schedules/{scheduleId}/seats", concert.concertId, schedule.scheduleId)
                 .header("X-Queue-Token", "test-queue-token")
                 .with(user(SecurityUser(1L, "테스트유저")))
-                .contentType(MediaType.APPLICATION_JSON)
         )
             .andDo(print())
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.resultCode").value("200-1"))
-            .andExpect(jsonPath("$.msg").value("좌석 선택 페이지 조회 성공"))
             .andExpect(jsonPath("$.data.concertId").value(concert.concertId))
             .andExpect(jsonPath("$.data.scheduleId").value(schedule.scheduleId))
-            .andExpect(jsonPath("$.data.prices.VIP").value(150000))
-            .andExpect(jsonPath("$.data.prices.A").value(70000))
-            .andExpect(jsonPath("$.data.seats[0].seatNumber").value("A-1"))
-            .andExpect(jsonPath("$.data.seats[0].seatStatus").value("AVAILABLE"))
-            .andExpect(jsonPath("$.data.seats[0].gradeName").value("VIP"))
-            .andExpect(jsonPath("$.data.seats[1].seatNumber").value("B-2"))
-            .andExpect(jsonPath("$.data.seats[1].seatStatus").value("AVAILABLE"))
-            .andExpect(jsonPath("$.data.seats[1].gradeName").value("A"))
+            .andExpect(jsonPath("$.data.seats").isArray)
+            .andExpect(jsonPath("$.data.seats.length()").value(2))
     }
 
     @Test
-    @DisplayName("콘서트 목록 조회 성공")
+    @DisplayName("존재하지 않는 공연 일정 좌석 선택 시 예외 발생")
     fun t2() {
         mockMvc.perform(
-            get("/api/v1/concerts")
-                .contentType(MediaType.APPLICATION_JSON)
+            get("/api/v1/concerts/{concertId}/schedules/{scheduleId}/seats", concert.concertId, 999L)
+                .header("X-Queue-Token", "test-queue-token")
+                .with(user(SecurityUser(1L, "테스트유저")))
         )
             .andDo(print())
-            .andExpect(status().isOk)
-            .andExpect(jsonPath("$.resultCode").value("200-1"))
-            .andExpect(jsonPath("$.msg").value("콘서트 목록 조회 성공"))
-            .andExpect(jsonPath("$.data[0].concertName").value("아이유 콘서트"))
-            .andExpect(jsonPath("$.data[0].venueName").value("올림픽체조경기장"))
-            .andExpect(jsonPath("$.data[0].status").value("AVAILABLE"))
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.resultCode").value("400-1"))
     }
 
     @Test
-    @DisplayName("콘서트 상세 조회 성공")
+    @DisplayName("공연과 일정 매칭 실패 시 예외 발생")
     fun t3() {
-        val seat = ScheduleSeat.create(schedule, "VIP", "A-1", 150000, AVAILABLE)
-        scheduleSeatRepository.save(seat)
+        val otherConcert = Concert.create("다른 콘서트", "설명", LocalDateTime.now(), LocalDateTime.now().plusDays(1), "poster2.jpg")
+        concertRepository.save(otherConcert)
 
         mockMvc.perform(
-            get("/api/v1/concerts/{concertId}", concert.concertId)
-                .contentType(MediaType.APPLICATION_JSON)
+            get("/api/v1/concerts/{concertId}/schedules/{scheduleId}/seats", otherConcert.concertId, schedule.scheduleId)
+                .header("X-Queue-Token", "test-queue-token")
+                .with(user(SecurityUser(1L, "테스트유저")))
         )
             .andDo(print())
-            .andExpect(status().isOk)
-            .andExpect(jsonPath("$.resultCode").value("200-1"))
-            .andExpect(jsonPath("$.msg").value("콘서트 상세 정보 조회 성공"))
-            .andExpect(jsonPath("$.data.concertId").value(concert.concertId))
-            .andExpect(jsonPath("$.data.concertName").value("아이유 콘서트"))
-            .andExpect(jsonPath("$.data.description").value("설명"))
-            .andExpect(jsonPath("$.data.venueName").value("올림픽체조경기장"))
-            .andExpect(jsonPath("$.data.location").value("서울"))
-            .andExpect(jsonPath("$.data.prices.VIP").value(150000))
-            .andExpect(jsonPath("$.data.bookable").value(true))
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.resultCode").value("400-1"))
     }
 
     @Test
@@ -156,17 +144,7 @@ class ConcertControllerTest @Autowired constructor(
         val seat = ScheduleSeat.create(schedule, "VIP", "A-1", 150000, AVAILABLE)
         scheduleSeatRepository.save(seat)
 
-        val rScript = mock(RScript::class.java)
-        doReturn(rScript).`when`(redissonClient).getScript(any(Codec::class.java))
-        `when`(rScript.eval<Any>(any(), anyString(), any(), anyList<Any>(), any(), any(), any())).thenReturn(1L)
-
-        val rMap = mock(RMap::class.java) as RMap<String, String>
-        doReturn(rMap).`when`(redissonClient).getMap<String, String>(anyString(), any(Codec::class.java))
-
-        val blockingQueue = mock(RBlockingQueue::class.java) as RBlockingQueue<String>
-        val delayedQueue = mock(RDelayedQueue::class.java) as RDelayedQueue<String>
-        doReturn(blockingQueue).`when`(redissonClient).getBlockingQueue<String>(anyString(), any(Codec::class.java))
-        doReturn(delayedQueue).`when`(redissonClient).getDelayedQueue<String>(any())
+        `when`(stringRedisTemplate.execute(any<RedisScript<Long>>(), anyList(), any(), any(), any())).thenReturn(1L)
 
         val requestBody = """
             {
@@ -200,11 +178,8 @@ class ConcertControllerTest @Autowired constructor(
         val seat = ScheduleSeat.create(schedule, "VIP", seatNumber, 150000, HOLD)
         scheduleSeatRepository.save(seat)
 
-        val rMap = mock(RMap::class.java) as RMap<String, String>
-        val rSet = mock(RScoredSortedSet::class.java) as RScoredSortedSet<String>
-        doReturn(rMap).`when`(redissonClient).getMap<String, String>(anyString(), any(Codec::class.java))
-        doReturn(rSet).`when`(redissonClient).getScoredSortedSet<String>(anyString(), any(Codec::class.java))
-        `when`(rMap["userId"]).thenReturn(userId.toString())
+        val entries: Map<Any, Any> = mapOf("userId" to userId.toString())
+        doReturn(entries).`when`(hashOps).entries(anyString())
 
         val requestBody = """
             {

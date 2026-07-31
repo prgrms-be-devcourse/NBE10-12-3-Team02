@@ -1,9 +1,8 @@
 package com.back.domain.concert.listener
 
 import com.back.domain.concert.service.SeatOccupyManager
-import org.redisson.api.RedissonClient
-import org.redisson.client.codec.StringCodec
 import org.slf4j.LoggerFactory
+import org.springframework.data.redis.core.StringRedisTemplate
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Component
 
@@ -14,7 +13,7 @@ import org.springframework.stereotype.Component
 // 서버 재부팅 후에도 Redis ZSET이 영속화되어 있어 100% 누락 없이 복구
 @Component
 class SeatHoldExpiredScheduler(
-    private val redissonClient: RedissonClient,
+    private val stringRedisTemplate: StringRedisTemplate,
     private val seatHoldExpiredProcessor: SeatHoldExpiredProcessor
 ) {
     private val log = LoggerFactory.getLogger(javaClass)
@@ -22,11 +21,10 @@ class SeatHoldExpiredScheduler(
     @Scheduled(fixedDelay = 1000)
     fun processExpiredSeats() {
         val now = System.currentTimeMillis().toDouble()
-        val expireSet = redissonClient.getScoredSortedSet<String>(SeatOccupyManager.EXPIRE_QUEUE_KEY, StringCodec.INSTANCE)
 
         // Score <= 현재 시각인 항목 전체 조회
-        val expiredMembers = expireSet.valueRange(0.0, true, now, true)
-        if (expiredMembers.isEmpty()) return
+        val expiredMembers = stringRedisTemplate.opsForZSet().rangeByScore(SeatOccupyManager.EXPIRE_QUEUE_KEY, 0.0, now)
+        if (expiredMembers.isNullOrEmpty()) return
 
         log.debug("만료 좌석 처리 시작: {}건", expiredMembers.size)
 
@@ -34,7 +32,7 @@ class SeatHoldExpiredScheduler(
             val parts = member.split(":")
             if (parts.size != 3) {
                 log.warn("잘못된 만료 큐 멤버 형식, 제거: {}", member)
-                expireSet.remove(member)
+                stringRedisTemplate.opsForZSet().remove(SeatOccupyManager.EXPIRE_QUEUE_KEY, member)
                 continue
             }
 
