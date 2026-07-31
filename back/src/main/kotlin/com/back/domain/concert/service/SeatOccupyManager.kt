@@ -4,8 +4,7 @@ import com.back.domain.concert.dto.SeatOccupyResponse
 import com.back.domain.concert.dto.SeatSelectionResponse
 import com.back.domain.concert.event.SeatOccupiedEvent
 import com.back.domain.concert.event.SeatReleasedEvent
-import com.back.domain.concert.listener.SeatHoldExpiredHandler
-import com.back.domain.concert.listener.SeatOccupiedEventListener
+
 import com.back.domain.schedule.repository.ScheduleSeatRepository
 import com.back.domain.ticket.dto.SeatHoldInfo
 import com.back.domain.ticket.repository.TicketRepository
@@ -86,6 +85,7 @@ class SeatOccupyManager(
         }
 
         cleanupRedis(redisKey)
+        removeFromExpireQueue(concertId, scheduleId, seatNumber)
 
         val seat = scheduleSeatRepository.findBySchedule_ScheduleIdAndSeatNumber(scheduleId, seatNumber)
         seat?.releaseToAvailable()
@@ -140,14 +140,28 @@ class SeatOccupyManager(
         }
     }
 
-    fun cancelDelayedQueueMessage(concertId: Long, scheduleId: Long, seatNumber: String) {
+    /**
+     * 좌석 선점 시 만료 ZSET에 등록한다.
+     * Score = 만료 예정 Unix 타임스탬프(ms), Member = concertId:scheduleId:seatNumber
+     */
+    fun addToExpireQueue(concertId: Long, scheduleId: Long, seatNumber: String, ttlSeconds: Long) {
+        val expireAt = System.currentTimeMillis() + ttlSeconds * 1000
+        val member = buildExpireMember(concertId, scheduleId, seatNumber)
+        redissonClient.getScoredSortedSet<String>(EXPIRE_QUEUE_KEY, StringCodec.INSTANCE)
+            .add(expireAt.toDouble(), member)
+        log.debug("만료 큐 등록: {}, expireAt={}", member, expireAt)
+    }
+
+    /**
+     * 결제 완료 또는 수동 취소 시 만료 ZSET에서 해당 좌석 메시지를 제거한다.
+     */
+    fun removeFromExpireQueue(concertId: Long, scheduleId: Long, seatNumber: String) {
         try {
-            val message = SeatOccupiedEventListener.buildMessage(concertId, scheduleId, seatNumber)
-            val blockingQueue = redissonClient.getBlockingQueue<String>(SeatHoldExpiredHandler.DELAYED_QUEUE_KEY, StringCodec.INSTANCE)
-            val delayedQueue = redissonClient.getDelayedQueue(blockingQueue)
-            delayedQueue.remove(message)
+            val member = buildExpireMember(concertId, scheduleId, seatNumber)
+            redissonClient.getScoredSortedSet<String>(EXPIRE_QUEUE_KEY, StringCodec.INSTANCE).remove(member)
+            log.debug("만료 큐 제거: {}", member)
         } catch (e: Exception) {
-            log.warn("Delayed Queue 메시지 제거 실패 (무시됨): {}", e.message)
+            log.warn("만료 큐 제거 실패 (무시됨): {}", e.message)
         }
     }
 
@@ -170,8 +184,14 @@ class SeatOccupyManager(
             end
         """.trimIndent()
 
+        const val EXPIRE_QUEUE_KEY = "seat:hold:expire:queue"
+
         @JvmStatic
         fun generateSeatOccupyKey(concertId: Long, scheduleId: Long, seatNumber: String): String =
             "seat:occupy:$concertId:$scheduleId:$seatNumber"
+
+        @JvmStatic
+        fun buildExpireMember(concertId: Long, scheduleId: Long, seatNumber: String): String =
+            "$concertId:$scheduleId:$seatNumber"
     }
 }
