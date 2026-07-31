@@ -63,7 +63,7 @@ class TicketService(
         for (holdInfo in sortedSeatHolds) {
             val redisKey = SeatOccupyManager.generateSeatOccupyKey(request.concertId, scheduleId, holdInfo.seatNumber)
             seatOccupyManager.cleanupRedis(redisKey)
-            seatOccupyManager.cancelDelayedQueueMessage(request.concertId, scheduleId, holdInfo.seatNumber)
+            seatOccupyManager.removeFromExpireQueue(request.concertId, scheduleId, holdInfo.seatNumber)
             sseEmitterRegistry.broadcast(scheduleId, holdInfo.seatNumber, SeatStatus.SOLD_OUT.name)
         }
 
@@ -97,7 +97,7 @@ class TicketService(
         val redisKey = SeatOccupyManager.generateSeatOccupyKey(concertId, scheduleId, seatNumber)
         seatOccupyManager.cleanupRedis(redisKey)
 
-        seatOccupyManager.cancelDelayedQueueMessage(concertId, scheduleId, seatNumber)
+        seatOccupyManager.removeFromExpireQueue(concertId, scheduleId, seatNumber)
         sseEmitterRegistry.broadcast(scheduleId, seatNumber, SeatStatus.AVAILABLE.name)
 
         eventPublisher.publishEvent(TicketCancelledEvent(concertId, scheduleId, userId))
