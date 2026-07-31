@@ -8,7 +8,10 @@ import {
   decodeToken,
   restoreSession,
   setAccessToken,
+  getAccessToken,
+  BASE_URL,
 } from "@/lib/api";
+import { Camera } from "lucide-react";
 import { showAlert, showConfirm, showSuccess, showError } from "@/lib/alert";
 import { getLocalConcertPoster } from "@/lib/concertDetailImages";
 import PasswordStrengthMeter from "@/app/components/PasswordStrengthMeter";
@@ -44,6 +47,7 @@ interface MyPageData {
   id: string;
   email: string;
   loginType: string;
+  profileImageUrl: string;
   ticketGroups: TicketGroupInfo[];
 }
 
@@ -67,6 +71,12 @@ export default function MyPage() {
   const [editPassword, setEditPassword] = useState("");
   const [editPasswordCheck, setEditPasswordCheck] = useState("");
   const [isSavingProfile, setIsSavingProfile] = useState(false);
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [profilePreviewUrl, setProfilePreviewUrl] = useState<string | null>(null);
+  const [selectedProfileFile, setSelectedProfileFile] = useState<File | null>(null);
+  const [isUploadingProfile, setIsUploadingProfile] = useState(false);
+  const [profileCacheKey, setProfileCacheKey] = useState(() => Date.now());
 
   useEffect(() => {
     if (hasCheckedAuth.current) return;
@@ -180,6 +190,78 @@ export default function MyPage() {
     } finally {
       setIsSavingProfile(false);
     }
+  };
+
+  const handleProfileFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = "";
+    const ALLOWED = ["image/jpeg", "image/png", "image/webp"];
+    if (!ALLOWED.includes(file.type)) {
+      showAlert("jpg, jpeg, png, webp 파일만 업로드할 수 있습니다.");
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      showAlert("파일 크기는 5MB 이하여야 합니다.");
+      return;
+    }
+    setSelectedProfileFile(file);
+    setProfilePreviewUrl(URL.createObjectURL(file));
+  };
+
+  const handleUploadProfileImage = async () => {
+    if (!selectedProfileFile) return;
+    const formData = new FormData();
+    formData.append("file", selectedProfileFile);
+    setIsUploadingProfile(true);
+    try {
+      const token = getAccessToken();
+      const res = await fetch(`${BASE_URL}/api/v1/users/me/profile-image`, {
+        method: "POST",
+        credentials: "include",
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        body: formData,
+      });
+      if (!res.ok) {
+        const json = await res.json().catch(() => ({}));
+        throw new Error((json as { msg?: string }).msg || "업로드에 실패했습니다.");
+      }
+      const newToken = res.headers.get("Authorization");
+      if (newToken?.startsWith("Bearer ")) setAccessToken(newToken.slice(7));
+      if (profilePreviewUrl) URL.revokeObjectURL(profilePreviewUrl);
+      setProfilePreviewUrl(null);
+      setSelectedProfileFile(null);
+      setProfileCacheKey(Date.now());
+      showSuccess("프로필 사진이 변경되었습니다.");
+    } catch (e) {
+      showError(e instanceof Error ? e.message : "업로드에 실패했습니다.");
+    } finally {
+      setIsUploadingProfile(false);
+    }
+  };
+
+  const handleDeleteProfileImage = async () => {
+    const confirmed = await showConfirm(
+      "프로필 사진을 기본 이미지로 변경하시겠어요?",
+      { title: "기본 이미지로 변경", confirmText: "변경", cancelText: "취소" },
+    );
+    if (!confirmed) return;
+    try {
+      await apiFetch("/users/me/profile-image", { method: "DELETE" });
+      if (profilePreviewUrl) URL.revokeObjectURL(profilePreviewUrl);
+      setProfilePreviewUrl(null);
+      setSelectedProfileFile(null);
+      setProfileCacheKey(Date.now());
+      showSuccess("기본 이미지로 변경되었습니다.");
+    } catch (e) {
+      showError(e instanceof Error ? e.message : "삭제에 실패했습니다.");
+    }
+  };
+
+  const cancelProfileEdit = () => {
+    if (profilePreviewUrl) URL.revokeObjectURL(profilePreviewUrl);
+    setProfilePreviewUrl(null);
+    setSelectedProfileFile(null);
   };
 
   if (loading) {
@@ -322,6 +404,60 @@ export default function MyPage() {
         </div>
 
         <div className="bg-white rounded-2xl shadow-sm p-8 mb-8">
+          <div className="flex flex-col items-center mb-6">
+            <div className="relative w-20 h-20 rounded-full overflow-hidden border-2 border-gray-100 mb-2">
+              <Image
+                src={profilePreviewUrl || `${data.profileImageUrl}?t=${profileCacheKey}`}
+                alt="프로필 사진"
+                fill
+                unoptimized
+                className="object-cover"
+              />
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="absolute inset-0 bg-black/30 flex items-center justify-center opacity-0 hover:opacity-100 transition"
+                aria-label="프로필 사진 변경"
+              >
+                <Camera size={18} className="text-white" />
+              </button>
+            </div>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".jpg,.jpeg,.png,.webp"
+              className="hidden"
+              onChange={handleProfileFileSelect}
+            />
+            {selectedProfileFile ? (
+              <div className="flex gap-2 mt-1">
+                <button
+                  type="button"
+                  onClick={cancelProfileEdit}
+                  className="text-xs text-gray-500 hover:text-gray-700 border border-gray-200 px-3 py-1 rounded-lg transition"
+                >
+                  취소
+                </button>
+                <button
+                  type="button"
+                  onClick={handleUploadProfileImage}
+                  disabled={isUploadingProfile}
+                  className="text-xs bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded-lg transition disabled:opacity-50"
+                >
+                  {isUploadingProfile ? "저장 중..." : "저장"}
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={handleDeleteProfileImage}
+                className="text-xs text-gray-400 hover:text-gray-600 mt-1 transition"
+              >
+                기본 이미지로 변경
+              </button>
+            )}
+          </div>
+
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-bold text-gray-700">내 정보</h2>
             {!isEditing && (
