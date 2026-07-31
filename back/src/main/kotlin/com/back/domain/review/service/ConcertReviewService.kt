@@ -7,6 +7,7 @@ import com.back.domain.review.dto.ConcertReviewUpdateRequest
 import com.back.domain.review.dto.EligibleConcertResponse
 import com.back.domain.review.entity.ConcertReview
 import com.back.domain.review.repository.ConcertReviewRepository
+import com.back.domain.review.repository.ReviewBookmarkRepository
 import com.back.domain.review.repository.ReviewLikeRepository
 import com.back.domain.ticket.repository.TicketRepository
 import com.back.domain.user.repository.UserRepository
@@ -25,6 +26,7 @@ class ConcertReviewService(
     private val userRepository: UserRepository,
     private val ticketRepository: TicketRepository,
     private val reviewLikeRepository: ReviewLikeRepository,
+    private val reviewBookmarkRepository: ReviewBookmarkRepository,
 ) {
 
     @Transactional
@@ -117,6 +119,7 @@ class ConcertReviewService(
             throw ServiceException(ErrorCode.REVIEW_FORBIDDEN)
         }
         reviewLikeRepository.deleteAllByReviewReviewId(reviewId)
+        reviewBookmarkRepository.deleteAllByReviewReviewId(reviewId)
         concertReviewRepository.delete(review)
     }
 
@@ -131,11 +134,14 @@ class ConcertReviewService(
         val reviewId = review.reviewId!!
         val isLiked = currentUserId != null &&
             reviewLikeRepository.existsByReviewReviewIdAndUserUserId(reviewId, currentUserId)
+        val isBookmarked = currentUserId != null &&
+            reviewBookmarkRepository.existsByReviewReviewIdAndUserUserId(reviewId, currentUserId)
         return ConcertReviewResponse.of(
             review = review,
             currentUserId = currentUserId,
             likeCount = reviewLikeRepository.countByReviewReviewId(reviewId),
             isLiked = isLiked,
+            isBookmarked = isBookmarked,
         )
     }
 
@@ -153,6 +159,9 @@ class ConcertReviewService(
         val likedReviewIds = currentUserId
             ?.let { reviewLikeRepository.findLikedReviewIds(reviewIds, it).toSet() }
             ?: emptySet()
+        val bookmarkedReviewIds = currentUserId
+            ?.let { reviewBookmarkRepository.findBookmarkedReviewIds(reviewIds, it).toSet() }
+            ?: emptySet()
 
         return reviews.map { review ->
             val reviewId = review.reviewId!!
@@ -161,6 +170,7 @@ class ConcertReviewService(
                 currentUserId = currentUserId,
                 likeCount = likeCounts[reviewId] ?: 0L,
                 isLiked = reviewId in likedReviewIds,
+                isBookmarked = reviewId in bookmarkedReviewIds,
             )
         }
     }

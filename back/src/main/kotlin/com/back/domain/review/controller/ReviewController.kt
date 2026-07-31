@@ -3,7 +3,9 @@ package com.back.domain.review.controller
 import com.back.domain.review.dto.ConcertReviewResponse
 import com.back.domain.review.dto.EligibleConcertResponse
 import com.back.domain.review.dto.ReviewLikeStatusResponse
+import com.back.domain.review.dto.ReviewBookmarkStatusResponse
 import com.back.domain.review.service.ConcertReviewService
+import com.back.domain.review.service.ReviewBookmarkService
 import com.back.domain.review.service.ReviewLikeService
 import com.back.global.annotation.ApiV1
 import com.back.global.requestcontext.RequestContext
@@ -24,6 +26,7 @@ import org.springframework.web.bind.annotation.RestController
 class ReviewController(
     private val concertReviewService: ConcertReviewService,
     private val reviewLikeService: ReviewLikeService,
+    private val reviewBookmarkService: ReviewBookmarkService,
     private val requestContext: RequestContext
 ) {
 
@@ -62,6 +65,28 @@ class ReviewController(
             "200-1",
             "리뷰 좋아요가 취소되었습니다.",
             reviewLikeService.unlike(reviewId, actor.id),
+        )
+    }
+
+    @PutMapping("/{reviewId}/bookmarks")
+    @Operation(summary = "리뷰 북마크 등록", description = "리뷰를 내 북마크에 등록합니다.")
+    fun bookmarkReview(@PathVariable reviewId: Long): RsData<ReviewBookmarkStatusResponse> {
+        val actor = requestContext.actor ?: throw IllegalStateException("Actor must not be null")
+        return RsData(
+            "200-1",
+            "리뷰가 북마크에 등록되었습니다.",
+            reviewBookmarkService.bookmark(reviewId, actor.id),
+        )
+    }
+
+    @DeleteMapping("/{reviewId}/bookmarks")
+    @Operation(summary = "리뷰 북마크 취소", description = "리뷰를 내 북마크에서 제거합니다.")
+    fun unbookmarkReview(@PathVariable reviewId: Long): RsData<ReviewBookmarkStatusResponse> {
+        val actor = requestContext.actor ?: throw IllegalStateException("Actor must not be null")
+        return RsData(
+            "200-1",
+            "리뷰 북마크가 취소되었습니다.",
+            reviewBookmarkService.unbookmark(reviewId, actor.id),
         )
     }
 

@@ -14,6 +14,7 @@ data class ConcertReviewResponse(
     @get:JsonProperty("isMine") val isMine: Boolean,
     val likeCount: Long,
     @get:JsonProperty("isLiked") val isLiked: Boolean,
+    @get:JsonProperty("isBookmarked") val isBookmarked: Boolean,
     val createdAt: LocalDateTime?,
     val updatedAt: LocalDateTime?,
     val concertName: String,
@@ -25,6 +26,7 @@ data class ConcertReviewResponse(
             currentUserId: Long?,
             likeCount: Long = 0L,
             isLiked: Boolean = false,
+            isBookmarked: Boolean = false,
         ): ConcertReviewResponse =
             ConcertReviewResponse(
                 reviewId = review.reviewId!!,
@@ -36,6 +38,7 @@ data class ConcertReviewResponse(
                 isMine = currentUserId != null && review.user.userId == currentUserId,
                 likeCount = likeCount,
                 isLiked = isLiked,
+                isBookmarked = isBookmarked,
                 createdAt = review.createDate,
                 updatedAt = review.modifyDate,
                 concertName = review.concert.concertName,

@@ -10,6 +10,8 @@ import com.back.domain.auth.repository.SocialLinkCookieRepository
 import com.back.domain.user.dto.UpdateMyPageRequest
 import com.back.domain.user.service.UserService
 import com.back.domain.auth.service.SocialLinkService
+import com.back.domain.review.dto.ReviewBookmarkResponse
+import com.back.domain.review.service.ReviewBookmarkService
 import com.back.global.annotation.ApiV1
 import com.back.global.requestcontext.RequestContext
 import com.back.global.rsData.RsData
@@ -19,6 +21,9 @@ import jakarta.validation.Valid
 import org.springframework.http.CacheControl
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
+import org.springframework.data.domain.Page
+import org.springframework.data.domain.Pageable
+import org.springframework.data.web.PageableDefault
 import org.springframework.web.bind.annotation.*
 import org.springframework.http.MediaType
 import org.springframework.web.multipart.MultipartFile
@@ -34,6 +39,7 @@ class UserController(
     private val requestContext: RequestContext,
     private val socialLinkService: SocialLinkService,
     private val socialLinkCookieRepository: SocialLinkCookieRepository,
+    private val reviewBookmarkService: ReviewBookmarkService,
 ) {
 
     @PostMapping("/signup")
@@ -56,6 +62,19 @@ class UserController(
     fun getMyPage(): RsData<MyPageResponse> {
         val actor = requestContext.actor ?: throw IllegalStateException("Actor must not be null")
         return RsData("200-1", "마이페이지 조회 성공", userService.getMyPage(actor.id))
+    }
+
+    @GetMapping("/me/review-bookmarks")
+    @Operation(summary = "내 리뷰 북마크 목록 조회", description = "북마크한 리뷰를 최신 북마크순으로 조회합니다.")
+    fun getMyReviewBookmarks(
+        @PageableDefault(size = 20) pageable: Pageable,
+    ): RsData<Page<ReviewBookmarkResponse>> {
+        val actor = requestContext.actor ?: throw IllegalStateException("Actor must not be null")
+        return RsData(
+            "200-1",
+            "리뷰 북마크 목록 조회 성공",
+            reviewBookmarkService.getMyBookmarks(actor.id, pageable),
+        )
     }
 
     @GetMapping("/me/social-links")
