@@ -3,6 +3,7 @@ package com.back.global.security.email
 import com.back.global.security.email.constant.EmailVerificationConfirmResult
 import org.springframework.data.redis.core.StringRedisTemplate
 import org.springframework.data.redis.core.script.DefaultRedisScript
+import org.springframework.data.redis.core.script.RedisScript
 import org.springframework.stereotype.Repository
 import java.time.Duration
 
@@ -109,7 +110,7 @@ class EmailVerificationRepository(
         "$RESERVED_PREFIX$reservationId:$emailHash"
 
     private fun executeStateTransition(
-        script: DefaultRedisScript<Long>,
+        script: RedisScript<Long>,
         tokenHash: String,
         expectedValue: String,
         newValue: String? = null,
@@ -132,11 +133,11 @@ class EmailVerificationRepository(
         private const val AVAILABLE_PREFIX = "AVAILABLE:"
         private const val RESERVED_PREFIX = "RESERVED:"
 
-        private val SAVE_CHALLENGE_SCRIPT = DefaultRedisScript(EmailVerificationLuaScripts.saveChallengeScript(), Long::class.java)
-        private val CONFIRM_SCRIPT = DefaultRedisScript(EmailVerificationLuaScripts.confirmScript(), Long::class.java)
-        private val RESERVE_SCRIPT = DefaultRedisScript(EmailVerificationLuaScripts.reserveScript(), Long::class.java)
-        private val COMPLETE_RESERVATION_SCRIPT = DefaultRedisScript(EmailVerificationLuaScripts.completeReservationScript(), Long::class.java)
-        private val RESTORE_RESERVATION_SCRIPT = DefaultRedisScript(EmailVerificationLuaScripts.restoreReservationScript(), Long::class.java)
-        private val CLEAR_CHALLENGE_SCRIPT = DefaultRedisScript(EmailVerificationLuaScripts.clearChallengeScript(), Long::class.java)
+        private val SAVE_CHALLENGE_SCRIPT: RedisScript<Long> = DefaultRedisScript(EmailVerificationLuaScripts.saveChallengeScript(), Long::class.java)
+        private val CONFIRM_SCRIPT: RedisScript<Long> = DefaultRedisScript(EmailVerificationLuaScripts.confirmScript(), Long::class.java)
+        private val RESERVE_SCRIPT: RedisScript<Long> = DefaultRedisScript(EmailVerificationLuaScripts.reserveScript(), Long::class.java)
+        private val COMPLETE_RESERVATION_SCRIPT: RedisScript<Long> = DefaultRedisScript(EmailVerificationLuaScripts.completeReservationScript(), Long::class.java)
+        private val RESTORE_RESERVATION_SCRIPT: RedisScript<Long> = DefaultRedisScript(EmailVerificationLuaScripts.restoreReservationScript(), Long::class.java)
+        private val CLEAR_CHALLENGE_SCRIPT: RedisScript<Long> = DefaultRedisScript(EmailVerificationLuaScripts.clearChallengeScript(), Long::class.java)
     }
 }

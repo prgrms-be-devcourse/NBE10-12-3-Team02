@@ -5,6 +5,7 @@ import com.back.global.exception.ErrorCode
 import com.back.global.exception.ServiceException
 import org.springframework.data.redis.core.StringRedisTemplate
 import org.springframework.data.redis.core.script.DefaultRedisScript
+import org.springframework.data.redis.core.script.RedisScript
 import org.springframework.stereotype.Component
 import java.time.Duration
 
@@ -21,7 +22,7 @@ class WaitingQueueManager(
         stringRedisTemplate.opsForSet().add(ACTIVE_SCHEDULES_KEY, scheduleId.toString())
 
         val rank: Long? = stringRedisTemplate.execute(
-            REGISTER_WAIT_REDIS_SCRIPT,
+            REGISTER_WAIT_SCRIPT,
             listOf(waitKey, seqKey),
             user
         )
@@ -77,7 +78,7 @@ class WaitingQueueManager(
         val expiredAt = now + ttl.toMillis()
 
         val userIds: List<String>? = stringRedisTemplate.execute(
-            ADD_ACTIVE_USER_REDIS_SCRIPT,
+            ADD_ACTIVE_USER_SCRIPT,
             listOf(waitKey, activeKey),
             capacity.toString(),
             batchSize.toString(),
@@ -150,7 +151,7 @@ class WaitingQueueManager(
         private const val ACTIVE_TOKEN_KEY_PREFIX = "queue:active:token:"
         private const val ACTIVE_SCHEDULES_KEY = "queue:active:schedules"
 
-        private val REGISTER_WAIT_SCRIPT = """
+        private val REGISTER_WAIT_LUA = """
             local exists = redis.call('ZSCORE', KEYS[1], ARGV[1])
             if not exists then
               local sequence = redis.call('INCR', KEYS[2])
@@ -163,7 +164,7 @@ class WaitingQueueManager(
             return rank + 1
         """.trimIndent()
 
-        private val ADD_ACTIVE_USER_SCRIPT = """
+        private val ADD_ACTIVE_USER_LUA = """
             redis.call('ZREMRANGEBYSCORE', KEYS[2], '-inf', tonumber(ARGV[3]))
             local activeCount = redis.call('ZCARD', KEYS[2])
             local availableSlots = tonumber(ARGV[1]) - activeCount
@@ -182,8 +183,10 @@ class WaitingQueueManager(
             return users
         """.trimIndent()
 
-        private val REGISTER_WAIT_REDIS_SCRIPT = DefaultRedisScript(REGISTER_WAIT_SCRIPT, Long::class.java)
-        private val ADD_ACTIVE_USER_REDIS_SCRIPT = DefaultRedisScript(ADD_ACTIVE_USER_SCRIPT, List::class.java)
+        private val REGISTER_WAIT_SCRIPT: RedisScript<Long> = DefaultRedisScript(REGISTER_WAIT_LUA, Long::class.java)
+
+        @Suppress("UNCHECKED_CAST")
+        private val ADD_ACTIVE_USER_SCRIPT: RedisScript<List<*>> = DefaultRedisScript(ADD_ACTIVE_USER_LUA, List::class.java as Class<List<*>>)
 
         @JvmStatic
         fun generateActiveTokenKey(scheduleId: Long, userId: Long): String =

@@ -8,6 +8,7 @@ import com.back.global.security.jwt.constant.RefreshTokenValidationResult
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.data.redis.core.StringRedisTemplate
 import org.springframework.data.redis.core.script.DefaultRedisScript
+import org.springframework.data.redis.core.script.RedisScript
 import org.springframework.stereotype.Repository
 import java.time.Duration
 
@@ -28,7 +29,7 @@ class RefreshTokenRepository(
         ttl: Duration,
     ): RefreshTokenValidationResult {
         val result = stringRedisTemplate.execute(
-            ROTATE_REDIS_SCRIPT,
+            ROTATE_SCRIPT,
             listOf(
                 generateKey(RefreshTokenKeyType.TOKEN, userId, oldJti),
                 generateKey(RefreshTokenKeyType.TOKEN, userId, newJti),
@@ -101,6 +102,6 @@ class RefreshTokenRepository(
         }
 
     companion object {
-        private val ROTATE_REDIS_SCRIPT = DefaultRedisScript(RefreshTokenLuaScripts.rotateScript(), Long::class.java)
+        private val ROTATE_SCRIPT: RedisScript<Long> = DefaultRedisScript(RefreshTokenLuaScripts.rotateScript(), Long::class.java)
     }
 }

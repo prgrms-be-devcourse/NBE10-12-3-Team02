@@ -13,6 +13,7 @@ import org.slf4j.LoggerFactory
 import org.springframework.context.ApplicationEventPublisher
 import org.springframework.data.redis.core.StringRedisTemplate
 import org.springframework.data.redis.core.script.DefaultRedisScript
+import org.springframework.data.redis.core.script.RedisScript
 import org.springframework.stereotype.Component
 import org.springframework.transaction.annotation.Transactional
 import java.util.*
@@ -36,7 +37,7 @@ class SeatOccupyManager(
         val occupyToken = UUID.randomUUID().toString()
 
         val result: Long? = stringRedisTemplate.execute(
-            OCCUPY_REDIS_SCRIPT,
+            OCCUPY_SCRIPT,
             listOf(redisKey),
             userId.toString(),
             occupyToken,
@@ -162,7 +163,7 @@ class SeatOccupyManager(
     companion object {
         const val OCCUPY_TTL_SECONDS: Long = 600
 
-        private val OCCUPY_SCRIPT = """
+        private val OCCUPY_LUA = """
             if redis.call('EXISTS', KEYS[1]) == 1 then
               if redis.call('HGET', KEYS[1], 'userId') == ARGV[1] then
                 redis.call('HSET', KEYS[1], 'occupyToken', ARGV[2])
@@ -178,7 +179,7 @@ class SeatOccupyManager(
             end
         """.trimIndent()
 
-        private val OCCUPY_REDIS_SCRIPT = DefaultRedisScript(OCCUPY_SCRIPT, Long::class.java)
+        private val OCCUPY_SCRIPT: RedisScript<Long> = DefaultRedisScript(OCCUPY_LUA, Long::class.java)
 
         const val EXPIRE_QUEUE_KEY = "seat:hold:expire:queue"
 
