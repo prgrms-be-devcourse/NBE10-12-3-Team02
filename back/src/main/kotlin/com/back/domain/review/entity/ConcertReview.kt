@@ -30,6 +30,13 @@ open class ConcertReview protected constructor() : BaseEntity() {
     lateinit var content: String
         protected set
 
+    @OneToMany(
+        mappedBy = "review",
+        cascade = [CascadeType.ALL],
+        orphanRemoval = true,
+    )
+    private val comments: MutableList<ReviewComment> = mutableListOf()
+
     private constructor(
         concert: Concert,
         user: User,

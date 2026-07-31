@@ -3,7 +3,9 @@ package com.back.domain.review.controller
 import com.back.domain.concert.entity.Concert
 import com.back.domain.concert.repository.ConcertRepository
 import com.back.domain.review.entity.ConcertReview
+import com.back.domain.review.entity.ReviewComment
 import com.back.domain.review.repository.ConcertReviewRepository
+import com.back.domain.review.repository.ReviewCommentRepository
 import com.back.domain.schedule.entity.Schedule
 import com.back.domain.schedule.entity.ScheduleSeat
 import com.back.domain.schedule.constant.SeatStatus.HOLD
@@ -17,6 +19,7 @@ import com.back.domain.user.repository.UserRepository
 import com.back.domain.venue.entity.Venue
 import com.back.domain.venue.repository.VenueRepository
 import com.back.global.security.SecurityUser
+import jakarta.persistence.EntityManager
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DisplayName
@@ -57,7 +60,9 @@ class ConcertReviewControllerTest @Autowired constructor(
     private val scheduleRepository: ScheduleRepository,
     private val scheduleSeatRepository: ScheduleSeatRepository,
     private val ticketRepository: TicketRepository,
-    private val concertReviewRepository: ConcertReviewRepository
+    private val concertReviewRepository: ConcertReviewRepository,
+    private val reviewCommentRepository: ReviewCommentRepository,
+    private val entityManager: EntityManager,
 ) {
     private lateinit var userEntity: User
     private lateinit var securityUser: SecurityUser
@@ -280,6 +285,35 @@ class ConcertReviewControllerTest @Autowired constructor(
             .andExpect(jsonPath("$.msg").value("리뷰가 삭제되었습니다."))
 
         assertThat(concertReviewRepository.existsById(review.reviewId!!)).isFalse
+    }
+
+    @Test
+    @DisplayName("댓글이 있는 리뷰 삭제 성공 - 연관 댓글도 함께 삭제")
+    fun deleteReviewWithComments() {
+        val review = concertReviewRepository.saveAndFlush(
+            ConcertReview.create(concert, userEntity, "댓글이 있는 리뷰", "리뷰 내용")
+        )
+        val comment = reviewCommentRepository.saveAndFlush(
+            ReviewComment.create(review, userEntity, "삭제되어야 하는 댓글")
+        )
+        val reviewId = review.reviewId!!
+        val commentId = comment.commentId!!
+
+        entityManager.clear()
+
+        mockMvc.perform(
+            delete("/api/v1/concerts/{concertId}/reviews/{reviewId}", concert.concertId, reviewId)
+                .with(user(securityUser))
+        )
+            .andDo(print())
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.resultCode").value("200-1"))
+
+        entityManager.flush()
+        entityManager.clear()
+
+        assertThat(concertReviewRepository.existsById(reviewId)).isFalse
+        assertThat(reviewCommentRepository.existsById(commentId)).isFalse
     }
 
     @Test
