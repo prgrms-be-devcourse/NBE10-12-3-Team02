@@ -4,6 +4,7 @@ import com.back.domain.post.entity.PostBookmark
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.Pageable
 import org.springframework.data.jpa.repository.JpaRepository
+import org.springframework.data.jpa.repository.Modifying
 import org.springframework.data.jpa.repository.Query
 import org.springframework.data.repository.query.Param
 
@@ -12,7 +13,9 @@ interface PostBookmarkRepository : JpaRepository<PostBookmark, Long> {
 
     fun deleteByPostPostIdAndUserUserId(postId: Long, userId: Long): Long
 
-    fun deleteAllByPostPostId(postId: Long): Long
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query("DELETE FROM PostBookmark b WHERE b.post.postId = :postId")
+    fun deleteAllByPostPostId(@Param("postId") postId: Long): Int
 
     @Query(
         """

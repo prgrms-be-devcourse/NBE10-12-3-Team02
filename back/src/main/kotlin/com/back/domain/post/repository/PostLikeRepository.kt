@@ -2,6 +2,7 @@ package com.back.domain.post.repository
 
 import com.back.domain.post.entity.PostLike
 import org.springframework.data.jpa.repository.JpaRepository
+import org.springframework.data.jpa.repository.Modifying
 import org.springframework.data.jpa.repository.Query
 import org.springframework.data.repository.query.Param
 
@@ -12,7 +13,9 @@ interface PostLikeRepository : JpaRepository<PostLike, Long> {
 
     fun deleteByPostPostIdAndUserUserId(postId: Long, userId: Long): Long
 
-    fun deleteAllByPostPostId(postId: Long): Long
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query("DELETE FROM PostLike l WHERE l.post.postId = :postId")
+    fun deleteAllByPostPostId(@Param("postId") postId: Long): Int
 
     @Query(
         """
