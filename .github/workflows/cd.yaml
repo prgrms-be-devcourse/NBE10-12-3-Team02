@@ -152,7 +152,11 @@ jobs:
               "printf \"upstream app_backend {\\n    server 127.0.0.1:%s;\\n}\\n\" \"$GREEN_PORT\" > \"$UPSTREAM_CONF\"",
               "nginx -t",
               "nginx -s reload",
-              "if [ \"$BLUE_COLOR\" != \"none\" ]; then sleep 5; docker rm -f \"app-$BLUE_COLOR\" || true; fi",
+              "if [ \"$BLUE_COLOR\" != \"none\" ]; then",
+              "  echo \"Stopping old container app-$BLUE_COLOR gracefully...\"",
+              "  docker stop -t 30 \"app-$BLUE_COLOR\" || true",
+              "  docker rm \"app-$BLUE_COLOR\" || true",
+              "fi",
               "docker image prune -f",
               "echo \"Deploy complete: active=app-$GREEN_COLOR port=$GREEN_PORT\""
             ]')

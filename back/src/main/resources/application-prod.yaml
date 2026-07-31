@@ -1,5 +1,6 @@
 server:
   forward-headers-strategy: framework
+  shutdown: graceful
 
 management:
   endpoints:
@@ -15,6 +16,8 @@ management:
 spring:
   application:
     name: back
+  lifecycle:
+    timeout-per-shutdown-phase: 30s
   datasource:
     url: ${DB_URL}
     username: ${DB_USERNAME}
