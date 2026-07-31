@@ -26,7 +26,7 @@ class PostInteractionServiceTest {
 
         val result = service.like(1L, 2L)
 
-        assertThat(result.liked).isTrue
+        assertThat(result.isLiked).isTrue
         assertThat(result.likeCount).isEqualTo(1L)
     }
 

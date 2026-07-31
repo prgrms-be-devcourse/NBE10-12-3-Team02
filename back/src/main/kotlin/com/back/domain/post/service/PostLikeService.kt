@@ -25,14 +25,14 @@ class PostLikeService(
     fun unlike(postId: Long, userId: Long): PostLikeStatusResponse {
         postLikeCommandService.delete(postId, userId)
         return PostLikeStatusResponse(
-            liked = false,
+            isLiked = false,
             likeCount = postLikeRepository.countByPostPostId(postId),
         )
     }
 
     private fun getStatus(postId: Long, userId: Long): PostLikeStatusResponse =
         PostLikeStatusResponse(
-            liked = postLikeRepository.existsByPostPostIdAndUserUserId(postId, userId),
+            isLiked = postLikeRepository.existsByPostPostIdAndUserUserId(postId, userId),
             likeCount = postLikeRepository.countByPostPostId(postId),
         )
 }

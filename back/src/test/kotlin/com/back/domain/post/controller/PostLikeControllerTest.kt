@@ -107,7 +107,7 @@ class PostLikeControllerTest @Autowired constructor(
             .andDo(print())
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.resultCode").value("200-1"))
-            .andExpect(jsonPath("$.data.liked").value(true))
+            .andExpect(jsonPath("$.data.isLiked").value(true))
             .andExpect(jsonPath("$.data.likeCount").value(1))
 
         assertThat(
@@ -127,7 +127,7 @@ class PostLikeControllerTest @Autowired constructor(
                     .with(user(securityUser))
             )
                 .andExpect(status().isOk)
-                .andExpect(jsonPath("$.data.liked").value(true))
+                .andExpect(jsonPath("$.data.isLiked").value(true))
                 .andExpect(jsonPath("$.data.likeCount").value(1))
         }
 
@@ -145,7 +145,7 @@ class PostLikeControllerTest @Autowired constructor(
         )
             .andDo(print())
             .andExpect(status().isOk)
-            .andExpect(jsonPath("$.data.liked").value(false))
+            .andExpect(jsonPath("$.data.isLiked").value(false))
             .andExpect(jsonPath("$.data.likeCount").value(0))
 
         assertThat(postLikeRepository.countByPostPostId(post.postId!!)).isZero()
@@ -159,7 +159,7 @@ class PostLikeControllerTest @Autowired constructor(
                 .with(user(securityUser))
         )
             .andExpect(status().isOk)
-            .andExpect(jsonPath("$.data.liked").value(false))
+            .andExpect(jsonPath("$.data.isLiked").value(false))
             .andExpect(jsonPath("$.data.likeCount").value(0))
     }
 
