@@ -27,9 +27,9 @@ class RedissonVsLettuceBenchmarkTest {
     private lateinit var stringRedisTemplate: StringRedisTemplate
 
     @Test
-    @DisplayName("Redisson Pub/Sub 분산 락 vs StringRedisTemplate 스핀락 100건 동시 경합 벤치마크")
+    @DisplayName("Redisson Pub/Sub 분산 락 vs StringRedisTemplate 스핀락 10건 동시 경합 벤치마크")
     fun compareRedissonAndSpinLock() {
-        val taskCount = 100     // 평상시 빠른 테스트를 위해 100번으로 하향 조정
+        val taskCount = 10     // 평상시 빠른 테스트를 위해 10번으로 하향 조정
         val spinLockKey = "benchmark:seat:spin_lock"
         val redissonLockKey = "benchmark:seat:redisson_lock"
 

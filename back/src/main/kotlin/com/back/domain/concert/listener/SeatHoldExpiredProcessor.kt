@@ -19,11 +19,9 @@ class SeatHoldExpiredProcessor(
 ) {
     private val log = LoggerFactory.getLogger(javaClass)
 
-    /**
-     * 1초 스케줄러에서 호출된다.
-     * SKIP LOCKED를 사용하여 다른 트랜잭션(결제/선점)이 해당 좌석을 처리 중이면 즉시 Skip한다.
-     * Skip된 좌석은 다음 스케줄러 주기(1초 후)에 다시 시도한다.
-     */
+     // 1초 스케줄러에서 호출
+     // SKIP LOCKED를 사용하여 다른 트랜잭션(결제/선점)이 해당 좌석을 처리 중이면 즉시 Skip
+     // Skip된 좌석은 다음 스케줄러 주기(1초 후)에 다시 시도
     @Transactional
     fun processExpiredSeat(concertId: Long, scheduleId: Long, seatNumber: String) {
         log.debug("좌석 선점 만료 처리 시도: concertId={}, scheduleId={}, seat={}", concertId, scheduleId, seatNumber)

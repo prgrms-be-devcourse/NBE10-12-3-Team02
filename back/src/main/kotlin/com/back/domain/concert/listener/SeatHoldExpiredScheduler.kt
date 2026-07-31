@@ -1,20 +1,17 @@
 package com.back.domain.concert.listener
 
 import com.back.domain.concert.service.SeatOccupyManager
-import org.redisson.client.codec.StringCodec
 import org.redisson.api.RedissonClient
+import org.redisson.client.codec.StringCodec
 import org.slf4j.LoggerFactory
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Component
 
-/**
- * 1초 주기로 Redis ZSET(seat:hold:expire:queue)을 폴링하여 만료된 좌석 선점을 자동 해제한다.
- *
- * - Score <= 현재 시각인 항목을 만료된 좌석으로 판단한다.
- * - DB 처리는 SKIP LOCKED를 사용하여 결제/선점 트랜잭션과의 충돌을 방지한다.
- * - SKIP된 좌석은 다음 주기(1초 후)에 재시도된다.
- * - 서버 재부팅 후에도 Redis ZSET이 영속화되어 있어 100% 누락 없이 복구된다.
- */
+// 1초 주기로 Redis ZSET(seat:hold:expire:queue)을 폴링하여 만료된 좌석 선점을 자동 해제함
+// Score <= 현재 시각인 항목을 만료된 좌석으로 판단함
+// DB 처리는 SKIP LOCKED를 사용하여 결제/선점 트랜잭션과의 충돌을 방지함
+// SKIP된 좌석은 다음 주기(1초 후)에 재시도
+// 서버 재부팅 후에도 Redis ZSET이 영속화되어 있어 100% 누락 없이 복구
 @Component
 class SeatHoldExpiredScheduler(
     private val redissonClient: RedissonClient,
