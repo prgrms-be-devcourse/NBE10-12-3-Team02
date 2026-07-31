@@ -1,7 +1,14 @@
+"use client";
+
 import Image from "next/image";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 
 export default function Footer() {
+  const pathname = usePathname();
+
+  if (pathname === "/login" || pathname === "/signup") return null;
+
   return (
     <footer className="print:hidden bg-white border-t border-gray-100 mt-auto">
       <div className="max-w-5xl mx-auto px-6 py-10">

@@ -38,6 +38,8 @@ export default function PageTabs() {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
+  if (pathname === "/login" || pathname === "/signup") return null;
+
   return (
     <>
       <div

@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { User } from "lucide-react";
 import {
   apiFetch,
@@ -13,6 +14,7 @@ import {
 import { showConfirm } from "@/lib/alert";
 
 export default function Navbar() {
+  const pathname = usePathname();
   const [userName, setUserName] = useState<string | null>(null);
   const [authChecked, setAuthChecked] = useState(false);
 
@@ -26,6 +28,8 @@ export default function Navbar() {
     window.addEventListener("auth-changed", syncAuth);
     return () => window.removeEventListener("auth-changed", syncAuth);
   }, []);
+
+  if (pathname === "/login" || pathname === "/signup") return null;
 
   const handleLogoClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
     if (typeof window !== "undefined" && window.location.pathname === "/") {
