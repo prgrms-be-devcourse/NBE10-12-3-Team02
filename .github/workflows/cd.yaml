@@ -73,7 +73,7 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-  # ── 3. EC2 SSM 자동 배포 (send-command → wait → 결과 확인) ──
+  # ── 3. EC2 SSM Blue/Green 무중단 배포 (send-command → wait → 결과 확인) ──
   deploy:
     needs: build-backend
     if: always() && needs.build-backend.result == 'success'
@@ -89,10 +89,18 @@ jobs:
         id: ecr
         uses: aws-actions/amazon-ecr-login@v2
 
-      # EC2가 SSM Parameter Store(/nbe10-12-3-team02/prod/env, SecureString)에서
-      # 직접 .env를 받아온 뒤 이어서 배포까지 한 번의 SSM 커맨드로 수행함 -
-      # 비밀값이 GitHub Actions 워크플로/SSM 커맨드 파라미터를 거치지 않고
-      # EC2 인스턴스 role 권한으로만 조회됨
+      # Blue/Green 무중단 배포:
+      # 1) SSM Parameter Store(/nbe10-12-3-team02/prod/env)에서 .env 조회 (비밀값이
+      #    GitHub Actions/SSM 커맨드 파라미터를 거치지 않고 EC2 인스턴스 role로만 조회됨)
+      # 2) ECR 로그인 + 새 이미지 pull
+      # 3) /etc/nginx/conf.d/upstream.conf를 읽어 현재 활성 포트(8080/8081)를 판별해
+      #    반대쪽 색(app-blue/app-green, 포트 8080/8081 고정)으로 새 컨테이너 기동
+      # 4) 헬스체크(최대 120초, 3초 간격) 통과 시에만 upstream.conf를 새 포트로 전환 + reload
+      #    실패하면 새로 띄운 컨테이너만 제거하고 exit 1 (기존 활성 컨테이너는 그대로 유지되어 무중단)
+      # 5) 전환 성공 후 이전 색 컨테이너 정리
+      #
+      # ⚠️ 컨테이너 안에 curl이 없어(temurin JRE 베이스, 실측 확인) 헬스체크는
+      #    docker exec가 아니라 호스트에서 게시된 포트로 직접 curl함
       - name: Send deploy command via SSM
         id: ssm
         env:
@@ -113,15 +121,50 @@ jobs:
               ("export ECR_REGISTRY=" + $registry),
               ("export IMAGE_TAG=" + $tag),
               ("aws ecr get-login-password --region " + $region + " | docker login --username AWS --password-stdin " + $registry),
-              "docker compose --env-file .env pull",
-              "docker compose --env-file .env up -d",
-              "docker image prune -f"
+              "IMAGE=\"$ECR_REGISTRY/nbe10-12-3-team02:$IMAGE_TAG\"",
+              "docker pull \"$IMAGE\"",
+              "UPSTREAM_CONF=/etc/nginx/conf.d/upstream.conf",
+              "if [ -f \"$UPSTREAM_CONF\" ] && grep -q \"127.0.0.1:8080\" \"$UPSTREAM_CONF\"; then",
+              "  BLUE_COLOR=blue; BLUE_PORT=8080; GREEN_COLOR=green; GREEN_PORT=8081",
+              "elif [ -f \"$UPSTREAM_CONF\" ] && grep -q \"127.0.0.1:8081\" \"$UPSTREAM_CONF\"; then",
+              "  BLUE_COLOR=green; BLUE_PORT=8081; GREEN_COLOR=blue; GREEN_PORT=8080",
+              "else",
+              "  BLUE_COLOR=none; BLUE_PORT=none; GREEN_COLOR=blue; GREEN_PORT=8080",
+              "fi",
+              "echo \"Current active: $BLUE_COLOR ($BLUE_PORT) -> deploying: $GREEN_COLOR ($GREEN_PORT)\"",
+              "if [ \"$BLUE_COLOR\" = \"none\" ] && docker ps -a --format \"{{.Names}}\" | grep -qx \"app\"; then",
+              "  echo \"Legacy app container found with no active upstream target - removing it\"",
+              "  docker rm -f app || true",
+              "fi",
+              "docker rm -f \"app-$GREEN_COLOR\" >/dev/null 2>&1 || true",
+              "docker run -d --name \"app-$GREEN_COLOR\" --network app_redis-net -p \"$GREEN_PORT:8080\" --env-file .env --restart unless-stopped \"$IMAGE\"",
+              "HEALTHY=false",
+              "for i in $(seq 1 40); do",
+              "  if curl -sf -o /dev/null \"http://127.0.0.1:$GREEN_PORT/actuator/health\"; then HEALTHY=true; break; fi",
+              "  sleep 3",
+              "done",
+              "if [ \"$HEALTHY\" != \"true\" ]; then",
+              "  echo \"Health check failed for app-$GREEN_COLOR\"",
+              "  docker logs \"app-$GREEN_COLOR\" --tail 50 || true",
+              "  docker rm -f \"app-$GREEN_COLOR\" || true",
+              "  exit 1",
+              "fi",
+              "printf \"upstream app_backend {\\n    server 127.0.0.1:%s;\\n}\\n\" \"$GREEN_PORT\" > \"$UPSTREAM_CONF\"",
+              "nginx -t",
+              "nginx -s reload",
+              "if [ \"$BLUE_COLOR\" != \"none\" ]; then",
+              "  echo \"Stopping old container app-$BLUE_COLOR gracefully...\"",
+              "  docker stop -t 30 \"app-$BLUE_COLOR\" || true",
+              "  docker rm \"app-$BLUE_COLOR\" || true",
+              "fi",
+              "docker image prune -f",
+              "echo \"Deploy complete: active=app-$GREEN_COLOR port=$GREEN_PORT\""
             ]')
 
           COMMAND_ID=$(aws ssm send-command \
             --instance-ids "${{ secrets.EC2_INSTANCE_ID }}" \
             --document-name "AWS-RunShellScript" \
-            --comment "Deploy backend ${{ github.sha }}" \
+            --comment "Blue/Green deploy backend ${{ github.sha }}" \
             --parameters "{\"commands\":$COMMANDS}" \
             --query "Command.CommandId" \
             --output text)

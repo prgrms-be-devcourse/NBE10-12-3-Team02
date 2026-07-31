@@ -9,4 +9,3 @@ app_allowed_cidr = "0.0.0.0/0"
 github_repository = "prgrms-be-devcourse/NBE10-12-3-Team02"
 
 ecr_repository_name = "nbe10-12-3-team02"
-image_tag            = "latest"

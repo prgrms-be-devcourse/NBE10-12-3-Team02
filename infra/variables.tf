@@ -58,12 +58,6 @@ variable "mysql_data_volume_size" {
   default     = 20
 }
 
-variable "image_tag" {
-  description = "부트스트랩 시점에 최초로 pull할 이미지 태그. 이후 실제 배포 태그는 CD 파이프라인이 갱신"
-  type        = string
-  default     = "latest"
-}
-
 variable "letsencrypt_email" {
   description = "certbot 인증서 등록/만료 알림용 이메일"
   type        = string
