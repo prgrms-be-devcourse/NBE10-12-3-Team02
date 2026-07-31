@@ -10,8 +10,8 @@ import com.back.domain.auth.repository.SocialLinkCookieRepository
 import com.back.domain.user.dto.UpdateMyPageRequest
 import com.back.domain.user.service.UserService
 import com.back.domain.auth.service.SocialLinkService
-import com.back.domain.review.dto.ReviewBookmarkResponse
-import com.back.domain.review.service.ReviewBookmarkService
+import com.back.domain.post.dto.PostBookmarkResponse
+import com.back.domain.post.service.PostBookmarkService
 import com.back.global.annotation.ApiV1
 import com.back.global.requestcontext.RequestContext
 import com.back.global.rsData.RsData
@@ -39,7 +39,7 @@ class UserController(
     private val requestContext: RequestContext,
     private val socialLinkService: SocialLinkService,
     private val socialLinkCookieRepository: SocialLinkCookieRepository,
-    private val reviewBookmarkService: ReviewBookmarkService,
+    private val postBookmarkService: PostBookmarkService,
 ) {
 
     @PostMapping("/signup")
@@ -64,16 +64,16 @@ class UserController(
         return RsData("200-1", "마이페이지 조회 성공", userService.getMyPage(actor.id))
     }
 
-    @GetMapping("/me/review-bookmarks")
-    @Operation(summary = "내 리뷰 북마크 목록 조회", description = "북마크한 리뷰를 최신 북마크순으로 조회합니다.")
-    fun getMyReviewBookmarks(
+    @GetMapping("/me/post-bookmarks")
+    @Operation(summary = "내 게시글 북마크 목록 조회", description = "북마크한 게시글을 최신 북마크순으로 조회합니다.")
+    fun getMyPostBookmarks(
         @PageableDefault(size = 20) pageable: Pageable,
-    ): RsData<Page<ReviewBookmarkResponse>> {
+    ): RsData<Page<PostBookmarkResponse>> {
         val actor = requestContext.actor ?: throw IllegalStateException("Actor must not be null")
         return RsData(
             "200-1",
-            "리뷰 북마크 목록 조회 성공",
-            reviewBookmarkService.getMyBookmarks(actor.id, pageable),
+            "게시글 북마크 목록 조회 성공",
+            postBookmarkService.getMyBookmarks(actor.id, pageable),
         )
     }
 

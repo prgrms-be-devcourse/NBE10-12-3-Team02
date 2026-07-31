@@ -1,0 +1,48 @@
+package com.back.domain.post.dto
+
+import com.back.domain.post.entity.ConcertPost
+import com.fasterxml.jackson.annotation.JsonProperty
+import java.time.LocalDateTime
+
+data class ConcertPostResponse(
+    val postId: Long,
+    val concertId: Long,
+    val userId: Long,
+    val userName: String,
+    val title: String,
+    val content: String,
+    @get:JsonProperty("isMine") val isMine: Boolean,
+    val likeCount: Long,
+    @get:JsonProperty("isLiked") val isLiked: Boolean,
+    @get:JsonProperty("isBookmarked") val isBookmarked: Boolean,
+    val createdAt: LocalDateTime?,
+    val updatedAt: LocalDateTime?,
+    val concertName: String,
+    val posterUrl: String?
+) {
+    companion object {
+        fun of(
+            post: ConcertPost,
+            currentUserId: Long?,
+            likeCount: Long = 0L,
+            isLiked: Boolean = false,
+            isBookmarked: Boolean = false,
+        ): ConcertPostResponse =
+            ConcertPostResponse(
+                postId = post.postId!!,
+                concertId = post.concert.concertId!!,
+                userId = post.user.userId!!,
+                userName = post.user.name,
+                title = post.title,
+                content = post.content,
+                isMine = currentUserId != null && post.user.userId == currentUserId,
+                likeCount = likeCount,
+                isLiked = isLiked,
+                isBookmarked = isBookmarked,
+                createdAt = post.createDate,
+                updatedAt = post.modifyDate,
+                concertName = post.concert.concertName,
+                posterUrl = post.concert.urlPoster
+            )
+    }
+}
