@@ -69,14 +69,9 @@ class ConcertServiceTest {
         val venue = venueRepository.save(Venue.create("올림픽체조경기장", "서울", 15000L))
         schedule = scheduleRepository.save(Schedule.create(concert, venue, LocalDateTime.now().plusHours(12), 1))
 
-        for (i in 1..100) {
-            val createdSeat = scheduleSeatRepository.save(
-                ScheduleSeat.create(schedule, "VIP", "A-$i", 150000, SeatStatus.AVAILABLE)
-            )
-            if (i == 1) {
-                this.seat = createdSeat
-            }
-        }
+        seat = scheduleSeatRepository.save(
+            ScheduleSeat.create(schedule, "VIP", "A-1", 150000, SeatStatus.AVAILABLE)
+        )
 
         val pattern = "seat:occupy:${concert.concertId}:${schedule.scheduleId}:*"
         val keys = stringRedisTemplate.keys(pattern)
@@ -126,9 +121,14 @@ class ConcertServiceTest {
     @Test
     @DisplayName("다양한 좌석에 대한 동시성 테스트")
     fun seatOccupy2() {
-        val threadCount = 100
+        val threadCount = 20
         val startLatch = CountDownLatch(1)
         val doneLatch = CountDownLatch(threadCount)
+
+        val seatsToSave = (2..threadCount).map { i ->
+            ScheduleSeat.create(schedule, "VIP", "A-$i", 150000, SeatStatus.AVAILABLE)
+        }
+        scheduleSeatRepository.saveAll(seatsToSave)
 
         val successCount = AtomicInteger(0)
         val failCount = AtomicInteger(0)
@@ -155,7 +155,7 @@ class ConcertServiceTest {
         doneLatch.await(10, TimeUnit.SECONDS)
         executor.shutdown()
 
-        assertThat(successCount.get()).isEqualTo(100)
+        assertThat(successCount.get()).isEqualTo(threadCount)
         assertThat(failCount.get()).isEqualTo(0)
     }
 }

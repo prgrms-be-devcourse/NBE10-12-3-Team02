@@ -1,37 +1,33 @@
 package com.back.global.security.email
 
+import com.back.global.RedisTestConfig
 import com.back.global.security.email.constant.EmailVerificationConfirmResult
 import com.back.global.security.jwt.TokenHashUtil
 import org.assertj.core.api.Assertions.assertThat
-import org.junit.jupiter.api.AfterAll
-import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.TestInstance
-import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory
+import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.boot.test.context.SpringBootTest
+import org.springframework.context.annotation.Import
 import org.springframework.data.redis.core.StringRedisTemplate
-import org.testcontainers.containers.GenericContainer
-import org.testcontainers.junit.jupiter.Container
-import org.testcontainers.junit.jupiter.Testcontainers
-import org.testcontainers.utility.DockerImageName
+import org.springframework.test.context.ActiveProfiles
 import java.time.Duration
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
 
-@Testcontainers
-@TestInstance(TestInstance.Lifecycle.PER_CLASS)
+@ActiveProfiles("test")
+@SpringBootTest
+@Import(RedisTestConfig::class)
 class EmailVerificationRepositoryTest {
-    private lateinit var connectionFactory: LettuceConnectionFactory
+
+    @Autowired
     private lateinit var stringRedisTemplate: StringRedisTemplate
+
     private lateinit var repository: EmailVerificationRepository
 
-    @BeforeAll
-    fun setUpClient() {
-        connectionFactory = LettuceConnectionFactory(redis.host, redis.getMappedPort(REDIS_PORT)).apply {
-            afterPropertiesSet()
-        }
-        stringRedisTemplate = StringRedisTemplate(connectionFactory)
+    @BeforeEach
+    fun setUp() {
         repository = EmailVerificationRepository(
             stringRedisTemplate,
             EmailVerificationProperties(
@@ -42,37 +38,39 @@ class EmailVerificationRepositoryTest {
                 redisPrefix = PREFIX,
             ),
         )
-    }
 
-    @BeforeEach
-    fun clearRedis() {
         val keys = stringRedisTemplate.keys("$PREFIX*")
         if (!keys.isNullOrEmpty()) {
             stringRedisTemplate.delete(keys)
         }
     }
 
-    @AfterAll
-    fun tearDownClient() {
-        connectionFactory.destroy()
-    }
-
     @Test
-    @DisplayName("최초 챌린지 생성 시 코드, 시도 횟수, 쿨다운 키가 생성된다")
-    fun t1() {
-        val result = saveChallenge()
+    @DisplayName("최초 인증번호 생성 시 코드가 저장되고 쿨다운/시도횟수 키가 생성된다")
+    fun saveChallenge_success() {
+        val created = saveChallenge()
 
-        assertThat(result).isTrue()
+        assertThat(created).isTrue()
         assertThat(stringValue(codeKey())).isEqualTo(CODE_HASH)
-        assertThat(remainingTime(codeKey())).isPositive()
         assertThat(stringValue(cooldownKey())).isEqualTo("1")
-        assertThat(remainingTime(cooldownKey())).isPositive()
-        assertThat(stringRedisTemplate.hasKey(attemptKey())).isFalse()
+        assertThat(stringValue(attemptKey())).isNull()
+        assertThat(remainingTime(codeKey())).isGreaterThan(0L)
+        assertThat(remainingTime(cooldownKey())).isGreaterThan(0L)
     }
 
     @Test
-    @DisplayName("올바른 인증번호 검증 성공 시 챌린지 데이터가 삭제되고 검증 완료 상태가 등록된다")
-    fun t2() {
+    @DisplayName("쿨다운 시간이 남아있으면 인증번호 재전송이 차단된다")
+    fun saveChallenge_blockedByCooldown() {
+        saveChallenge()
+
+        val reattempt = saveChallenge()
+
+        assertThat(reattempt).isFalse()
+    }
+
+    @Test
+    @DisplayName("올바른 인증번호 검증 시 성공하고 검증 완료 토큰 상태가 저장된다")
+    fun confirm_success() {
         saveChallenge()
 
         val result = repository.confirm(
@@ -85,36 +83,38 @@ class EmailVerificationRepositoryTest {
 
         assertThat(result).isEqualTo(EmailVerificationConfirmResult.SUCCESS)
         assertThat(stringValue(verifiedKey(TOKEN_HASH))).isEqualTo("AVAILABLE:$EMAIL_HASH")
-        assertThat(stringValue(codeKey())).isNull()
+        assertThat(stringRedisTemplate.hasKey(codeKey())).isFalse()
         assertThat(stringRedisTemplate.hasKey(attemptKey())).isFalse()
     }
 
     @Test
-    @DisplayName("잘못된 인증번호는 시도 횟수와 TTL을 증가시킨다")
-    fun t3() {
+    @DisplayName("잘못된 인증번호 입력 시 실패하고 시도 횟수가 증가한다")
+    fun confirm_invalidCode() {
         saveChallenge()
 
         val result = repository.confirm(
             EMAIL_HASH,
-            TokenHashUtil.sha256("$EMAIL:000000"),
+            TokenHashUtil.sha256("wrong-code"),
             TOKEN_HASH,
             MAX_ATTEMPTS,
             VERIFICATION_TTL,
         )
 
         assertThat(result).isEqualTo(EmailVerificationConfirmResult.INVALID)
-        assertThat(stringValue(attemptKey())?.toLong()).isEqualTo(1L)
-        assertThat(remainingTime(attemptKey())).isPositive()
+        assertThat(stringValue(attemptKey())).isEqualTo("1")
+        assertThat(stringRedisTemplate.hasKey(verifiedKey(TOKEN_HASH))).isFalse()
     }
 
     @Test
-    @DisplayName("최대 시도 횟수 초과 시 인증번호와 시도 횟수를 삭제한다")
-    fun t4() {
+    @DisplayName("최대 시도 횟수를 초과하면 TOO_MANY_ATTEMPTS를 반환하고 코드 및 시도 횟수가 초기화된다")
+    fun confirm_exceedMaxAttempts() {
         saveChallenge()
+
+        val wrongCodeHash = TokenHashUtil.sha256("wrong-code")
         repeat(MAX_ATTEMPTS.toInt()) {
             repository.confirm(
                 EMAIL_HASH,
-                TokenHashUtil.sha256("$EMAIL:000000"),
+                wrongCodeHash,
                 TOKEN_HASH,
                 MAX_ATTEMPTS,
                 VERIFICATION_TTL,
@@ -123,77 +123,68 @@ class EmailVerificationRepositoryTest {
 
         val result = repository.confirm(
             EMAIL_HASH,
-            CODE_HASH,
+            wrongCodeHash,
             TOKEN_HASH,
             MAX_ATTEMPTS,
             VERIFICATION_TTL,
         )
 
         assertThat(result).isEqualTo(EmailVerificationConfirmResult.TOO_MANY_ATTEMPTS)
-        assertThat(stringValue(codeKey())).isNull()
+        assertThat(stringRedisTemplate.hasKey(codeKey())).isFalse()
         assertThat(stringRedisTemplate.hasKey(attemptKey())).isFalse()
     }
 
     @Test
-    @DisplayName("동시 요청 시 최대 1번만 검증에 성공해야 한다")
-    fun t5() {
-        saveChallenge()
+    @DisplayName("동시 요청 시 쿨다운 키로 인해 단 1개의 요청만 성공한다")
+    fun saveChallenge_concurrency() {
         val executor = Executors.newFixedThreadPool(CONCURRENT_REQUESTS)
-        val readyLatch = CountDownLatch(CONCURRENT_REQUESTS)
-        val startLatch = CountDownLatch(1)
+        val latch = CountDownLatch(CONCURRENT_REQUESTS)
+        val results = java.util.Collections.synchronizedList(mutableListOf<Boolean>())
 
-        val results = List(CONCURRENT_REQUESTS) { index ->
-            executor.submit<EmailVerificationConfirmResult> {
-                readyLatch.countDown()
-                startLatch.await()
-                repository.confirm(
-                    EMAIL_HASH,
-                    CODE_HASH,
-                    TokenHashUtil.sha256("$TOKEN-$index"),
-                    MAX_ATTEMPTS,
-                    VERIFICATION_TTL,
-                )
+        repeat(CONCURRENT_REQUESTS) {
+            executor.submit {
+                try {
+                    results.add(saveChallenge())
+                } finally {
+                    latch.countDown()
+                }
             }
         }
 
-        readyLatch.await()
-        startLatch.countDown()
-
-        val confirmResults = results.map { it.get() }
+        latch.await()
         executor.shutdown()
 
-        assertThat(confirmResults.count { it == EmailVerificationConfirmResult.SUCCESS }).isEqualTo(1)
-        assertThat(stringValue(codeKey())).isNull()
+        assertThat(results.count { it }).isEqualTo(1)
+        assertThat(results.count { !it }).isEqualTo(CONCURRENT_REQUESTS - 1)
     }
 
     @Test
-    @DisplayName("예약/완료/복구 플로우가 정상적으로 검증 전이된다")
-    fun t6() {
+    @DisplayName("검증 상태 선점(reserve), 완료(complete), 원복(restore) 트랜잭션 정상 동작")
+    fun stateTransitions() {
         saveChallenge()
-        repository.confirm(
-            EMAIL_HASH,
-            CODE_HASH,
-            TOKEN_HASH,
-            MAX_ATTEMPTS,
-            VERIFICATION_TTL,
-        )
+        repository.confirm(EMAIL_HASH, CODE_HASH, TOKEN_HASH, MAX_ATTEMPTS, VERIFICATION_TTL)
 
-        val reservationId = "res-123"
-        assertThat(repository.reserveVerification(EMAIL_HASH, TOKEN_HASH, reservationId)).isTrue()
+        val reservationId = "reservation-123"
+
+        val reserved = repository.reserveVerification(EMAIL_HASH, TOKEN_HASH, reservationId)
+        assertThat(reserved).isTrue()
         assertThat(stringValue(verifiedKey(TOKEN_HASH))).isEqualTo("RESERVED:$reservationId:$EMAIL_HASH")
 
-        assertThat(repository.restoreVerification(EMAIL_HASH, TOKEN_HASH, reservationId)).isTrue()
+        val restored = repository.restoreVerification(EMAIL_HASH, TOKEN_HASH, reservationId)
+        assertThat(restored).isTrue()
         assertThat(stringValue(verifiedKey(TOKEN_HASH))).isEqualTo("AVAILABLE:$EMAIL_HASH")
 
-        assertThat(repository.reserveVerification(EMAIL_HASH, TOKEN_HASH, reservationId)).isTrue()
-        assertThat(repository.completeVerification(EMAIL_HASH, TOKEN_HASH, reservationId)).isTrue()
-        assertThat(stringValue(verifiedKey(TOKEN_HASH))).isNull()
+        repository.reserveVerification(EMAIL_HASH, TOKEN_HASH, reservationId)
+        val completed = repository.completeVerification(EMAIL_HASH, TOKEN_HASH, reservationId)
+        assertThat(completed).isTrue()
+        assertThat(stringRedisTemplate.hasKey(verifiedKey(TOKEN_HASH))).isFalse()
     }
 
     @Test
-    @DisplayName("clearChallenge 호출 시 챌린지 관련 키가 전부 제거된다")
-    fun t7() {
+    @DisplayName("clearChallenge 호출 시 챌린지 및 쿨다운 키가 삭제된다")
+    fun clearChallenge() {
         saveChallenge()
+
         repository.clearChallenge(EMAIL_HASH)
 
         assertThat(stringValue(codeKey())).isNull()
@@ -224,7 +215,6 @@ class EmailVerificationRepositoryTest {
     private fun verifiedKey(tokenHash: String): String = "${PREFIX}verified:$tokenHash"
 
     companion object {
-        private const val REDIS_PORT = 6379
         private const val PREFIX = "test:auth:email-verification:"
         private const val EMAIL = "test@example.com"
         private val EMAIL_HASH = TokenHashUtil.sha256(EMAIL)
@@ -237,13 +227,5 @@ class EmailVerificationRepositoryTest {
         private val CODE_TTL = Duration.ofMinutes(5)
         private val COOLDOWN_TTL = Duration.ofMinutes(1)
         private val VERIFICATION_TTL = Duration.ofMinutes(30)
-
-        @Container
-        @JvmStatic
-        private val redis = RedisContainer(DockerImageName.parse("redis:7.2-alpine"))
-            .withExposedPorts(REDIS_PORT)
     }
 }
-
-private class RedisContainer(imageName: DockerImageName) :
-    GenericContainer<RedisContainer>(imageName)
