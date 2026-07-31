@@ -48,7 +48,7 @@ class ReviewCommentController(
         @PathVariable commentId: Long
     ): RsData<Void> {
         val actor = requestContext.actor ?: throw IllegalStateException("Actor must not be null")
-        reviewCommentService.delete(commentId, actor.id)
+        reviewCommentService.delete(reviewId, commentId, actor.id)
         return RsData("200-1", "댓글이 삭제되었습니다.")
     }
 }

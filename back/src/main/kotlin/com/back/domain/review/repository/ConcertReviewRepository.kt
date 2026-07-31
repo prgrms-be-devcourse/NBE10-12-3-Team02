@@ -43,5 +43,7 @@ interface ConcertReviewRepository : JpaRepository<ConcertReview, Long> {
         @Param("now") now: LocalDateTime
     ): List<Concert>
 
+    fun findByReviewIdAndConcertConcertId(reviewId: Long, concertId: Long): ConcertReview?
+
     fun existsByConcert_ConcertIdAndUser_UserId(concertId: Long, userId: Long): Boolean
 }

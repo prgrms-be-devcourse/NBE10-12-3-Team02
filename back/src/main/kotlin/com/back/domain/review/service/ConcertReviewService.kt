@@ -76,11 +76,19 @@ class ConcertReviewService(
         return ConcertReviewResponse.of(review, currentUserId)
     }
 
+    fun getDetail(concertId: Long, reviewId: Long, currentUserId: Long?): ConcertReviewResponse {
+        val review = findByConcertIdAndReviewId(concertId, reviewId)
+        return ConcertReviewResponse.of(review, currentUserId)
+    }
+
     @Transactional
-    fun update(reviewId: Long, userId: Long, request: ConcertReviewUpdateRequest): ConcertReviewResponse {
-        val review = concertReviewRepository.findById(reviewId).orElseThrow {
-            ServiceException(ErrorCode.REVIEW_NOT_FOUND)
-        }
+    fun update(
+        concertId: Long,
+        reviewId: Long,
+        userId: Long,
+        request: ConcertReviewUpdateRequest,
+    ): ConcertReviewResponse {
+        val review = findByConcertIdAndReviewId(concertId, reviewId)
         if (review.user.userId != userId) {
             throw ServiceException(ErrorCode.REVIEW_FORBIDDEN)
         }
@@ -101,13 +109,15 @@ class ConcertReviewService(
     }
 
     @Transactional
-    fun delete(reviewId: Long, userId: Long) {
-        val review = concertReviewRepository.findById(reviewId).orElseThrow {
-            ServiceException(ErrorCode.REVIEW_NOT_FOUND)
-        }
+    fun delete(concertId: Long, reviewId: Long, userId: Long) {
+        val review = findByConcertIdAndReviewId(concertId, reviewId)
         if (review.user.userId != userId) {
             throw ServiceException(ErrorCode.REVIEW_FORBIDDEN)
         }
         concertReviewRepository.delete(review)
     }
+
+    private fun findByConcertIdAndReviewId(concertId: Long, reviewId: Long): ConcertReview =
+        concertReviewRepository.findByReviewIdAndConcertConcertId(reviewId, concertId)
+            ?: throw ServiceException(ErrorCode.REVIEW_NOT_FOUND)
 }

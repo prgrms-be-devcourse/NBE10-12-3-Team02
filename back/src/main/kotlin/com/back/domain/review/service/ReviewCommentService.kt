@@ -39,10 +39,10 @@ class ReviewCommentService(
     }
 
     @Transactional
-    fun delete(commentId: Long, userId: Long) {
-        val comment = reviewCommentRepository.findById(commentId).orElseThrow {
-            ServiceException(ErrorCode.COMMENT_NOT_FOUND)
-        }
+    fun delete(reviewId: Long, commentId: Long, userId: Long) {
+        val comment = reviewCommentRepository
+            .findByCommentIdAndReviewReviewId(commentId, reviewId)
+            ?: throw ServiceException(ErrorCode.COMMENT_NOT_FOUND)
         if (comment.user.userId != userId) {
             throw ServiceException(ErrorCode.COMMENT_FORBIDDEN)
         }

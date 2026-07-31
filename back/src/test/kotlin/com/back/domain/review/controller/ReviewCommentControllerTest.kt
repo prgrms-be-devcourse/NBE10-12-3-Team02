@@ -149,6 +149,31 @@ class ReviewCommentControllerTest @Autowired constructor(
     }
 
     @Test
+    @DisplayName("댓글 삭제 실패 - URL의 리뷰와 댓글의 리뷰가 다름")
+    fun deleteCommentWithMismatchedReview() {
+        val comment = reviewCommentRepository.save(
+            ReviewComment.create(review, userEntity, "삭제되지 않아야 하는 댓글")
+        )
+        val otherReview = concertReviewRepository.save(
+            ConcertReview.create(concert, userEntity, "다른 리뷰", "다른 리뷰 내용")
+        )
+
+        mockMvc.perform(
+            delete(
+                "/api/v1/reviews/{reviewId}/comments/{commentId}",
+                otherReview.reviewId,
+                comment.commentId,
+            )
+                .with(user(securityUser))
+        )
+            .andDo(print())
+            .andExpect(status().isNotFound)
+            .andExpect(jsonPath("$.resultCode").value("404-10"))
+
+        assertThat(reviewCommentRepository.existsById(comment.commentId!!)).isTrue
+    }
+
+    @Test
     @DisplayName("댓글 삭제 실패 - 본인 댓글 아님")
     fun deleteCommentForbidden() {
         val otherUser = userRepository.save(User.create("other", "other@test.com", "0000", "타인", LoginType.NORMAL))

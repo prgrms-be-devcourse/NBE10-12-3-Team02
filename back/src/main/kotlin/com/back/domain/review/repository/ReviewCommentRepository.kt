@@ -14,4 +14,6 @@ interface ReviewCommentRepository : JpaRepository<ReviewComment, Long> {
         ORDER BY c.createDate ASC
     """)
     fun findAllByReviewId(@Param("reviewId") reviewId: Long): List<ReviewComment>
+
+    fun findByCommentIdAndReviewReviewId(commentId: Long, reviewId: Long): ReviewComment?
 }

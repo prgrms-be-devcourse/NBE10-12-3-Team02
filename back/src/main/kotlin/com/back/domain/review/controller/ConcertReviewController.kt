@@ -51,7 +51,7 @@ class ConcertReviewController(
         @PathVariable reviewId: Long
     ): RsData<ConcertReviewResponse> {
         val currentUserId = requestContext.actor?.id
-        val data = concertReviewService.getDetail(reviewId, currentUserId)
+        val data = concertReviewService.getDetail(concertId, reviewId, currentUserId)
         return RsData("200-1", "리뷰 상세 조회 성공", data)
     }
 
@@ -63,7 +63,7 @@ class ConcertReviewController(
         @RequestBody @Valid request: ConcertReviewUpdateRequest
     ): RsData<ConcertReviewResponse> {
         val actor = requestContext.actor ?: throw IllegalStateException("Actor must not be null")
-        val data = concertReviewService.update(reviewId, actor.id, request)
+        val data = concertReviewService.update(concertId, reviewId, actor.id, request)
         return RsData("200-1", "리뷰가 수정되었습니다.", data)
     }
 
@@ -74,7 +74,7 @@ class ConcertReviewController(
         @PathVariable reviewId: Long
     ): RsData<Void> {
         val actor = requestContext.actor ?: throw IllegalStateException("Actor must not be null")
-        concertReviewService.delete(reviewId, actor.id)
+        concertReviewService.delete(concertId, reviewId, actor.id)
         return RsData("200-1", "리뷰가 삭제되었습니다.")
     }
 }

@@ -217,6 +217,27 @@ class ConcertReviewControllerTest @Autowired constructor(
     }
 
     @Test
+    @DisplayName("리뷰 상세 조회 실패 - URL의 콘서트와 리뷰의 콘서트가 다름")
+    fun getReviewWithMismatchedConcert() {
+        val review = concertReviewRepository.save(
+            ConcertReview.create(concert, userEntity, "좋았어요", "좋은 공연이었습니다.")
+        )
+        val otherConcert = saveOtherConcert()
+
+        mockMvc.perform(
+            get(
+                "/api/v1/concerts/{concertId}/reviews/{reviewId}",
+                otherConcert.concertId,
+                review.reviewId,
+            )
+                .contentType(MediaType.APPLICATION_JSON)
+        )
+            .andDo(print())
+            .andExpect(status().isNotFound)
+            .andExpect(jsonPath("$.resultCode").value("404-9"))
+    }
+
+    @Test
     @DisplayName("리뷰 수정 성공")
     fun updateReview() {
         val review = concertReviewRepository.save(
@@ -240,6 +261,38 @@ class ConcertReviewControllerTest @Autowired constructor(
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.resultCode").value("200-1"))
             .andExpect(jsonPath("$.data.title").value("수정된 제목"))
+    }
+
+    @Test
+    @DisplayName("리뷰 수정 실패 - URL의 콘서트와 리뷰의 콘서트가 다름")
+    fun updateReviewWithMismatchedConcert() {
+        val review = concertReviewRepository.save(
+            ConcertReview.create(concert, userEntity, "기존 제목", "기존 내용")
+        )
+        val otherConcert = saveOtherConcert()
+        val requestBody = """
+            {
+              "title": "수정 제목",
+              "content": "수정 내용"
+            }
+        """.trimIndent()
+
+        mockMvc.perform(
+            put(
+                "/api/v1/concerts/{concertId}/reviews/{reviewId}",
+                otherConcert.concertId,
+                review.reviewId,
+            )
+                .with(user(securityUser))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(requestBody)
+        )
+            .andDo(print())
+            .andExpect(status().isNotFound)
+            .andExpect(jsonPath("$.resultCode").value("404-9"))
+
+        assertThat(concertReviewRepository.findById(review.reviewId!!).orElseThrow().title)
+            .isEqualTo("기존 제목")
     }
 
     @Test
@@ -285,6 +338,29 @@ class ConcertReviewControllerTest @Autowired constructor(
             .andExpect(jsonPath("$.msg").value("리뷰가 삭제되었습니다."))
 
         assertThat(concertReviewRepository.existsById(review.reviewId!!)).isFalse
+    }
+
+    @Test
+    @DisplayName("리뷰 삭제 실패 - URL의 콘서트와 리뷰의 콘서트가 다름")
+    fun deleteReviewWithMismatchedConcert() {
+        val review = concertReviewRepository.save(
+            ConcertReview.create(concert, userEntity, "제목", "내용")
+        )
+        val otherConcert = saveOtherConcert()
+
+        mockMvc.perform(
+            delete(
+                "/api/v1/concerts/{concertId}/reviews/{reviewId}",
+                otherConcert.concertId,
+                review.reviewId,
+            )
+                .with(user(securityUser))
+        )
+            .andDo(print())
+            .andExpect(status().isNotFound)
+            .andExpect(jsonPath("$.resultCode").value("404-9"))
+
+        assertThat(concertReviewRepository.existsById(review.reviewId!!)).isTrue
     }
 
     @Test
@@ -359,4 +435,15 @@ class ConcertReviewControllerTest @Autowired constructor(
             .andExpect(status().isConflict)
             .andExpect(jsonPath("$.resultCode").value("409-4"))
     }
+
+    private fun saveOtherConcert(): Concert =
+        concertRepository.save(
+            Concert.create(
+                "다른 콘서트",
+                "설명",
+                LocalDateTime.now().minusDays(30),
+                LocalDateTime.now().minusDays(1),
+                "other-poster.jpg",
+            )
+        )
 }
