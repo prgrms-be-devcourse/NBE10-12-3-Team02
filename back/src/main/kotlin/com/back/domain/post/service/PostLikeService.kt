@@ -13,8 +13,11 @@ class PostLikeService(
     fun like(postId: Long, userId: Long): PostLikeStatusResponse {
         try {
             postLikeCommandService.createIfAbsent(postId, userId)
-        } catch (_: DataIntegrityViolationException) {
-            // 동시 요청 중 다른 트랜잭션이 먼저 저장한 경우 멱등 성공으로 처리한다.
+        } catch (e: DataIntegrityViolationException) {
+            // 실제 좋아요가 저장된 경우에만 동시 중복 요청으로 판단한다.
+            if (!postLikeRepository.existsByPostPostIdAndUserUserId(postId, userId)) {
+                throw e
+            }
         }
         return getStatus(postId, userId)
     }

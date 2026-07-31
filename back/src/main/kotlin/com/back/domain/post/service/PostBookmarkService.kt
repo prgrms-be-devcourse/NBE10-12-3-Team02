@@ -17,8 +17,11 @@ class PostBookmarkService(
     fun bookmark(postId: Long, userId: Long): PostBookmarkStatusResponse {
         try {
             postBookmarkCommandService.createIfAbsent(postId, userId)
-        } catch (_: DataIntegrityViolationException) {
-            // 동시 요청 중 다른 트랜잭션이 먼저 저장한 경우 멱등 성공으로 처리한다.
+        } catch (e: DataIntegrityViolationException) {
+            // 실제 북마크가 저장된 경우에만 동시 중복 요청으로 판단한다.
+            if (!postBookmarkRepository.existsByPostPostIdAndUserUserId(postId, userId)) {
+                throw e
+            }
         }
         return PostBookmarkStatusResponse(isBookmarked = true)
     }
