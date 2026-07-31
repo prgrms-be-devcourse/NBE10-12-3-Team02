@@ -87,6 +87,7 @@ class SeatOccupyManager(
         val seat = scheduleSeatRepository.findBySchedule_ScheduleIdAndSeatNumber(scheduleId, seatNumber)
         seat?.releaseToAvailable()
 
+        // 트랜잭션 커밋 후 SSE 브로드캐스트 (SeatStatusSseBroadcaster.onSeatReleased)
         eventPublisher.publishEvent(SeatReleasedEvent(concertId, scheduleId, seatNumber))
     }
 
@@ -139,10 +140,8 @@ class SeatOccupyManager(
         }
     }
 
-    /**
-     * 좌석 선점 시 만료 ZSET에 등록한다.
-     * Score = 만료 예정 Unix 타임스탬프(ms), Member = concertId:scheduleId:seatNumber
-     */
+     // 좌석 선점 시 만료 ZSET에 등록함
+     // Score = 만료 예정 Unix 타임스탬프, Member = concertId:scheduleId:seatNumber
     fun addToExpireQueue(concertId: Long, scheduleId: Long, seatNumber: String, ttlSeconds: Long) {
         val expireAt = System.currentTimeMillis() + ttlSeconds * 1000
         val member = buildExpireMember(concertId, scheduleId, seatNumber)
@@ -150,9 +149,7 @@ class SeatOccupyManager(
         log.debug("만료 큐 등록: {}, expireAt={}", member, expireAt)
     }
 
-    /**
-     * 결제 완료 또는 수동 취소 시 만료 ZSET에서 해당 좌석 메시지를 제거한다.
-     */
+     // 결제 완료 또는 수동 취소 시 만료 ZSET에서 해당 좌석 메시지를 제거함
     fun removeFromExpireQueue(concertId: Long, scheduleId: Long, seatNumber: String) {
         try {
             val member = buildExpireMember(concertId, scheduleId, seatNumber)
