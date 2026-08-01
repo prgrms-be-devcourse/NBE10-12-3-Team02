@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { apiFetch, decodeToken, ApiError } from "@/lib/api";
+import { Star } from "lucide-react";
 
 interface EligibleConcert {
   concertId: number;
@@ -10,12 +11,21 @@ interface EligibleConcert {
   posterUrl: string | null;
 }
 
+type ReviewType = "REVIEW" | "EXPECTATION";
+
+const REVIEW_TYPE_OPTIONS: { key: ReviewType; label: string }[] = [
+  { key: "REVIEW", label: "관람후기" },
+  { key: "EXPECTATION", label: "기대평" },
+];
+
 export default function BoardWritePage() {
   const router = useRouter();
+  const [reviewType, setReviewType] = useState<ReviewType>("REVIEW");
   const [concerts, setConcerts] = useState<EligibleConcert[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedId, setSelectedId] = useState<number | "">("");
   const [form, setForm] = useState({ title: "", content: "" });
+  const [rating, setRating] = useState<number | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
 
@@ -24,11 +34,19 @@ export default function BoardWritePage() {
       router.replace("/login");
       return;
     }
-    apiFetch<EligibleConcert[]>("/posts/eligible-concerts")
+    setLoading(true);
+    apiFetch<EligibleConcert[]>(`/posts/eligible-concerts?reviewType=${reviewType}`)
       .then((res) => setConcerts(res.data))
       .catch(() => setConcerts([]))
       .finally(() => setLoading(false));
-  }, [router]);
+  }, [router, reviewType]);
+
+  const handleReviewTypeChange = (type: ReviewType) => {
+    setReviewType(type);
+    setSelectedId("");
+    setRating(null);
+    setError("");
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -40,12 +58,20 @@ export default function BoardWritePage() {
       setError("제목과 내용을 입력해주세요.");
       return;
     }
+    if (reviewType === "REVIEW" && rating === null) {
+      setError("별점을 선택해주세요.");
+      return;
+    }
     setSubmitting(true);
     setError("");
     try {
       await apiFetch(`/concerts/${selectedId}/posts`, {
         method: "POST",
-        body: JSON.stringify(form),
+        body: JSON.stringify({
+          ...form,
+          reviewType,
+          ...(reviewType === "REVIEW" ? { rating } : {}),
+        }),
       });
       router.push("/board");
     } catch (e) {
@@ -59,23 +85,36 @@ export default function BoardWritePage() {
     }
   };
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <p className="text-gray-400">불러오는 중...</p>
-      </div>
-    );
-  }
-
   return (
     <div className="min-h-screen bg-gray-50 py-10">
       <div className="max-w-2xl mx-auto px-4">
-        <h1 className="text-2xl font-bold text-gray-800 mb-8">후기 작성</h1>
+        <h1 className="text-2xl font-bold text-gray-800 mb-6">후기 작성</h1>
 
-        {concerts.length === 0 ? (
+        <div className="flex gap-2 mb-8">
+          {REVIEW_TYPE_OPTIONS.map((t) => (
+            <button
+              key={t.key}
+              type="button"
+              onClick={() => handleReviewTypeChange(t.key)}
+              className={`px-4 py-2 rounded-lg text-sm font-semibold border transition ${
+                reviewType === t.key
+                  ? "bg-blue-600 text-white border-blue-600"
+                  : "bg-white text-gray-600 border-gray-200 hover:border-blue-400"
+              }`}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+
+        {loading ? (
+          <p className="text-gray-400 text-sm">불러오는 중...</p>
+        ) : concerts.length === 0 ? (
           <div className="bg-white rounded-2xl shadow-sm p-10 text-center">
             <p className="text-gray-500 text-sm leading-relaxed">
-              최근 6개월 이내에 관람한 콘서트가 없습니다.
+              {reviewType === "REVIEW"
+                ? "최근 6개월 이내에 관람한 콘서트가 없습니다."
+                : "예매한 콘서트가 없습니다."}
             </p>
             <button
               onClick={() => router.push("/board")}
@@ -125,7 +164,11 @@ export default function BoardWritePage() {
                     내용
                   </label>
                   <textarea
-                    placeholder="후기 내용을 입력하세요 (최대 2000자)"
+                    placeholder={
+                      reviewType === "REVIEW"
+                        ? "후기 내용을 입력하세요 (최대 2000자)"
+                        : "기대되는 점을 자유롭게 적어보세요 (최대 2000자)"
+                    }
                     maxLength={2000}
                     rows={8}
                     value={form.content}
@@ -133,6 +176,34 @@ export default function BoardWritePage() {
                     className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300 resize-none"
                   />
                 </div>
+
+                {reviewType === "REVIEW" && (
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      별점
+                    </label>
+                    <div className="flex gap-1">
+                      {[1, 2, 3, 4, 5].map((n) => (
+                        <button
+                          key={n}
+                          type="button"
+                          onClick={() => setRating(n)}
+                          aria-label={`${n}점`}
+                          className="p-0.5"
+                        >
+                          <Star
+                            size={28}
+                            className={
+                              rating !== null && n <= rating
+                                ? "fill-yellow-400 text-yellow-400"
+                                : "text-gray-300"
+                            }
+                          />
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </>
             )}
 

@@ -1,7 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Link from "next/link";
 import { apiFetch, decodeToken, ApiError } from "@/lib/api";
+import { Star, Heart } from "lucide-react";
 
 interface ConcertPost {
   postId: number;
@@ -10,9 +12,32 @@ interface ConcertPost {
   userName: string;
   title: string;
   content: string;
+  rating: number | null;
+  reviewType: "EXPECTATION" | "REVIEW";
   isMine: boolean;
+  likeCount: number;
+  isLiked: boolean;
   createdAt: string;
   updatedAt: string;
+}
+
+const REVIEW_TYPE_BADGE: Record<ConcertPost["reviewType"], { label: string; className: string }> = {
+  REVIEW: { label: "관람후기", className: "bg-emerald-50 text-emerald-600 border border-emerald-200" },
+  EXPECTATION: { label: "기대평", className: "bg-amber-50 text-amber-600 border border-amber-200" },
+};
+
+function RatingStars({ rating }: { rating: number }) {
+  return (
+    <div className="flex items-center gap-0.5">
+      {[1, 2, 3, 4, 5].map((n) => (
+        <Star
+          key={n}
+          size={13}
+          className={n <= rating ? "fill-yellow-400 text-yellow-400" : "text-gray-200"}
+        />
+      ))}
+    </div>
+  );
 }
 
 const ELIGIBILITY_MESSAGES: Record<string, string> = {
@@ -30,7 +55,14 @@ export default function ConcertPostSection({ concertId }: { concertId: number })
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState("");
   const [refreshKey, setRefreshKey] = useState(0);
-  const me = decodeToken();
+  const [me, setMe] = useState<{ id: number; name: string } | null>(null);
+
+  useEffect(() => {
+    const syncAuth = () => setMe(decodeToken());
+    syncAuth();
+    window.addEventListener("auth-changed", syncAuth);
+    return () => window.removeEventListener("auth-changed", syncAuth);
+  }, []);
 
   useEffect(() => {
     const doFetch = async () => {
@@ -179,12 +211,43 @@ export default function ConcertPostSection({ concertId }: { concertId: number })
               <li key={post.postId} className="border-b border-gray-100 pb-5 last:border-0">
                 <div className="flex items-start justify-between">
                   <div>
-                    <p className="font-semibold text-gray-800">{post.title}</p>
-                    <p className="text-xs text-gray-400 mt-0.5">
-                      {post.userName} · {post.createdAt?.slice(0, 10)}
-                    </p>
+                    <div className="flex items-center gap-2">
+                      <p className="font-semibold text-gray-800">{post.title}</p>
+                      <span
+                        className={`shrink-0 text-[10px] font-semibold rounded px-1.5 py-0.5 ${REVIEW_TYPE_BADGE[post.reviewType].className}`}
+                      >
+                        {REVIEW_TYPE_BADGE[post.reviewType].label}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2 mt-0.5">
+                      <p className="text-xs text-gray-400">
+                        {post.isMine ? (
+                          post.userName
+                        ) : (
+                          <Link
+                            href={`/users/${post.userId}`}
+                            className="hover:text-blue-500 hover:underline"
+                          >
+                            {post.userName}
+                          </Link>
+                        )}{" "}
+                        · {post.createdAt?.slice(0, 10)}
+                      </p>
+                      <span className="flex items-center gap-0.5 text-xs text-gray-400">
+                        <Heart
+                          size={12}
+                          className={post.isLiked ? "fill-red-500 text-red-500" : ""}
+                        />
+                        {post.likeCount}
+                      </span>
+                    </div>
+                    {post.reviewType === "REVIEW" && post.rating !== null && (
+                      <div className="mt-1">
+                        <RatingStars rating={post.rating} />
+                      </div>
+                    )}
                   </div>
-                  {post.isMine && (
+                  {post.isMine && me && (
                     <div className="flex gap-2 shrink-0 ml-4">
                       <button
                         onClick={() => handleEdit(post)}
