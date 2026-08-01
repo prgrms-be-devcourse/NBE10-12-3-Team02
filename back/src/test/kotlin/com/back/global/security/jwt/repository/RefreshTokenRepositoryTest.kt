@@ -37,7 +37,7 @@ class RefreshTokenRepositoryTest {
     }
 
     @Test
-    @DisplayName("정상 토큰 저장 및 verify 검증")
+    @DisplayName("토큰 저장 및 검증")
     fun saveAndVerify() {
         refreshTokenRepository.save(userId, oldJti, oldHash, ttl)
 
@@ -52,7 +52,7 @@ class RefreshTokenRepositoryTest {
     }
 
     @Test
-    @DisplayName("rotate 성공 시 기존 JTI는 5초 임시 만료가 설정되고, 신규 JTI가 저장되며 Index 세트가 갱신된다")
+    @DisplayName("토큰 교체(rotate) 성공")
     fun rotate_success() {
         refreshTokenRepository.save(userId, oldJti, oldHash, ttl)
 
@@ -77,7 +77,7 @@ class RefreshTokenRepositoryTest {
     }
 
     @Test
-    @DisplayName("rotate 시 요청 Hash와 저장된 Hash가 다르면 MISMATCH가 반환된다")
+    @DisplayName("토큰 불일치 시 MISMATCH 반환")
     fun rotate_mismatch() {
         refreshTokenRepository.save(userId, oldJti, oldHash, ttl)
 
@@ -94,7 +94,7 @@ class RefreshTokenRepositoryTest {
     }
 
     @Test
-    @DisplayName("rotate 시 존재하지 않는 JTI로 요청하면 NOT_FOUND가 반환된다")
+    @DisplayName("존재하지 않는 토큰 교체 시 NOT_FOUND 반환")
     fun rotate_notFound() {
         val result = refreshTokenRepository.rotate(
             userId = userId,
@@ -109,7 +109,7 @@ class RefreshTokenRepositoryTest {
     }
 
     @Test
-    @DisplayName("deleteAllByUserId 호출 시 사용자의 모든 Refresh Token과 Index 세트가 삭제된다")
+    @DisplayName("사용자 토큰 전체 삭제")
     fun deleteAllByUserId() {
         refreshTokenRepository.save(userId, "jti-1", "hash-1", ttl)
         refreshTokenRepository.save(userId, "jti-2", "hash-2", ttl)

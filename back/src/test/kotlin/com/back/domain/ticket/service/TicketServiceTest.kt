@@ -104,7 +104,7 @@ class TicketServiceTest {
     }
 
     @Test
-    @DisplayName("선점된 좌석으로 정상 티켓 예매 시 Ticket 엔티티가 생성되고 좌석 상태가 SOLD_OUT으로 변경된다")
+    @DisplayName("티켓 예매 성공")
     fun createTicket_success() {
         val occupyResponse = seatOccupyManager.seatOccupy(
             concert.concertId!!,
@@ -132,7 +132,7 @@ class TicketServiceTest {
     }
 
     @Test
-    @DisplayName("회차당 1인 3매 초과 예매 시도 시 EXCEED_TICKET_LIMIT 예외가 발생한다")
+    @DisplayName("1인 3매 초과 예매 차단")
     fun createTicket_exceedLimit_throwsException() {
         val occ1 = seatOccupyManager.seatOccupy(concert.concertId!!, schedule.scheduleId!!, seat1.seatNumber, user.userId!!)
         val occ2 = seatOccupyManager.seatOccupy(concert.concertId!!, schedule.scheduleId!!, seat2.seatNumber, user.userId!!)
@@ -167,7 +167,7 @@ class TicketServiceTest {
     }
 
     @Test
-    @DisplayName("선점 정보가 존재하지 않거나 만료되었을 때 예매 시도 시 SEAT_HOLD_EXPIRED 예외가 발생한다")
+    @DisplayName("선점 만료 시 예매 차단")
     fun createTicket_expiredHold_throwsException() {
         val request = PaymentTicketRequest(
             concertId = concert.concertId!!,
@@ -181,7 +181,7 @@ class TicketServiceTest {
     }
 
     @Test
-    @DisplayName("티켓 예매 취소 시 isValid가 false로 변경되고 좌석이 AVAILABLE 상태로 복구된다")
+    @DisplayName("티켓 예매 취소 성공")
     fun cancelTicket_success() {
         val occ = seatOccupyManager.seatOccupy(concert.concertId!!, schedule.scheduleId!!, seat1.seatNumber, user.userId!!)
         val req = PaymentTicketRequest(concertId = concert.concertId!!, seatHolds = listOf(SeatHoldInfo(seat1.seatNumber, occ.occupyToken)))

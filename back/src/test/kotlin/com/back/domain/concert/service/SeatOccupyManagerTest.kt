@@ -76,7 +76,7 @@ class SeatOccupyManagerTest {
     }
 
     @Test
-    @DisplayName("좌석 선점 성공 시 Redis에 userId와 occupyToken이 저장되고 DB 상태가 HOLD로 변경된다")
+    @DisplayName("좌석 선점 성공")
     fun seatOccupy_success() {
         val userId = 100L
         val response = seatOccupyManager.seatOccupy(
@@ -100,7 +100,7 @@ class SeatOccupyManagerTest {
     }
 
     @Test
-    @DisplayName("이미 선점된 좌석을 다른 사용자가 선점 시도 시 SEAT_HELD_BY_OTHER_USER 예외가 발생한다")
+    @DisplayName("중복 선점 시 예외 발생")
     fun seatOccupy_duplicate_throwsException() {
         val user1 = 100L
         val user2 = 200L
@@ -114,7 +114,7 @@ class SeatOccupyManagerTest {
     }
 
     @Test
-    @DisplayName("좌석 선점 취소 시 Redis 선점 정보와 만료 ZSET이 함께 제거되고 DB 상태가 AVAILABLE로 복구된다")
+    @DisplayName("선점 취소 성공")
     fun seatOccupyCancel_success() {
         val userId = 100L
         seatOccupyManager.seatOccupy(concert.concertId!!, schedule.scheduleId!!, seat.seatNumber, userId)
@@ -135,7 +135,7 @@ class SeatOccupyManagerTest {
     }
 
     @Test
-    @DisplayName("ZSET 만료 큐 등록 및 제거 기능 테스트")
+    @DisplayName("만료 큐 등록 및 제거")
     fun expireQueue_addAndRemove() {
         val member = SeatOccupyManager.buildExpireMember(concert.concertId!!, schedule.scheduleId!!, seat.seatNumber)
 

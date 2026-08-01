@@ -55,7 +55,12 @@ object EmailVerificationLuaScripts {
             return 0
         end
 
-        redis.call('SET', KEYS[1], ARGV[2], 'KEEPTTL')
+        local ttl = redis.call('PTTL', KEYS[1])
+        if ttl > 0 then
+            redis.call('SET', KEYS[1], ARGV[2], 'PX', ttl)
+        else
+            redis.call('SET', KEYS[1], ARGV[2])
+        end
         return 1
     """.trimIndent()
 
@@ -75,7 +80,12 @@ object EmailVerificationLuaScripts {
             return 0
         end
 
-        redis.call('SET', KEYS[1], ARGV[2], 'KEEPTTL')
+        local ttl = redis.call('PTTL', KEYS[1])
+        if ttl > 0 then
+            redis.call('SET', KEYS[1], ARGV[2], 'PX', ttl)
+        else
+            redis.call('SET', KEYS[1], ARGV[2])
+        end
         return 1
     """.trimIndent()
 
