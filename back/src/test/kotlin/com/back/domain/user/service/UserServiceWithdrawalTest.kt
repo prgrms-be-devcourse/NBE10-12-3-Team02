@@ -2,6 +2,7 @@ package com.back.domain.user.service
 
 import com.back.domain.auth.repository.UserSocialAuthRepository
 import com.back.domain.auth.service.EmailVerificationService
+import com.back.domain.follow.service.FollowService
 import com.back.domain.ticket.repository.TicketRepository
 import com.back.domain.user.constant.LoginType
 import com.back.domain.user.dto.UserWithdrawalTarget
@@ -33,6 +34,7 @@ class UserServiceWithdrawalTest {
         userWithdrawalQueryService = userWithdrawalQueryService,
         userWithdrawalCommandService = userWithdrawalCommandService,
         fileStorage = mock(FileStorage::class.java),
+        followService = mock(FollowService::class.java),
     )
 
     @Test

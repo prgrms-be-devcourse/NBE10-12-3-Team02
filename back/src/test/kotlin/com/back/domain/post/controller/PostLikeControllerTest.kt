@@ -4,6 +4,7 @@ import com.back.domain.concert.entity.Concert
 import com.back.domain.concert.repository.ConcertRepository
 import com.back.domain.post.entity.ConcertPost
 import com.back.domain.post.entity.PostLike
+import com.back.domain.post.entity.ReviewType
 import com.back.domain.post.repository.ConcertPostRepository
 import com.back.domain.post.repository.PostLikeRepository
 import com.back.domain.user.constant.LoginType
@@ -93,7 +94,7 @@ class PostLikeControllerTest @Autowired constructor(
             )
         )
         post = concertPostRepository.save(
-            ConcertPost.create(concert, userEntity, "좋아요 테스트 게시글", "게시글 내용")
+            ConcertPost.create(concert, userEntity, "좋아요 테스트 게시글", "게시글 내용", rating = 5, reviewType = ReviewType.REVIEW)
         )
     }
 

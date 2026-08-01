@@ -4,6 +4,7 @@ import com.back.domain.concert.entity.Concert
 import com.back.domain.concert.repository.ConcertRepository
 import com.back.domain.post.entity.ConcertPost
 import com.back.domain.post.entity.PostComment
+import com.back.domain.post.entity.ReviewType
 import com.back.domain.post.repository.ConcertPostRepository
 import com.back.domain.post.repository.PostCommentRepository
 import com.back.domain.schedule.constant.SeatStatus.HOLD
@@ -94,7 +95,7 @@ class PostCommentControllerTest @Autowired constructor(
         ticketRepository.save(Ticket.create(userEntity, schedule, seat, "ticket-comment-001", 150000, "group-comment-001"))
 
         val author = userRepository.save(User.create("poster", "poster@test.com", "0000", "게시글어", LoginType.NORMAL))
-        post = concertPostRepository.save(ConcertPost.create(concert, author, "좋은 공연", "감동이었어요."))
+        post = concertPostRepository.save(ConcertPost.create(concert, author, "좋은 공연", "감동이었어요.", rating = 5, reviewType = ReviewType.REVIEW))
     }
 
     @Test
@@ -155,7 +156,7 @@ class PostCommentControllerTest @Autowired constructor(
             PostComment.create(post, userEntity, "삭제되지 않아야 하는 댓글")
         )
         val otherPost = concertPostRepository.save(
-            ConcertPost.create(concert, userEntity, "다른 게시글", "다른 게시글 내용")
+            ConcertPost.create(concert, userEntity, "다른 게시글", "다른 게시글 내용", rating = 5, reviewType = ReviewType.REVIEW)
         )
 
         mockMvc.perform(
