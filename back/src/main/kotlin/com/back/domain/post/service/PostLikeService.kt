@@ -1,9 +1,13 @@
 package com.back.domain.post.service
 
+import com.back.domain.post.dto.PostLikeResponse
 import com.back.domain.post.dto.PostLikeStatusResponse
 import com.back.domain.post.repository.PostLikeRepository
 import org.springframework.dao.DataIntegrityViolationException
+import org.springframework.data.domain.Page
+import org.springframework.data.domain.Pageable
 import org.springframework.stereotype.Service
+import org.springframework.transaction.annotation.Transactional
 
 @Service
 class PostLikeService(
@@ -32,5 +36,10 @@ class PostLikeService(
             likeCount = postLikeRepository.countByPostPostId(postId),
         )
     }
+
+    @Transactional(readOnly = true)
+    fun getMyLikes(userId: Long, pageable: Pageable): Page<PostLikeResponse> =
+        postLikeRepository.findPageByUserId(userId, pageable)
+            .map(PostLikeResponse::from)
 
 }
