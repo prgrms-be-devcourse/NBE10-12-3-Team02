@@ -77,19 +77,17 @@ class WaitingQueueManager(
         val now = System.currentTimeMillis()
         val expiredAt = now + ttl.toMillis()
 
-        val userIds: List<String>? = stringRedisTemplate.execute(
+        val rawResult: Any? = stringRedisTemplate.execute(
             ADD_ACTIVE_USER_SCRIPT,
             listOf(waitKey, activeKey),
             capacity.toString(),
             batchSize.toString(),
             now.toString(),
             expiredAt.toString()
-        ) as? List<String>
+        )
 
-        if (userIds.isNullOrEmpty()) {
-            return emptyList()
-        }
-        return userIds.mapNotNull { it.toLongOrNull() }
+        val userIds = rawResult as? List<*> ?: return emptyList()
+        return userIds.mapNotNull { it?.toString()?.toLongOrNull() }
     }
 
     fun issueToken(scheduleId: Long, userId: Long, ttl: Duration): String {
