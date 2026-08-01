@@ -17,6 +17,7 @@ import org.mockito.Mockito.verify
 import org.mockito.Mockito.`when`
 import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.security.oauth2.core.OAuth2AuthenticationException
+import org.springframework.test.util.ReflectionTestUtils
 
 class OAuth2UserAccountServiceTest {
     private val userRepository = mock(UserRepository::class.java)
@@ -32,9 +33,13 @@ class OAuth2UserAccountServiceTest {
     @DisplayName("Provider 계정이 연결된 기존 회원을 조회한다")
     fun t1() {
         val existingUser = oauthUser()
+        // 실제로는 영속화된 User를 참조하는 지연 로딩 프록시라 userId가 항상 채워져 있다.
+        ReflectionTestUtils.setField(existingUser, "userId", USER_ID)
         val socialAuth = socialAuth(existingUser)
         `when`(userSocialAuthRepository.findByProviderAndProviderId(LoginType.GOOGLE, PROVIDER_ID))
             .thenReturn(socialAuth)
+        `when`(userRepository.findByUserIdAndDeletedAtIsNull(USER_ID))
+            .thenReturn(existingUser)
 
         val result = service.getOrCreateUser(userInfo(), LoginType.GOOGLE, "")
 
@@ -166,6 +171,7 @@ class OAuth2UserAccountServiceTest {
     }
 
     companion object {
+        private const val USER_ID = 1L
         private const val PROVIDER_ID = "google-provider-id"
         private const val EMAIL = "user@example.com"
         private const val NAME = "구글회원"
