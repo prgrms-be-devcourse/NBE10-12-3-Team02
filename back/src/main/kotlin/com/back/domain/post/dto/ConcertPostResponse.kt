@@ -1,6 +1,7 @@
 package com.back.domain.post.dto
 
 import com.back.domain.post.entity.ConcertPost
+import com.back.domain.post.entity.ReviewType
 import com.fasterxml.jackson.annotation.JsonProperty
 import java.time.LocalDateTime
 
@@ -11,6 +12,8 @@ data class ConcertPostResponse(
     val userName: String,
     val title: String,
     val content: String,
+    val rating: Int?,
+    val reviewType: ReviewType,
     @get:JsonProperty("isMine") val isMine: Boolean,
     val likeCount: Long,
     @get:JsonProperty("isLiked") val isLiked: Boolean,
@@ -35,6 +38,8 @@ data class ConcertPostResponse(
                 userName = post.user.name,
                 title = post.title,
                 content = post.content,
+                rating = post.rating,
+                reviewType = post.reviewType,
                 isMine = currentUserId != null && post.user.userId == currentUserId,
                 likeCount = likeCount,
                 isLiked = isLiked,
