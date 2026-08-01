@@ -39,4 +39,6 @@ interface TicketRepository : JpaRepository<Ticket, Long> {
     fun existsByUser_UserIdAndSchedule_Concert_ConcertIdAndSchedule_ScheduleDateBetweenAndIsValidTrue(
         userId: Long, concertId: Long, from: LocalDateTime, to: LocalDateTime
     ): Boolean
+
+    fun existsByUser_UserIdAndSchedule_Concert_ConcertId(userId: Long, concertId: Long): Boolean
 }
