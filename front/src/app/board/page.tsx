@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import Link from "next/link";
 import { apiFetch, decodeToken, restoreSession } from "@/lib/api";
 import { getLocalConcertPoster } from "@/lib/concertDetailImages";
@@ -113,12 +114,15 @@ export default function BoardPage() {
                 onClick={() => router.push(`/board/${post.postId}`)}
                 className="bg-white rounded-2xl shadow-sm border border-gray-100 flex gap-4 p-4 cursor-pointer hover:shadow-md transition"
               >
-                <div className="shrink-0 w-16 h-20 rounded-lg overflow-hidden bg-gradient-to-br from-blue-100 to-indigo-200 flex items-center justify-center">
+                <div className="relative shrink-0 w-16 h-20 rounded-lg overflow-hidden bg-gradient-to-br from-blue-100 to-indigo-200 flex items-center justify-center">
                   {post.posterUrl ? (
-                    <img
+                    <Image
+                      fill
+                      unoptimized
                       src={getLocalConcertPoster(post.posterUrl)}
                       alt={post.concertName}
-                      className="w-full h-full object-cover"
+                      sizes="64px"
+                      className="object-cover"
                     />
                   ) : (
                     <span className="text-xs text-gray-400 text-center px-1">포스터</span>

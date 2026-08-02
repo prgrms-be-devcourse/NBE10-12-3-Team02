@@ -2,6 +2,7 @@
 
 import { useState, useEffect, use } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import Link from "next/link";
 import { apiFetch, decodeToken, ApiError, restoreSession } from "@/lib/api";
 import { getLocalConcertPoster } from "@/lib/concertDetailImages";
@@ -266,9 +267,16 @@ export default function PostDetailPage({
           </button>
 
           <div className="flex gap-4 mb-5">
-            <div className="shrink-0 w-14 h-18 rounded-lg overflow-hidden bg-gradient-to-br from-blue-100 to-indigo-200 flex items-center justify-center">
+            <div className="relative shrink-0 w-14 h-18 rounded-lg overflow-hidden bg-gradient-to-br from-blue-100 to-indigo-200 flex items-center justify-center">
               {posterUrl ? (
-                <img src={posterUrl} alt={post.concertName} className="w-full h-full object-cover" />
+                <Image
+                  fill
+                  unoptimized
+                  src={posterUrl}
+                  alt={post.concertName}
+                  sizes="56px"
+                  className="object-cover"
+                />
               ) : (
                 <span className="text-xs text-gray-400">포스터</span>
               )}

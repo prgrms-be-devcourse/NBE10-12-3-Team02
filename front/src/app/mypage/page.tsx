@@ -977,12 +977,15 @@ export default function MyPage() {
                 tabIndex={0}
                 className="flex gap-3 p-4 border border-gray-100 rounded-xl hover:shadow-md hover:border-blue-200 transition cursor-pointer"
               >
-                <div className="shrink-0 w-12 h-16 rounded-lg overflow-hidden bg-gradient-to-br from-blue-100 to-indigo-200 flex items-center justify-center">
+                <div className="relative shrink-0 w-12 h-16 rounded-lg overflow-hidden bg-gradient-to-br from-blue-100 to-indigo-200 flex items-center justify-center">
                   {b.posterUrl ? (
-                    <img
+                    <Image
+                      fill
+                      unoptimized
                       src={getLocalConcertPoster(b.posterUrl)}
                       alt={b.concertName}
-                      className="w-full h-full object-cover"
+                      sizes="48px"
+                      className="object-cover"
                     />
                   ) : (
                     <span className="text-[10px] text-gray-400">포스터</span>
@@ -1055,12 +1058,15 @@ export default function MyPage() {
                 tabIndex={0}
                 className="flex gap-3 p-4 border border-gray-100 rounded-xl hover:shadow-md hover:border-blue-200 transition cursor-pointer"
               >
-                <div className="shrink-0 w-12 h-16 rounded-lg overflow-hidden bg-gradient-to-br from-blue-100 to-indigo-200 flex items-center justify-center">
+                <div className="relative shrink-0 w-12 h-16 rounded-lg overflow-hidden bg-gradient-to-br from-blue-100 to-indigo-200 flex items-center justify-center">
                   {l.posterUrl ? (
-                    <img
+                    <Image
+                      fill
+                      unoptimized
                       src={getLocalConcertPoster(l.posterUrl)}
                       alt={l.concertName}
-                      className="w-full h-full object-cover"
+                      sizes="48px"
+                      className="object-cover"
                     />
                   ) : (
                     <span className="text-[10px] text-gray-400">포스터</span>
