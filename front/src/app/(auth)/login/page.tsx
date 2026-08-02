@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
+import { useState, useEffect, useRef, Suspense } from "react";
 import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
@@ -16,6 +16,12 @@ const OAUTH_ERROR_MESSAGES: Record<string, string> = {
   oauth2_user_id_invalid: "소셜 로그인 정보가 올바르지 않습니다.",
   oauth2_user_not_found: "가입된 회원 정보를 찾을 수 없습니다.",
   oauth2_token_issue_failed: "로그인 처리 중 오류가 발생했습니다.",
+  oauth2_provider_id_missing: "소셜 로그인 정보를 가져오지 못했습니다.",
+  oauth2_email_missing: "소셜 계정에서 이메일 정보를 가져오지 못했습니다.",
+  oauth2_email_already_exists:
+    "이미 해당 이메일로 가입된 계정이 있습니다. 아이디/비밀번호로 로그인하거나, 기존 계정에서 소셜 연동을 이용해주세요.",
+  oauth2_account_already_used: "이미 다른 계정에 연결된 소셜 계정입니다.",
+  oauth2_provider_not_supported: "지원하지 않는 소셜 로그인입니다.",
 };
 
 const SOCIAL_PROVIDERS = [
@@ -43,16 +49,22 @@ function LoginContent() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const hasHandledRef = useRef(false);
 
   // 소셜 로그인이 실패해서 서버가 /login?error=... 로 돌려보낸 경우, 그 이유를 안내한다.
+  // hasHandledRef: Strict Mode 이중 실행에서 alert이 두 번 뜨는 걸 막는다.
+  // router는 안정 참조라 deps에서 제외한다.
   useEffect(() => {
     const errorCode = searchParams.get("error");
-    if (errorCode) {
-      showAlert(
-        OAUTH_ERROR_MESSAGES[errorCode] ??
-          "소셜 로그인 중 오류가 발생했습니다.",
-      );
-    }
+    if (!errorCode) return;
+    if (hasHandledRef.current) return;
+    hasHandledRef.current = true;
+    showAlert(
+      OAUTH_ERROR_MESSAGES[errorCode] ?? "소셜 로그인 중 오류가 발생했습니다.",
+    ).then(() => {
+      router.replace("/login");
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
 
   const handleLogin = async (e: React.FormEvent) => {

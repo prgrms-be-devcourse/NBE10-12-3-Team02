@@ -53,6 +53,25 @@ interface MyPageData {
 
 type StatusFilter = "all" | "valid" | "canceled";
 
+function SocialBadge({ provider }: { provider: string }) {
+  const iconMap: Record<string, string> = {
+    KAKAO: "/icons/kakao.png",
+    NAVER: "/icons/naver.png",
+    GOOGLE: "/icons/google.png",
+  };
+  const src = iconMap[provider];
+  if (!src) return null;
+  return (
+    <Image
+      src={src}
+      alt={provider}
+      width={18}
+      height={18}
+      unoptimized
+    />
+  );
+}
+
 export default function MyPage() {
   const router = useRouter();
   const hasCheckedAuth = useRef(false);
@@ -553,10 +572,17 @@ export default function MyPage() {
                 <span className="inline-block w-20 text-gray-400">이름</span>
                 {data.name}
               </p>
-              <p>
-                <span className="inline-block w-20 text-gray-400">아이디</span>
-                {data.id}
-              </p>
+              {isSocialLogin ? (
+                <p className="flex items-center gap-1.5">
+                  <span className="inline-block w-20 shrink-0 text-gray-400">로그인 방식</span>
+                  <SocialBadge provider={data.loginType} />
+                </p>
+              ) : (
+                <p>
+                  <span className="inline-block w-20 text-gray-400">아이디</span>
+                  {data.id}
+                </p>
+              )}
               <p>
                 <span className="inline-block w-20 text-gray-400">이메일</span>
                 {data.email}
