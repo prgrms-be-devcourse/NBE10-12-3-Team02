@@ -72,6 +72,7 @@ open class ConcertPost protected constructor() : BaseEntity() {
     }
 
     fun update(title: String, content: String, rating: Int?) {
+        validateRatingByReviewType(this.reviewType, rating)
         this.title = title
         this.content = content
         this.rating = rating
@@ -87,11 +88,15 @@ open class ConcertPost protected constructor() : BaseEntity() {
             rating: Int?,
             reviewType: ReviewType
         ): ConcertPost {
+            validateRatingByReviewType(reviewType, rating)
+            return ConcertPost(concert, user, title, content, rating, reviewType)
+        }
+
+        private fun validateRatingByReviewType(reviewType: ReviewType, rating: Int?) {
             when (reviewType) {
                 ReviewType.REVIEW -> require(rating != null && rating in 1..5) { "관람후기는 평점이 1~5 사이여야 합니다." }
                 ReviewType.EXPECTATION -> require(rating == null) { "기대평은 평점을 입력할 수 없습니다." }
             }
-            return ConcertPost(concert, user, title, content, rating, reviewType)
         }
     }
 }
