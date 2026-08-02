@@ -29,19 +29,23 @@ export default function BoardWritePage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
 
+  const fetchEligibleConcerts = (type: ReviewType) => {
+    apiFetch<EligibleConcert[]>(`/posts/eligible-concerts?reviewType=${type}`)
+      .then((res) => setConcerts(res.data))
+      .catch(() => setConcerts([]))
+      .finally(() => setLoading(false));
+  };
+
   useEffect(() => {
     if (!decodeToken()) {
       router.replace("/login");
       return;
     }
-    setLoading(true);
-    apiFetch<EligibleConcert[]>(`/posts/eligible-concerts?reviewType=${reviewType}`)
-      .then((res) => setConcerts(res.data))
-      .catch(() => setConcerts([]))
-      .finally(() => setLoading(false));
+    fetchEligibleConcerts(reviewType);
   }, [router, reviewType]);
 
   const handleReviewTypeChange = (type: ReviewType) => {
+    setLoading(true);
     setReviewType(type);
     setSelectedId("");
     setRating(null);
