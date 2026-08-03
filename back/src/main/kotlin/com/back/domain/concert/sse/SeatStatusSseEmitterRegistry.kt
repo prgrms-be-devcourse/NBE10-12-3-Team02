@@ -1,5 +1,6 @@
 package com.back.domain.concert.sse
 
+import com.back.domain.concert.sse.repository.SseOutboxEventRepository
 import org.slf4j.LoggerFactory
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Component
@@ -14,7 +15,8 @@ import java.util.concurrent.locks.ReentrantLock
 
 @Component
 class SeatStatusSseEmitterRegistry(
-    private val eventCache: SeatStatusSseEventCache
+    private val eventCache: SeatStatusSseEventCache,
+    private val sseOutboxEventRepository: SseOutboxEventRepository
 ) {
     private val log = LoggerFactory.getLogger(javaClass)
     private val executor = Executors.newVirtualThreadPerTaskExecutor()
@@ -53,20 +55,20 @@ class SeatStatusSseEmitterRegistry(
         emitter.onTimeout(cleanup)
         emitter.onError { cleanup.run() }
 
-        // Last-Event-ID 재연결 시 누락 이벤트 Replay 전송
+        // Last-Event-ID 재연결 시 DB/캐시 기반 누락 이벤트 Replay 전송
         if (!lastEventId.isNullOrBlank()) {
-            val missedEvents = eventCache.getEventsAfter(scheduleId, lastEventId)
-            for (event in missedEvents) {
+            val missedEvents = getMissedEvents(scheduleId, lastEventId)
+            for ((eventId, seatNumber, status) in missedEvents) {
                 try {
-                    val data = "{\"seatNumber\":\"${event.seatNumber}\",\"status\":\"${event.status}\"}"
+                    val data = "{\"seatNumber\":\"$seatNumber\",\"status\":\"$status\"}"
                     wrapper.send(
                         SseEmitter.event()
-                            .id(event.eventId)
+                            .id(eventId)
                             .name("seat_status_changed")
                             .data(data)
                     )
                 } catch (e: Exception) {
-                    log.warn("누락 이벤트 Replay 전송 실패: scheduleId={}, eventId={}", scheduleId, event.eventId)
+                    log.warn("누락 이벤트 Replay 전송 실패: scheduleId={}, eventId={}", scheduleId, eventId)
                     break
                 }
             }
@@ -74,6 +76,18 @@ class SeatStatusSseEmitterRegistry(
 
         log.debug("SSE 구독 등록: scheduleId={}, 총 구독자={}", scheduleId, emitters[scheduleId]?.size ?: 0)
         return wrapper
+    }
+
+    private fun getMissedEvents(scheduleId: Long, lastEventId: String): List<Triple<String, String, String>> {
+        val outboxEvent = sseOutboxEventRepository.findByEventId(lastEventId)
+        val targetId = outboxEvent?.id
+        if (targetId != null) {
+            val dbEvents = sseOutboxEventRepository.findByScheduleIdAndIdGreaterThanOrderByIdAsc(scheduleId, targetId)
+            return dbEvents.map { Triple(it.eventId, it.seatNumber, it.status) }
+        }
+
+        return eventCache.getEventsAfter(scheduleId, lastEventId)
+            .map { Triple(it.eventId, it.seatNumber, it.status) }
     }
 
     fun broadcast(scheduleId: Long, seatNumber: String, status: String) {
@@ -103,8 +117,6 @@ class SeatStatusSseEmitterRegistry(
 
     @Scheduled(fixedRate = 15000)
     fun sendHeartbeat() {
-        val now = System.currentTimeMillis()
-
         for ((scheduleId, list) in emitters) {
             if (list.isEmpty()) continue
 

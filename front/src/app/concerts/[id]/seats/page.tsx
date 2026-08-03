@@ -78,6 +78,8 @@ function SeatSelectContent({ params }: { params: Promise<{ id: string }> }) {
   const proceedingToPaymentRef = useRef(false);
   // 실제로 대기열에 진입해 대기 중인 상태인지를 기록하는 Ref (Strict Mode/새로고침 시의 오작동 방지)
   const isWaitingRef = useRef(false);
+  const lastEventIdRef = useRef<string>("");
+  const pollingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const [adultCount, setAdultCount] = useState(1);
   const [teenCount, setTeenCount] = useState(0);
@@ -240,9 +242,16 @@ function SeatSelectContent({ params }: { params: Promise<{ id: string }> }) {
 
     const connectSse = () => {
       if (!active) return;
+      const queryParam = lastEventIdRef.current
+        ? `?lastEventId=${encodeURIComponent(lastEventIdRef.current)}`
+        : "";
       sse = new EventSource(
-        `${BASE_URL}/api/v1/concerts/${id}/schedules/${scheduleId}/seats/status`,
+        `${BASE_URL}/api/v1/concerts/${id}/schedules/${scheduleId}/seats/status${queryParam}`,
       );
+
+      sse.addEventListener("heartbeat", () => {
+        // 서버 15초 heartbeat 수신 확인
+      });
 
       sse.addEventListener("seat_snapshot", (e) => {
         if (!active) return;
@@ -271,6 +280,9 @@ function SeatSelectContent({ params }: { params: Promise<{ id: string }> }) {
 
       sse.addEventListener("seat_status_changed", (e) => {
         if (!active) return;
+        if (e.lastEventId) {
+          lastEventIdRef.current = e.lastEventId;
+        }
         try {
           const { seatNumber, status } = JSON.parse(e.data) as {
             seatNumber: string;
@@ -297,6 +309,20 @@ function SeatSelectContent({ params }: { params: Promise<{ id: string }> }) {
         sse = null;
         if (active) {
           reconnectTimer = setTimeout(connectSse, 3000);
+
+          if (!pollingTimerRef.current) {
+            pollingTimerRef.current = setInterval(() => {
+              if (!active) return;
+              apiFetch<SeatSelectionData>(
+                `/concerts/${id}/schedules/${scheduleId}/seats`,
+                { headers: { "X-Queue-Token": entryToken } },
+              )
+                .then((refreshed) => {
+                  if (active) setSeatData(refreshed.data);
+                })
+                .catch(() => {});
+            }, 30000);
+          }
         }
       };
     };
@@ -363,6 +389,10 @@ function SeatSelectContent({ params }: { params: Promise<{ id: string }> }) {
     return () => {
       active = false;
       if (reconnectTimer) clearTimeout(reconnectTimer);
+      if (pollingTimerRef.current) {
+        clearInterval(pollingTimerRef.current);
+        pollingTimerRef.current = null;
+      }
       sse?.close();
     };
   }, [id, scheduleId, entryToken, router]);
