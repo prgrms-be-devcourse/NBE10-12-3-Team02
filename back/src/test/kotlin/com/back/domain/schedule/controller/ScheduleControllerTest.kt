@@ -2,9 +2,9 @@ package com.back.domain.schedule.controller
 
 import com.back.domain.concert.entity.Concert
 import com.back.domain.concert.repository.ConcertRepository
+import com.back.domain.schedule.constant.SeatStatus.*
 import com.back.domain.schedule.entity.Schedule
 import com.back.domain.schedule.entity.ScheduleSeat
-import com.back.domain.schedule.constant.SeatStatus.*
 import com.back.domain.schedule.repository.ScheduleRepository
 import com.back.domain.schedule.repository.ScheduleSeatRepository
 import com.back.domain.venue.entity.Venue
@@ -13,16 +13,18 @@ import com.back.global.RedisTestConfig
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
-import org.springframework.data.redis.core.StringRedisTemplate
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
 import org.springframework.context.annotation.Import
+import org.springframework.data.redis.core.StringRedisTemplate
+import org.springframework.http.HttpHeaders
 import org.springframework.test.context.ActiveProfiles
 import org.springframework.test.context.bean.override.mockito.MockitoBean
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
 import org.springframework.test.web.servlet.result.MockMvcResultHandlers.print
+import org.springframework.test.web.servlet.result.MockMvcResultMatchers.header
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 import org.springframework.transaction.annotation.Transactional
@@ -71,6 +73,7 @@ class ScheduleControllerTest @Autowired constructor(
                 .param("concertId", concert.concertId.toString()))
             .andDo(print())
             .andExpect(status().isOk())
+            .andExpect(header().string(HttpHeaders.ETAG, "\"${concert.concertId}-${schedule.scheduleId}-2\""))
             .andExpect(jsonPath("$.resultCode").value("200-1"))
             .andExpect(jsonPath("$.msg").value("특정 회차 좌석 실시간 조회 성공"))
             .andExpect(jsonPath("$.data.concertId").value(concert.concertId))
@@ -78,5 +81,18 @@ class ScheduleControllerTest @Autowired constructor(
             .andExpect(jsonPath("$.data.round").value(1))
             .andExpect(jsonPath("$.data.scheduleDate").value("2026-07-01T19:00:00"))
             .andExpect(jsonPath("$.data.remainingSeats").value(2))
+    }
+
+    @Test
+    @DisplayName("30초 주기 폴링 시 If-None-Match ETag가 일치하면 304 Not Modified가 반환된다")
+    fun showSchedule_pollingETag_returns304() {
+        val eTag = "\"${concert.concertId}-${schedule.scheduleId}-2\""
+
+        mockMvc.perform(get("/api/v1/schedules/{scheduleId}/seats/status", schedule.scheduleId)
+                .param("concertId", concert.concertId.toString())
+                .header(HttpHeaders.IF_NONE_MATCH, eTag))
+            .andDo(print())
+            .andExpect(status().isNotModified)
+            .andExpect(header().string(HttpHeaders.ETAG, eTag))
     }
 }

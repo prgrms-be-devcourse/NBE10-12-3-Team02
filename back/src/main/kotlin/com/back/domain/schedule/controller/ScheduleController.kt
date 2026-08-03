@@ -7,6 +7,9 @@ import com.back.global.annotation.ApiV1
 import com.back.global.rsData.RsData
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.tags.Tag
+import org.springframework.http.HttpHeaders
+import org.springframework.http.HttpStatus
+import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
 
 @ApiV1
@@ -26,12 +29,23 @@ class ScheduleController(
     }
 
     @GetMapping("/{scheduleId}/seats/status")
-    @Operation(summary = "특정 회차 좌석 실시간 현황 조회", description = "특정 회차 좌석 실시간 현황 조회 API")
+    @Operation(summary = "특정 회차 좌석 실시간 현황 조회", description = "특정 회차 좌석 실시간 현황 조회 API (30초 주기 폴링 보완 지원)")
     fun showSchedule(
         @RequestParam(value = "concertId") concertId: Long,
-        @PathVariable(value = "scheduleId") scheduleId: Long
-    ): RsData<ShowScheduleResponse> {
+        @PathVariable(value = "scheduleId") scheduleId: Long,
+        @RequestHeader(value = HttpHeaders.IF_NONE_MATCH, required = false) ifNoneMatch: String?
+    ): ResponseEntity<RsData<ShowScheduleResponse>> {
         val response = scheduleService.showSchedule(concertId, scheduleId)
-        return RsData("200-1", "특정 회차 좌석 실시간 조회 성공", response)
+        val eTag = "\"$concertId-$scheduleId-${response.remainingSeats}\""
+
+        if (!ifNoneMatch.isNullOrBlank() && ifNoneMatch == eTag) {
+            return ResponseEntity.status(HttpStatus.NOT_MODIFIED)
+                .eTag(eTag)
+                .build()
+        }
+
+        return ResponseEntity.ok()
+            .eTag(eTag)
+            .body(RsData("200-1", "특정 회차 좌석 실시간 조회 성공", response))
     }
 }

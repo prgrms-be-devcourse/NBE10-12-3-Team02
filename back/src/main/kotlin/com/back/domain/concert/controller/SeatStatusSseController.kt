@@ -8,10 +8,11 @@ import io.swagger.v3.oas.annotations.tags.Tag
 import org.slf4j.LoggerFactory
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
+import org.springframework.web.bind.annotation.RequestHeader
 import org.springframework.web.bind.annotation.RequestMapping
+import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter
-import java.io.IOException
 
 @ApiV1
 @RestController
@@ -33,10 +34,13 @@ class SeatStatusSseController(
     )
     fun seatStatusStream(
         @PathVariable concertId: Long,
-        @PathVariable scheduleId: Long
+        @PathVariable scheduleId: Long,
+        @RequestHeader(value = "Last-Event-ID", required = false) lastEventHeader: String?,
+        @RequestParam(value = "lastEventId", required = false) lastEventParam: String?
     ): SseEmitter {
+        val lastEventId = lastEventHeader?.ifBlank { null } ?: lastEventParam?.ifBlank { null }
         val emitter = SseEmitter(SSE_TIMEOUT_MS)
-        val wrapper = registry.register(scheduleId, emitter)
+        val wrapper = registry.register(scheduleId, emitter, lastEventId)
 
         try {
             val seats = scheduleSeatRepository.findByScheduleScheduleId(scheduleId)
@@ -62,7 +66,7 @@ class SeatStatusSseController(
             emitter.complete()
         }
 
-        log.debug("SSE 스트림 연결: concertId={}, scheduleId={}", concertId, scheduleId)
+        log.debug("SSE 스트림 연결: concertId={}, scheduleId={}, lastEventId={}", concertId, scheduleId, lastEventId)
         return emitter
     }
 

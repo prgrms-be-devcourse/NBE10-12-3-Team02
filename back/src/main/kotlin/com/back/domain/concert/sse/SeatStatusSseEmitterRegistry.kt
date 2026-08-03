@@ -1,31 +1,47 @@
 package com.back.domain.concert.sse
 
 import org.slf4j.LoggerFactory
+import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Component
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter
+import java.io.IOException
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CopyOnWriteArrayList
+import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicLong
 import java.util.concurrent.locks.ReentrantLock
-import kotlin.concurrent.withLock
 
 @Component
-class SeatStatusSseEmitterRegistry {
+class SeatStatusSseEmitterRegistry(
+    private val eventCache: SeatStatusSseEventCache
+) {
     private val log = LoggerFactory.getLogger(javaClass)
+    private val executor = Executors.newVirtualThreadPerTaskExecutor()
 
     class SynchronizedEmitter(
         val emitter: SseEmitter,
-        val lock: ReentrantLock = ReentrantLock()
+        val lock: ReentrantLock = ReentrantLock(),
+        val createdAt: Long = System.currentTimeMillis(),
+        val lastSentAt: AtomicLong = AtomicLong(System.currentTimeMillis())
     ) {
-        fun send(event: SseEmitter.SseEventBuilder) {
-            lock.withLock {
+        fun send(event: SseEmitter.SseEventBuilder, timeoutMs: Long = 500L) {
+            val acquired = lock.tryLock(timeoutMs, TimeUnit.MILLISECONDS)
+            if (!acquired) {
+                throw IOException("Emitter lock acquisition timed out (${timeoutMs}ms) - Slow Consumer detected")
+            }
+            try {
                 emitter.send(event)
+                lastSentAt.set(System.currentTimeMillis())
+            } finally {
+                lock.unlock()
             }
         }
     }
 
     private val emitters = ConcurrentHashMap<Long, MutableList<SynchronizedEmitter>>()
 
-    fun register(scheduleId: Long, emitter: SseEmitter): SynchronizedEmitter {
+    fun register(scheduleId: Long, emitter: SseEmitter, lastEventId: String? = null): SynchronizedEmitter {
         val wrapper = SynchronizedEmitter(emitter)
         emitters.computeIfAbsent(scheduleId) { CopyOnWriteArrayList() }.add(wrapper)
 
@@ -37,8 +53,26 @@ class SeatStatusSseEmitterRegistry {
         emitter.onTimeout(cleanup)
         emitter.onError { cleanup.run() }
 
-        log.debug("SSE 구독 등록: scheduleId={}, 총 구독자={}", scheduleId, emitters[scheduleId]?.size ?: 0)
+        // Last-Event-ID 재연결 시 누락 이벤트 Replay 전송
+        if (!lastEventId.isNullOrBlank()) {
+            val missedEvents = eventCache.getEventsAfter(scheduleId, lastEventId)
+            for (event in missedEvents) {
+                try {
+                    val data = "{\"seatNumber\":\"${event.seatNumber}\",\"status\":\"${event.status}\"}"
+                    wrapper.send(
+                        SseEmitter.event()
+                            .id(event.eventId)
+                            .name("seat_status_changed")
+                            .data(data)
+                    )
+                } catch (e: Exception) {
+                    log.warn("누락 이벤트 Replay 전송 실패: scheduleId={}, eventId={}", scheduleId, event.eventId)
+                    break
+                }
+            }
+        }
 
+        log.debug("SSE 구독 등록: scheduleId={}, 총 구독자={}", scheduleId, emitters[scheduleId]?.size ?: 0)
         return wrapper
     }
 
@@ -46,18 +80,49 @@ class SeatStatusSseEmitterRegistry {
         val list = emitters[scheduleId]
         if (list.isNullOrEmpty()) return
 
+        val cachedEvent = eventCache.addEvent(scheduleId, seatNumber, status)
         val data = "{\"seatNumber\":\"$seatNumber\",\"status\":\"$status\"}"
 
         for (wrapper in list) {
-            try {
-                wrapper.send(
-                    SseEmitter.event()
-                        .name("seat_status_changed")
-                        .data(data)
-                )
-            } catch (e: Exception) {
-                log.warn("SSE 전송 실패 (자원 정리): scheduleId={}, seat={}, err={}", scheduleId, seatNumber, e.message)
-                runCatching { wrapper.emitter.completeWithError(e) }
+            executor.submit {
+                try {
+                    wrapper.send(
+                        SseEmitter.event()
+                            .id(cachedEvent.eventId)
+                            .name("seat_status_changed")
+                            .data(data)
+                    )
+                } catch (e: Exception) {
+                    log.warn("SSE 전송 실패 (자원 정리): scheduleId={}, seat={}, err={}", scheduleId, seatNumber, e.message)
+                    list.remove(wrapper)
+                    runCatching { wrapper.emitter.completeWithError(e) }
+                }
+            }
+        }
+    }
+
+    @Scheduled(fixedRate = 15000)
+    fun sendHeartbeat() {
+        val now = System.currentTimeMillis()
+
+        for ((scheduleId, list) in emitters) {
+            if (list.isEmpty()) continue
+
+            for (wrapper in list) {
+                executor.submit {
+                    try {
+                        wrapper.send(
+                            SseEmitter.event()
+                                .name("heartbeat")
+                                .comment("ping")
+                                .data("ping")
+                        )
+                    } catch (e: Exception) {
+                        log.debug("Heartbeat 전송 실패 (좀비 Emitter 정리): scheduleId={}, err={}", scheduleId, e.message)
+                        list.remove(wrapper)
+                        runCatching { wrapper.emitter.completeWithError(e) }
+                    }
+                }
             }
         }
     }
