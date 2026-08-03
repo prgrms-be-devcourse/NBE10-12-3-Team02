@@ -32,15 +32,19 @@ export default function ShareButton({
     <button
       onClick={handleClick}
       aria-label="링크 복사"
-      className={`flex items-center gap-1 text-xs text-gray-400 hover:text-blue-500 transition ${className}`}
+      className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-sm font-medium transition ${
+        copied
+          ? "bg-green-50 border-green-200 text-green-600"
+          : "bg-white border-gray-200 text-gray-500 hover:border-blue-300 hover:text-blue-600 hover:bg-blue-50"
+      } ${className}`}
     >
       {copied ? (
         <>
-          <Check size={15} className="text-green-500" />
-          <span className="text-green-500">복사됨</span>
+          <Check size={16} className="shrink-0" />
+          <span>복사됨</span>
         </>
       ) : (
-        <Share2 size={15} />
+        <Share2 size={16} />
       )}
     </button>
   );
