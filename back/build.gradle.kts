@@ -47,8 +47,8 @@ dependencies {
     runtimeOnly("io.jsonwebtoken:jjwt-impl:0.13.0")
     runtimeOnly("io.jsonwebtoken:jjwt-jackson:0.13.0")
 
-    // Redisson
-    implementation("org.redisson:redisson-spring-boot-starter:4.6.1")
+    // Redis
+    implementation("org.springframework.boot:spring-boot-starter-data-redis")
 
     // WebSocket
     implementation("org.springframework.boot:spring-boot-starter-websocket")

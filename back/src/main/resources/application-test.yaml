@@ -4,15 +4,10 @@ spring:
     username: sa
     password:
     driver-class-name: org.h2.Driver
-  # Redisson은 자체 config 방식으로 동작하므로 standalone dummy 설정
-  redis:
-    redisson:
-      config: |
-        singleServerConfig:
-          address: "redis://127.0.0.1:6379"
-        threads: 4
-        nettyThreads: 8
-        codec: !<org.redisson.codec.JsonJacksonCodec> {}
+  data:
+    redis:
+      host: 127.0.0.1
+      port: 6379
 custom:
   cors:
     allowed-origins: http://localhost:3000

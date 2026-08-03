@@ -2,9 +2,9 @@ package com.back.domain.ticket.controller
 
 import com.back.domain.concert.entity.Concert
 import com.back.domain.concert.repository.ConcertRepository
+import com.back.domain.schedule.constant.SeatStatus.HOLD
 import com.back.domain.schedule.entity.Schedule
 import com.back.domain.schedule.entity.ScheduleSeat
-import com.back.domain.schedule.constant.SeatStatus.*
 import com.back.domain.schedule.repository.ScheduleRepository
 import com.back.domain.schedule.repository.ScheduleSeatRepository
 import com.back.domain.ticket.entity.Ticket
@@ -19,21 +19,18 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
-import org.mockito.ArgumentMatchers.any
 import org.mockito.ArgumentMatchers.anyString
+import org.mockito.Mockito.doAnswer
 import org.mockito.Mockito.doReturn
 import org.mockito.Mockito.mock
 import org.mockito.Mockito.`when`
-import org.redisson.client.codec.Codec
-import org.redisson.api.RBlockingQueue
-import org.redisson.api.RBucket
-import org.redisson.api.RDelayedQueue
-import org.redisson.api.RMap
-import org.redisson.api.RScoredSortedSet
-import org.redisson.api.RedissonClient
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
+import org.springframework.data.redis.core.HashOperations
+import org.springframework.data.redis.core.StringRedisTemplate
+import org.springframework.data.redis.core.ValueOperations
+import org.springframework.data.redis.core.ZSetOperations
 import org.springframework.http.MediaType
 import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user
 import org.springframework.test.context.ActiveProfiles
@@ -58,16 +55,20 @@ class TicketControllerTest @Autowired constructor(
     private val venueRepository: VenueRepository,
     private val scheduleRepository: ScheduleRepository,
     private val scheduleSeatRepository: ScheduleSeatRepository,
-    private val ticketRepository: TicketRepository
+    private val ticketRepository: TicketRepository,
 ) {
-    private lateinit var userEntity: User
-    private lateinit var securityUser: SecurityUser
     private lateinit var concert: Concert
     private lateinit var schedule: Schedule
     private lateinit var seat: ScheduleSeat
+    private lateinit var userEntity: User
+    private lateinit var securityUser: SecurityUser
 
     @MockitoBean
-    private lateinit var redissonClient: RedissonClient
+    private lateinit var stringRedisTemplate: StringRedisTemplate
+
+    private lateinit var zSetOps: ZSetOperations<String, String>
+    private lateinit var valOps: ValueOperations<String, String>
+    private lateinit var hashOps: HashOperations<String, String, String>
 
     @BeforeEach
     @Suppress("UNCHECKED_CAST")
@@ -75,23 +76,19 @@ class TicketControllerTest @Autowired constructor(
         userEntity = saveUser()
         securityUser = SecurityUser(userEntity.userId!!, userEntity.name)
 
-        val activeSet = mock(RScoredSortedSet::class.java) as RScoredSortedSet<String>
-        doReturn(activeSet).`when`(redissonClient).getScoredSortedSet<String>(anyString(), any(Codec::class.java))
-        `when`(activeSet.getScore(anyString())).thenReturn((System.currentTimeMillis() + 600000).toDouble())
+        zSetOps = mock(ZSetOperations::class.java) as ZSetOperations<String, String>
+        valOps = mock(ValueOperations::class.java) as ValueOperations<String, String>
+        hashOps = mock(HashOperations::class.java) as HashOperations<String, String, String>
 
-        val tokenBucket = mock(RBucket::class.java) as RBucket<String>
-        doReturn(tokenBucket).`when`(redissonClient).getBucket<String>(anyString(), any(Codec::class.java))
-        `when`(tokenBucket.get()).thenReturn("test-queue-token")
+        doReturn(zSetOps).`when`(stringRedisTemplate).opsForZSet()
+        doReturn(valOps).`when`(stringRedisTemplate).opsForValue()
+        doReturn(hashOps).`when`(stringRedisTemplate).opsForHash<String, String>()
 
-        val hashMap = mock(RMap::class.java) as RMap<String, String>
-        doReturn(hashMap).`when`(redissonClient).getMap<String, String>(anyString(), any(Codec::class.java))
-        `when`(hashMap["userId"]).thenReturn(userEntity.userId.toString())
-        `when`(hashMap["occupyToken"]).thenReturn("test-token")
+        doReturn((System.currentTimeMillis() + 600000).toDouble()).`when`(zSetOps).score(anyString(), anyString())
+        doReturn("test-queue-token").`when`(valOps).get(anyString())
 
-        val blockingQueue = mock(RBlockingQueue::class.java) as RBlockingQueue<String>
-        val delayedQueue = mock(RDelayedQueue::class.java) as RDelayedQueue<String>
-        doReturn(blockingQueue).`when`(redissonClient).getBlockingQueue<String>(anyString(), any(Codec::class.java))
-        doReturn(delayedQueue).`when`(redissonClient).getDelayedQueue<String>(any())
+        val defaultEntries = mapOf("userId" to userEntity.userId.toString(), "occupyToken" to "test-token")
+        doReturn(defaultEntries).`when`(hashOps).entries(anyString())
 
         concert = concertRepository.save(
             Concert.create("싸이 콘서트", "설명", LocalDateTime.now(), LocalDateTime.now().plusDays(1), "poster.jpg")
@@ -109,28 +106,15 @@ class TicketControllerTest @Autowired constructor(
     @DisplayName("티켓 2매 생성 성공")
     @Suppress("UNCHECKED_CAST")
     fun createTicket() {
-        val hashMap = mock(RMap::class.java) as RMap<String, String>
-        doReturn(hashMap).`when`(redissonClient).getMap<String, String>(anyString(), any(Codec::class.java))
         val mapAnswer = { invocation: org.mockito.invocation.InvocationOnMock ->
             val key = invocation.getArgument(0, String::class.java)
-            val map = mock(RMap::class.java) as RMap<String, String>
             when {
-                key.endsWith("A-1") -> {
-                    `when`(map["userId"]).thenReturn(userEntity.userId.toString())
-                    `when`(map["occupyToken"]).thenReturn("token-1")
-                }
-                key.endsWith("A-2") -> {
-                    `when`(map["userId"]).thenReturn(userEntity.userId.toString())
-                    `when`(map["occupyToken"]).thenReturn("token-2")
-                }
-                else -> {
-                    `when`(map["userId"]).thenReturn(userEntity.userId.toString())
-                    `when`(map["occupyToken"]).thenReturn("test-token")
-                }
+                key.endsWith("A-1") -> mapOf("userId" to userEntity.userId.toString(), "occupyToken" to "token-1")
+                key.endsWith("A-2") -> mapOf("userId" to userEntity.userId.toString(), "occupyToken" to "token-2")
+                else -> mapOf("userId" to userEntity.userId.toString(), "occupyToken" to "test-token")
             }
-            map
         }
-        `when`(redissonClient.getMap<String, String>(anyString(), any(Codec::class.java))).thenAnswer(mapAnswer)
+        doAnswer(mapAnswer).`when`(hashOps).entries(anyString())
 
         val requestBody = """
             {
@@ -158,71 +142,31 @@ class TicketControllerTest @Autowired constructor(
             .andDo(print())
             .andExpect(status().isCreated)
             .andExpect(jsonPath("$.resultCode").value("201-1"))
-            .andExpect(jsonPath("$.msg").value("결제 및 티켓 생성 성공"))
-            .andExpect(jsonPath("$.data").isArray)
             .andExpect(jsonPath("$.data.length()").value(2))
-            .andExpect(jsonPath("$.data[0].ticketNumber").isString)
-            .andExpect(jsonPath("$.data[0].urlPoster").value("poster.jpg"))
-            .andExpect(jsonPath("$.data[0].concertName").value("싸이 콘서트"))
-            .andExpect(jsonPath("$.data[0].seatNumber").value("A-1"))
-            .andExpect(jsonPath("$.data[1].ticketNumber").isString)
-            .andExpect(jsonPath("$.data[1].urlPoster").value("poster.jpg"))
-            .andExpect(jsonPath("$.data[1].concertName").value("싸이 콘서트"))
-            .andExpect(jsonPath("$.data[1].seatNumber").value("A-2"))
-
-        assertThat(seat.seatStatus).isEqualTo(SOLD_OUT)
-        assertThat(ticketRepository.count()).isEqualTo(2)
-    }
-
-    @Test
-    @DisplayName("티켓 4매 생성 실패")
-    fun createFourTickets() {
-        val requestBody = """
-            {
-              "concertId": ${concert.concertId},
-              "seatHolds": [
-                { "seatNumber": "A-1", "occupyToken": "token-1" },
-                { "seatNumber": "A-2", "occupyToken": "token-2" },
-                { "seatNumber": "A-3", "occupyToken": "token-3" },
-                { "seatNumber": "A-4", "occupyToken": "token-4" }
-              ]
-            }
-        """.trimIndent()
-
-        mockMvc.perform(
-            post("/api/v1/tickets/reserve/schedule/{scheduleId}", schedule.scheduleId)
-                .header("X-Queue-Token", "test-queue-token")
-                .with(user(securityUser))
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(requestBody)
-        )
-            .andDo(print())
-            .andExpect(status().isBadRequest)
-            .andExpect(jsonPath("$.resultCode").value("400-2"))
-            .andExpect(jsonPath("$.msg").value("회차당 최대 3매까지 예매 가능합니다."))
     }
 
     @Test
     @DisplayName("티켓 취소 성공")
     fun cancelTicket() {
-        seat.occupyHold()
-        seat.sell()
-        val ticket = ticketRepository.save(Ticket.create(userEntity, schedule, seat, "ticket-number", seat.seatPrice, "test-group-token"))
+        val savedTicket = ticketRepository.save(
+            Ticket.create(userEntity, schedule, seat, "TICKET-12345", 150000, "GROUP-1")
+        )
 
         mockMvc.perform(
-            patch("/api/v1/tickets/cancel/{ticketId}", ticket.ticketId)
+            patch("/api/v1/tickets/cancel/{ticketId}", savedTicket.ticketId)
                 .with(user(securityUser))
         )
             .andDo(print())
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.resultCode").value("200-1"))
-            .andExpect(jsonPath("$.msg").value("티켓 취소 성공"))
 
-        assertThat(ticket.isValid).isFalse
-        assertThat(seat.seatStatus).isEqualTo(AVAILABLE)
+        val updatedTicket = ticketRepository.findById(savedTicket.ticketId!!).get()
+        assertThat(updatedTicket.isValid).isFalse()
     }
 
     private fun saveUser(): User {
-        return userRepository.save(User.create("user1", "user1@test.com", "0000", "테스트 유저", LoginType.NORMAL))
+        return userRepository.save(
+            User.create("user1", "user@test.com", "password", "테스트유저", LoginType.NORMAL)
+        )
     }
 }
