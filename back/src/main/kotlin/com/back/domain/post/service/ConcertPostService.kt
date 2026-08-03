@@ -6,6 +6,7 @@ import com.back.domain.post.dto.ConcertPostResponse
 import com.back.domain.post.dto.ConcertPostUpdateRequest
 import com.back.domain.post.dto.EligibleConcertResponse
 import com.back.domain.post.entity.ConcertPost
+import com.back.domain.post.entity.ReviewType
 import com.back.domain.post.repository.ConcertPostRepository
 import com.back.domain.post.repository.PostBookmarkRepository
 import com.back.domain.post.repository.PostLikeRepository
@@ -14,12 +15,14 @@ import com.back.domain.user.repository.UserRepository
 import com.back.global.exception.ErrorCode
 import com.back.global.exception.ServiceException
 import org.springframework.dao.DataIntegrityViolationException
+import org.springframework.data.domain.Page
+import org.springframework.data.domain.PageImpl
+import org.springframework.data.domain.Pageable
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.LocalDateTime
 
 @Service
-@Transactional(readOnly = true)
 class ConcertPostService(
     private val concertPostRepository: ConcertPostRepository,
     private val concertRepository: ConcertRepository,
@@ -27,9 +30,9 @@ class ConcertPostService(
     private val ticketRepository: TicketRepository,
     private val postLikeRepository: PostLikeRepository,
     private val postBookmarkRepository: PostBookmarkRepository,
+    private val concertPostCommandService: ConcertPostCommandService,
 ) {
 
-    @Transactional
     fun create(concertId: Long, userId: Long, request: ConcertPostCreateRequest): ConcertPostResponse {
         val concert = concertRepository.findById(concertId).orElseThrow {
             ServiceException(ErrorCode.CONCERT_NOT_FOUND)
@@ -39,32 +42,45 @@ class ConcertPostService(
             ?: throw ServiceException(ErrorCode.USER_NOT_FOUND)
 
         val now = LocalDateTime.now()
-        val hasPastTicket = ticketRepository
-            .existsByUser_UserIdAndSchedule_Concert_ConcertIdAndSchedule_ScheduleDateBeforeAndIsValidTrue(userId, concertId, now)
-        if (!hasPastTicket) {
-            throw ServiceException(ErrorCode.POST_NOT_ELIGIBLE)
+
+        when (request.reviewType) {
+            ReviewType.REVIEW -> {
+                val hasPastTicket = ticketRepository
+                    .existsByUser_UserIdAndSchedule_Concert_ConcertIdAndSchedule_ScheduleDateBeforeAndIsValidTrue(userId, concertId, now)
+                if (!hasPastTicket) {
+                    throw ServiceException(ErrorCode.POST_NOT_ELIGIBLE)
+                }
+
+                val sixMonthsAgo = now.minusMonths(6)
+                val hasRecentTicket = ticketRepository
+                    .existsByUser_UserIdAndSchedule_Concert_ConcertIdAndSchedule_ScheduleDateBetweenAndIsValidTrue(userId, concertId, sixMonthsAgo, now)
+                if (!hasRecentTicket) {
+                    throw ServiceException(ErrorCode.POST_PERIOD_EXPIRED)
+                }
+            }
+            ReviewType.EXPECTATION -> {
+                val hasReservation = ticketRepository
+                    .existsByUser_UserIdAndSchedule_Concert_ConcertId(userId, concertId)
+                if (!hasReservation) {
+                    throw ServiceException(ErrorCode.POST_NOT_ELIGIBLE)
+                }
+            }
         }
 
-        val sixMonthsAgo = now.minusMonths(6)
-        val hasRecentTicket = ticketRepository
-            .existsByUser_UserIdAndSchedule_Concert_ConcertIdAndSchedule_ScheduleDateBetweenAndIsValidTrue(userId, concertId, sixMonthsAgo, now)
-        if (!hasRecentTicket) {
-            throw ServiceException(ErrorCode.POST_PERIOD_EXPIRED)
-        }
-
-        if (concertPostRepository.existsByConcert_ConcertIdAndUser_UserId(concertId, userId)) {
+        if (concertPostRepository.existsByConcert_ConcertIdAndUser_UserIdAndReviewType(concertId, userId, request.reviewType)) {
             throw ServiceException(ErrorCode.POST_ALREADY_EXISTS)
         }
 
-        val post = ConcertPost.create(concert, user, request.title, request.content)
+        val post = ConcertPost.create(concert, user, request.title, request.content, request.rating, request.reviewType)
         val saved = try {
-            concertPostRepository.saveAndFlush(post)
+            concertPostCommandService.save(post)
         } catch (e: DataIntegrityViolationException) {
             throw ServiceException(ErrorCode.POST_ALREADY_EXISTS)
         }
         return toResponse(saved, userId)
     }
 
+    @Transactional(readOnly = true)
     fun getList(concertId: Long, currentUserId: Long?): List<ConcertPostResponse> {
         if (!concertRepository.existsById(concertId)) {
             throw ServiceException(ErrorCode.CONCERT_NOT_FOUND)
@@ -73,6 +89,7 @@ class ConcertPostService(
         return toResponses(posts, currentUserId)
     }
 
+    @Transactional(readOnly = true)
     fun getDetail(postId: Long, currentUserId: Long?): ConcertPostResponse {
         val post = concertPostRepository.findById(postId).orElseThrow {
             ServiceException(ErrorCode.POST_NOT_FOUND)
@@ -80,6 +97,7 @@ class ConcertPostService(
         return toResponse(post, currentUserId)
     }
 
+    @Transactional(readOnly = true)
     fun getDetail(concertId: Long, postId: Long, currentUserId: Long?): ConcertPostResponse {
         val post = findByConcertIdAndPostId(concertId, postId)
         return toResponse(post, currentUserId)
@@ -96,20 +114,35 @@ class ConcertPostService(
         if (post.user.userId != userId) {
             throw ServiceException(ErrorCode.POST_FORBIDDEN)
         }
-        post.update(request.title, request.content)
+        post.update(request.title, request.content, request.rating)
+        // reviewType은 생성 시에만 결정되며 수정 불가
         return toResponse(post, userId)
     }
 
+    @Transactional(readOnly = true)
     fun getAllPosts(currentUserId: Long?): List<ConcertPostResponse> {
         val posts = concertPostRepository.findAllWithConcertAndUser()
         return toResponses(posts, currentUserId)
     }
 
-    fun getEligibleConcerts(userId: Long): List<EligibleConcertResponse> {
-        val now = LocalDateTime.now()
-        val sixMonthsAgo = now.minusMonths(6)
-        return concertPostRepository.findEligibleConcertsForUser(userId, sixMonthsAgo, now)
-            .map { EligibleConcertResponse.of(it) }
+    @Transactional(readOnly = true)
+    fun getMyPosts(userId: Long, pageable: Pageable): Page<ConcertPostResponse> {
+        val posts = concertPostRepository.findAllByUser_UserId(userId, pageable)
+        val responses = toResponses(posts.content, userId)
+        return PageImpl(responses, pageable, posts.totalElements)
+    }
+
+    @Transactional(readOnly = true)
+    fun getEligibleConcerts(userId: Long, reviewType: ReviewType): List<EligibleConcertResponse> {
+        val concerts = when (reviewType) {
+            ReviewType.REVIEW -> {
+                val now = LocalDateTime.now()
+                val sixMonthsAgo = now.minusMonths(6)
+                concertPostRepository.findEligibleConcertsForReview(userId, sixMonthsAgo, now, reviewType)
+            }
+            ReviewType.EXPECTATION -> concertPostRepository.findEligibleConcertsForExpectation(userId, reviewType)
+        }
+        return concerts.map { EligibleConcertResponse.of(it) }
     }
 
     @Transactional

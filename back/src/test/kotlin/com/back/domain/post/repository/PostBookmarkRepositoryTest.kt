@@ -4,6 +4,7 @@ import com.back.domain.concert.entity.Concert
 import com.back.domain.concert.repository.ConcertRepository
 import com.back.domain.post.entity.ConcertPost
 import com.back.domain.post.entity.PostBookmark
+import com.back.domain.post.entity.ReviewType
 import com.back.domain.user.constant.LoginType
 import com.back.domain.user.entity.User
 import com.back.domain.user.repository.UserRepository
@@ -49,7 +50,7 @@ class PostBookmarkRepositoryTest @Autowired constructor(
             )
         )
         val post = concertPostRepository.saveAndFlush(
-            ConcertPost.create(concert, user, "게시글", "게시글 내용")
+            ConcertPost.create(concert, user, "게시글", "게시글 내용", rating = 5, reviewType = ReviewType.REVIEW)
         )
         postBookmarkRepository.saveAndFlush(PostBookmark.create(post, user))
 
@@ -85,8 +86,8 @@ class PostBookmarkRepositoryTest @Autowired constructor(
                 null,
             )
         )
-        val targetPost = concertPostRepository.saveAndFlush(ConcertPost.create(concert1, user1, "대상", "내용"))
-        val otherPost = concertPostRepository.saveAndFlush(ConcertPost.create(concert2, user1, "다른 게시글", "내용"))
+        val targetPost = concertPostRepository.saveAndFlush(ConcertPost.create(concert1, user1, "대상", "내용", rating = 5, reviewType = ReviewType.REVIEW))
+        val otherPost = concertPostRepository.saveAndFlush(ConcertPost.create(concert2, user1, "다른 게시글", "내용", rating = 5, reviewType = ReviewType.REVIEW))
         postBookmarkRepository.saveAllAndFlush(
             listOf(
                 PostBookmark.create(targetPost, user1),

@@ -3,6 +3,7 @@ package com.back.domain.post.repository
 import com.back.domain.concert.entity.Concert
 import com.back.domain.concert.repository.ConcertRepository
 import com.back.domain.post.entity.ConcertPost
+import com.back.domain.post.entity.ReviewType
 import com.back.domain.user.constant.LoginType
 import com.back.domain.user.entity.User
 import com.back.domain.user.repository.UserRepository
@@ -46,12 +47,12 @@ class ConcertPostRepositoryTest @Autowired constructor(
             ),
         )
         concertPostRepository.saveAndFlush(
-            ConcertPost.create(concert, user, "첫 번째 게시글", "첫 번째 게시글 내용"),
+            ConcertPost.create(concert, user, "첫 번째 게시글", "첫 번째 게시글 내용", rating = 5, reviewType = ReviewType.REVIEW),
         )
 
         assertThatThrownBy {
             concertPostRepository.saveAndFlush(
-                ConcertPost.create(concert, user, "두 번째 게시글", "두 번째 게시글 내용"),
+                ConcertPost.create(concert, user, "두 번째 게시글", "두 번째 게시글 내용", rating = 5, reviewType = ReviewType.REVIEW),
             )
         }.isInstanceOf(DataIntegrityViolationException::class.java)
     }

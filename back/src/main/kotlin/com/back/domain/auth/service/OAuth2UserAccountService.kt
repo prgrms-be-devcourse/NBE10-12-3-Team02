@@ -35,7 +35,10 @@ class OAuth2UserAccountService(
 
         val existingSocialAuth =
             userSocialAuthRepository.findByProviderAndProviderId(loginType, platformId)
-        val existingUser = existingSocialAuth?.user
+        // existingSocialAuth.user는 지연 로딩 프록시이므로, 세션이 끝난 뒤(CustomOAuth2UserService)
+        // 접근하면 LazyInitializationException이 난다. userId만 꺼내 완전히 로드된 엔티티로 다시 조회한다.
+        val existingUser = existingSocialAuth?.user?.userId
+            ?.let { userRepository.findByUserIdAndDeletedAtIsNull(it) }
             ?: userRepository.findByLoginIdAndDeletedAtIsNull(loginId)
 
         if (existingUser != null) {

@@ -8,10 +8,13 @@ import com.back.domain.user.dto.SignupResponse
 import com.back.domain.auth.dto.SocialLinkStatusResponse
 import com.back.domain.auth.repository.SocialLinkCookieRepository
 import com.back.domain.user.dto.UpdateMyPageRequest
+import com.back.domain.user.dto.UserProfileResponse
 import com.back.domain.user.service.UserService
 import com.back.domain.auth.service.SocialLinkService
 import com.back.domain.post.dto.PostBookmarkResponse
+import com.back.domain.post.dto.PostLikeResponse
 import com.back.domain.post.service.PostBookmarkService
+import com.back.domain.post.service.PostLikeService
 import com.back.global.annotation.ApiV1
 import com.back.global.requestcontext.RequestContext
 import com.back.global.rsData.RsData
@@ -40,6 +43,7 @@ class UserController(
     private val socialLinkService: SocialLinkService,
     private val socialLinkCookieRepository: SocialLinkCookieRepository,
     private val postBookmarkService: PostBookmarkService,
+    private val postLikeService: PostLikeService,
 ) {
 
     @PostMapping("/signup")
@@ -74,6 +78,19 @@ class UserController(
             "200-1",
             "게시글 북마크 목록 조회 성공",
             postBookmarkService.getMyBookmarks(actor.id, pageable),
+        )
+    }
+
+    @GetMapping("/me/post-likes")
+    @Operation(summary = "내 게시글 좋아요 목록 조회", description = "좋아요한 게시글을 최신 좋아요순으로 조회합니다.")
+    fun getMyPostLikes(
+        @PageableDefault(size = 20) pageable: Pageable,
+    ): RsData<Page<PostLikeResponse>> {
+        val actor = requestContext.actor ?: throw IllegalStateException("Actor must not be null")
+        return RsData(
+            "200-1",
+            "게시글 좋아요 목록 조회 성공",
+            postLikeService.getMyLikes(actor.id, pageable),
         )
     }
 
@@ -131,6 +148,14 @@ class UserController(
         val actor = requestContext.actor ?: throw IllegalStateException("Actor must not be null")
         userService.deleteProfileImg(actor.id)
         return RsData("200-1", "프로필 사진이 기본 이미지로 변경되었습니다.", null)
+    }
+
+    @GetMapping("/{id}")
+    @Operation(summary = "다른 유저 공개 프로필 조회", description = "특정 유저의 공개 프로필을 조회합니다. 비로그인 상태에서도 조회 가능합니다.")
+    fun getUserProfile(@PathVariable id: Long): RsData<UserProfileResponse> {
+        val currentUserId = requestContext.actor?.id
+        val data = userService.getPublicProfile(id, currentUserId)
+        return RsData("200-1", "유저 프로필 조회 성공", data)
     }
 
     @GetMapping("/{id}/redirectToProfileImg")

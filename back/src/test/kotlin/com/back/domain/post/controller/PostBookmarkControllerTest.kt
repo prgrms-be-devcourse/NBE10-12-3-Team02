@@ -4,6 +4,7 @@ import com.back.domain.concert.entity.Concert
 import com.back.domain.concert.repository.ConcertRepository
 import com.back.domain.post.entity.ConcertPost
 import com.back.domain.post.entity.PostBookmark
+import com.back.domain.post.entity.ReviewType
 import com.back.domain.post.repository.ConcertPostRepository
 import com.back.domain.post.repository.PostBookmarkRepository
 import com.back.domain.user.constant.LoginType
@@ -88,7 +89,7 @@ class PostBookmarkControllerTest @Autowired constructor(
             )
         )
         post = concertPostRepository.save(
-            ConcertPost.create(concert, userEntity, "북마크 테스트 게시글", "게시글 내용")
+            ConcertPost.create(concert, userEntity, "북마크 테스트 게시글", "게시글 내용", rating = 5, reviewType = ReviewType.REVIEW)
         )
     }
 

@@ -2,9 +2,12 @@
 
 import { useState, useEffect, use } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
+import Link from "next/link";
 import { apiFetch, decodeToken, ApiError, restoreSession } from "@/lib/api";
 import { getLocalConcertPoster } from "@/lib/concertDetailImages";
 import { formatDateTime } from "@/lib/date";
+import { Star, Bookmark, Heart } from "lucide-react";
 
 interface PostDetail {
   postId: number;
@@ -13,15 +16,40 @@ interface PostDetail {
   userName: string;
   title: string;
   content: string;
+  rating: number | null;
+  reviewType: "EXPECTATION" | "REVIEW";
   isMine: boolean;
+  isBookmarked: boolean;
+  likeCount: number;
+  isLiked: boolean;
   createdAt: string;
   updatedAt: string;
   concertName: string;
   posterUrl: string | null;
 }
 
+const REVIEW_TYPE_BADGE: Record<PostDetail["reviewType"], { label: string; className: string }> = {
+  REVIEW: { label: "관람후기", className: "bg-emerald-50 text-emerald-600 border border-emerald-200" },
+  EXPECTATION: { label: "기대평", className: "bg-amber-50 text-amber-600 border border-amber-200" },
+};
+
+function RatingStars({ rating }: { rating: number }) {
+  return (
+    <div className="flex items-center gap-0.5">
+      {[1, 2, 3, 4, 5].map((n) => (
+        <Star
+          key={n}
+          size={16}
+          className={n <= rating ? "fill-yellow-400 text-yellow-400" : "text-gray-200"}
+        />
+      ))}
+    </div>
+  );
+}
+
 interface Comment {
   commentId: number;
+  authorId: number;
   authorName: string;
   content: string;
   createdAt: string;
@@ -39,7 +67,12 @@ export default function PostDetailPage({
   const [post, setPost] = useState<PostDetail | null>(null);
   const [postLoading, setPostLoading] = useState(true);
   const [editMode, setEditMode] = useState(false);
-  const [editForm, setEditForm] = useState({ title: "", content: "" });
+  const [editForm, setEditForm] = useState<{
+    title: string;
+    content: string;
+    reviewType: PostDetail["reviewType"];
+    rating: number | null;
+  }>({ title: "", content: "", reviewType: "REVIEW", rating: null });
   const [editError, setEditError] = useState("");
   const [editSubmitting, setEditSubmitting] = useState(false);
 
@@ -49,7 +82,21 @@ export default function PostDetailPage({
   const [commentSubmitting, setCommentSubmitting] = useState(false);
   const [commentRefreshKey, setCommentRefreshKey] = useState(0);
 
-  const me = decodeToken();
+  const [me, setMe] = useState<{ id: number; name: string } | null>(null);
+
+  const [bookmarked, setBookmarked] = useState(false);
+  const [bookmarkPending, setBookmarkPending] = useState(false);
+
+  const [liked, setLiked] = useState(false);
+  const [likeCount, setLikeCount] = useState(0);
+  const [likePending, setLikePending] = useState(false);
+
+  useEffect(() => {
+    const syncAuth = () => setMe(decodeToken());
+    syncAuth();
+    window.addEventListener("auth-changed", syncAuth);
+    return () => window.removeEventListener("auth-changed", syncAuth);
+  }, []);
 
   useEffect(() => {
     restoreSession().then(() => {
@@ -57,7 +104,15 @@ export default function PostDetailPage({
       apiFetch<PostDetail>(`/posts/${postId}`)
         .then((res) => {
           setPost(res.data);
-          setEditForm({ title: res.data.title, content: res.data.content });
+          setBookmarked(res.data.isBookmarked);
+          setLiked(res.data.isLiked);
+          setLikeCount(res.data.likeCount);
+          setEditForm({
+            title: res.data.title,
+            content: res.data.content,
+            reviewType: res.data.reviewType,
+            rating: res.data.rating,
+          });
         })
         .catch(() => setPost(null))
         .finally(() => setPostLoading(false));
@@ -98,6 +153,54 @@ export default function PostDetailPage({
       router.push("/board");
     } catch {
       alert("삭제에 실패했습니다.");
+    }
+  };
+
+  const handleBookmarkToggle = async () => {
+    if (!me) {
+      router.push("/login");
+      return;
+    }
+    setBookmarkPending(true);
+    try {
+      if (bookmarked) {
+        await apiFetch(`/posts/${postId}/bookmarks`, { method: "DELETE" });
+        setBookmarked(false);
+      } else {
+        await apiFetch(`/posts/${postId}/bookmarks`, { method: "PUT" });
+        setBookmarked(true);
+      }
+    } catch {
+      alert("북마크 처리에 실패했습니다.");
+    } finally {
+      setBookmarkPending(false);
+    }
+  };
+
+  const handleLikeToggle = async () => {
+    if (!me) {
+      router.push("/login");
+      return;
+    }
+    const prevLiked = liked;
+    const prevCount = likeCount;
+    const nextLiked = !liked;
+    setLiked(nextLiked);
+    setLikeCount((c) => (nextLiked ? c + 1 : c - 1));
+    setLikePending(true);
+    try {
+      const res = await apiFetch<{ isLiked: boolean; likeCount: number }>(
+        `/posts/${postId}/likes`,
+        { method: nextLiked ? "PUT" : "DELETE" },
+      );
+      setLiked(res.data.isLiked);
+      setLikeCount(res.data.likeCount);
+    } catch {
+      setLiked(prevLiked);
+      setLikeCount(prevCount);
+      alert("좋아요 처리에 실패했습니다.");
+    } finally {
+      setLikePending(false);
     }
   };
 
@@ -164,16 +267,44 @@ export default function PostDetailPage({
           </button>
 
           <div className="flex gap-4 mb-5">
-            <div className="shrink-0 w-14 h-18 rounded-lg overflow-hidden bg-gradient-to-br from-blue-100 to-indigo-200 flex items-center justify-center">
+            <div className="relative shrink-0 w-14 h-18 rounded-lg overflow-hidden bg-gradient-to-br from-blue-100 to-indigo-200 flex items-center justify-center">
               {posterUrl ? (
-                <img src={posterUrl} alt={post.concertName} className="w-full h-full object-cover" />
+                <Image
+                  fill
+                  unoptimized
+                  src={posterUrl}
+                  alt={post.concertName}
+                  sizes="56px"
+                  className="object-cover"
+                />
               ) : (
                 <span className="text-xs text-gray-400">포스터</span>
               )}
             </div>
             <div>
-              <p className="text-xs text-blue-600 font-semibold mb-0.5">{post.concertName}</p>
-              <p className="text-xs text-gray-400">{post.userName} · {formatDateTime(post.createdAt)}</p>
+              <div className="flex items-center gap-2 mb-0.5">
+                <p className="text-xs text-blue-600 font-semibold">{post.concertName}</p>
+                <span
+                  className={`text-[10px] font-semibold rounded px-1.5 py-0.5 ${REVIEW_TYPE_BADGE[post.reviewType].className}`}
+                >
+                  {REVIEW_TYPE_BADGE[post.reviewType].label}
+                </span>
+              </div>
+              <p className="text-xs text-gray-400">
+                {post.isMine ? (
+                  post.userName
+                ) : (
+                  <Link href={`/users/${post.userId}`} className="hover:text-blue-500 hover:underline">
+                    {post.userName}
+                  </Link>
+                )}{" "}
+                · {formatDateTime(post.createdAt)}
+              </p>
+              {post.reviewType === "REVIEW" && post.rating !== null && (
+                <div className="mt-1.5">
+                  <RatingStars rating={post.rating} />
+                </div>
+              )}
             </div>
           </div>
 
@@ -193,6 +324,31 @@ export default function PostDetailPage({
                 onChange={(e) => setEditForm((f) => ({ ...f, content: e.target.value }))}
                 className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300 resize-none"
               />
+              {editForm.reviewType === "REVIEW" && (
+                <div>
+                  <label className="block text-xs text-gray-400 mb-1">별점</label>
+                  <div className="flex gap-1">
+                    {[1, 2, 3, 4, 5].map((n) => (
+                      <button
+                        key={n}
+                        type="button"
+                        onClick={() => setEditForm((f) => ({ ...f, rating: n }))}
+                        aria-label={`${n}점`}
+                        className="p-0.5"
+                      >
+                        <Star
+                          size={24}
+                          className={
+                            editForm.rating !== null && n <= editForm.rating
+                              ? "fill-yellow-400 text-yellow-400"
+                              : "text-gray-300"
+                          }
+                        />
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
               {editError && <p className="text-red-500 text-sm">{editError}</p>}
               <div className="flex gap-2">
                 <button
@@ -214,19 +370,53 @@ export default function PostDetailPage({
             <>
               <div className="flex items-start justify-between">
                 <h1 className="text-xl font-bold text-gray-800">{post.title}</h1>
-                {post.isMine && (
-                  <div className="flex gap-2 ml-4 shrink-0">
+                <div className="flex items-center gap-3 ml-4 shrink-0">
+                  {me && (
                     <button
-                      onClick={() => { setEditForm({ title: post.title, content: post.content }); setEditMode(true); }}
-                      className="text-xs text-blue-500 hover:text-blue-700"
+                      onClick={handleLikeToggle}
+                      disabled={likePending}
+                      aria-label={liked ? "좋아요 취소" : "좋아요"}
+                      className="flex items-center gap-1 text-gray-400 hover:text-red-500 disabled:opacity-50 transition"
                     >
-                      수정
+                      <Heart size={20} className={liked ? "fill-red-500 text-red-500" : ""} />
+                      <span className="text-xs">{likeCount}</span>
                     </button>
-                    <button onClick={handleDelete} className="text-xs text-red-400 hover:text-red-600">
-                      삭제
+                  )}
+                  {me && (
+                    <button
+                      onClick={handleBookmarkToggle}
+                      disabled={bookmarkPending}
+                      aria-label={bookmarked ? "북마크 취소" : "북마크"}
+                      className="text-gray-400 hover:text-blue-500 disabled:opacity-50 transition"
+                    >
+                      <Bookmark
+                        size={20}
+                        className={bookmarked ? "fill-blue-500 text-blue-500" : ""}
+                      />
                     </button>
-                  </div>
-                )}
+                  )}
+                  {post.isMine && me && (
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => {
+                          setEditForm({
+                            title: post.title,
+                            content: post.content,
+                            reviewType: post.reviewType,
+                            rating: post.rating,
+                          });
+                          setEditMode(true);
+                        }}
+                        className="text-xs text-blue-500 hover:text-blue-700"
+                      >
+                        수정
+                      </button>
+                      <button onClick={handleDelete} className="text-xs text-red-400 hover:text-red-600">
+                        삭제
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
               <p className="text-gray-600 text-sm mt-4 leading-relaxed whitespace-pre-wrap">{post.content}</p>
             </>
@@ -247,10 +437,19 @@ export default function PostDetailPage({
                 <li key={c.commentId} className="border-b border-gray-100 pb-4 last:border-0">
                   <div className="flex items-start justify-between">
                     <div>
-                      <p className="text-xs text-gray-400">{c.authorName} · {formatDateTime(c.createdAt)}</p>
+                      <p className="text-xs text-gray-400">
+                        {c.isMine ? (
+                          c.authorName
+                        ) : (
+                          <Link href={`/users/${c.authorId}`} className="hover:text-blue-500 hover:underline">
+                            {c.authorName}
+                          </Link>
+                        )}{" "}
+                        · {formatDateTime(c.createdAt)}
+                      </p>
                       <p className="text-sm text-gray-700 mt-1">{c.content}</p>
                     </div>
-                    {c.isMine && (
+                    {c.isMine && me && (
                       <button
                         onClick={() => handleCommentDelete(c.commentId)}
                         className="text-xs text-red-400 hover:text-red-600 shrink-0 ml-3"

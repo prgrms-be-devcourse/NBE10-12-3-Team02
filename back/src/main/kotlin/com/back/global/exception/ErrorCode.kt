@@ -70,6 +70,11 @@ enum class ErrorCode(
     COMMENT_NOT_FOUND("404-10", "존재하지 않는 댓글입니다."),
     COMMENT_FORBIDDEN("403-6", "댓글을 삭제할 권한이 없습니다."),
 
+    // Follow
+    FOLLOW_SELF_NOT_ALLOWED("400-13", "자기 자신을 팔로우할 수 없습니다."),
+    FOLLOW_ALREADY_EXISTS("409-9", "이미 팔로우한 사용자입니다."),
+    FOLLOW_NOT_FOUND("404-11", "팔로우 관계가 존재하지 않습니다."),
+
     // bucket4j
     TOO_MANY_REQUESTS("429-1", "요청이 너무 많습니다."),
 

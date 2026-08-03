@@ -3,6 +3,7 @@ package com.back.domain.post.controller
 import com.back.domain.concert.entity.Concert
 import com.back.domain.concert.repository.ConcertRepository
 import com.back.domain.post.entity.ConcertPost
+import com.back.domain.post.entity.ReviewType
 import com.back.domain.post.repository.ConcertPostRepository
 import com.back.domain.schedule.entity.Schedule
 import com.back.domain.schedule.entity.ScheduleSeat
@@ -95,7 +96,7 @@ class PostControllerTest @Autowired constructor(
     @Test
     @DisplayName("전체 게시글 피드 조회 성공 (비로그인)")
     fun getAllPosts() {
-        concertPostRepository.save(ConcertPost.create(concert, userEntity, "좋은 공연", "감동이었어요."))
+        concertPostRepository.save(ConcertPost.create(concert, userEntity, "좋은 공연", "감동이었어요.", rating = 5, reviewType = ReviewType.REVIEW))
 
         mockMvc.perform(
             get("/api/v1/posts")
@@ -113,7 +114,7 @@ class PostControllerTest @Autowired constructor(
     @Test
     @DisplayName("전체 게시글 피드 조회 - 로그인 시 isMine 반영")
     fun getAllPostsLoggedIn() {
-        concertPostRepository.save(ConcertPost.create(concert, userEntity, "내 게시글", "내가 쓴 게시글입니다."))
+        concertPostRepository.save(ConcertPost.create(concert, userEntity, "내 게시글", "내가 쓴 게시글입니다.", rating = 5, reviewType = ReviewType.REVIEW))
 
         mockMvc.perform(
             get("/api/v1/posts")
@@ -130,6 +131,7 @@ class PostControllerTest @Autowired constructor(
     fun getEligibleConcerts() {
         mockMvc.perform(
             get("/api/v1/posts/eligible-concerts")
+                .param("reviewType", "REVIEW")
                 .with(user(securityUser))
                 .contentType(MediaType.APPLICATION_JSON)
         )
@@ -143,10 +145,11 @@ class PostControllerTest @Autowired constructor(
     @Test
     @DisplayName("자격 있는 콘서트 목록 - 이미 게시글 쓴 콘서트는 제외")
     fun getEligibleConcertsExcludesAlreadyPosted() {
-        concertPostRepository.save(ConcertPost.create(concert, userEntity, "이미 쓴 게시글", "내용"))
+        concertPostRepository.save(ConcertPost.create(concert, userEntity, "이미 쓴 게시글", "내용", rating = 5, reviewType = ReviewType.REVIEW))
 
         mockMvc.perform(
             get("/api/v1/posts/eligible-concerts")
+                .param("reviewType", "REVIEW")
                 .with(user(securityUser))
                 .contentType(MediaType.APPLICATION_JSON)
         )
@@ -171,6 +174,7 @@ class PostControllerTest @Autowired constructor(
 
         mockMvc.perform(
             get("/api/v1/posts/eligible-concerts")
+                .param("reviewType", "REVIEW")
                 .with(user(securityUser))
                 .contentType(MediaType.APPLICATION_JSON)
         )
@@ -187,6 +191,7 @@ class PostControllerTest @Autowired constructor(
 
         mockMvc.perform(
             get("/api/v1/posts/eligible-concerts")
+                .param("reviewType", "REVIEW")
                 .with(user(SecurityUser(otherUser.userId!!, otherUser.name)))
                 .contentType(MediaType.APPLICATION_JSON)
         )

@@ -4,6 +4,7 @@ import com.back.domain.concert.entity.Concert
 import com.back.domain.concert.repository.ConcertRepository
 import com.back.domain.post.entity.ConcertPost
 import com.back.domain.post.entity.PostComment
+import com.back.domain.post.entity.ReviewType
 import com.back.domain.post.repository.ConcertPostRepository
 import com.back.domain.post.repository.PostCommentRepository
 import com.back.domain.schedule.entity.Schedule
@@ -106,7 +107,9 @@ class ConcertPostControllerTest @Autowired constructor(
         val requestBody = """
             {
               "title": "정말 좋은 공연이었어요",
-              "content": "감동적인 무대였습니다. 다음에도 꼭 보러 가고 싶네요."
+              "content": "감동적인 무대였습니다. 다음에도 꼭 보러 가고 싶네요.",
+              "reviewType": "REVIEW",
+              "rating": 5
             }
         """.trimIndent()
 
@@ -133,7 +136,9 @@ class ConcertPostControllerTest @Autowired constructor(
         val requestBody = """
             {
               "title": "제목",
-              "content": "내용"
+              "content": "내용",
+              "reviewType": "REVIEW",
+              "rating": 5
             }
         """.trimIndent()
 
@@ -164,7 +169,9 @@ class ConcertPostControllerTest @Autowired constructor(
         val requestBody = """
             {
               "title": "제목",
-              "content": "내용"
+              "content": "내용",
+              "reviewType": "REVIEW",
+              "rating": 5
             }
         """.trimIndent()
 
@@ -183,7 +190,7 @@ class ConcertPostControllerTest @Autowired constructor(
     @DisplayName("게시글 목록 조회 성공 (비로그인)")
     fun getPosts() {
         val post = concertPostRepository.save(
-            ConcertPost.create(concert, userEntity, "좋았어요", "좋은 공연이었습니다.")
+            ConcertPost.create(concert, userEntity, "좋았어요", "좋은 공연이었습니다.", rating = 5, reviewType = ReviewType.REVIEW)
         )
 
         mockMvc.perform(
@@ -202,7 +209,7 @@ class ConcertPostControllerTest @Autowired constructor(
     @DisplayName("게시글 상세 조회 성공")
     fun getPost() {
         val post = concertPostRepository.save(
-            ConcertPost.create(concert, userEntity, "좋았어요", "좋은 공연이었습니다.")
+            ConcertPost.create(concert, userEntity, "좋았어요", "좋은 공연이었습니다.", rating = 5, reviewType = ReviewType.REVIEW)
         )
 
         mockMvc.perform(
@@ -221,7 +228,7 @@ class ConcertPostControllerTest @Autowired constructor(
     @DisplayName("게시글 상세 조회 실패 - URL의 콘서트와 게시글의 콘서트가 다름")
     fun getPostWithMismatchedConcert() {
         val post = concertPostRepository.save(
-            ConcertPost.create(concert, userEntity, "좋았어요", "좋은 공연이었습니다.")
+            ConcertPost.create(concert, userEntity, "좋았어요", "좋은 공연이었습니다.", rating = 5, reviewType = ReviewType.REVIEW)
         )
         val otherConcert = saveOtherConcert()
 
@@ -242,13 +249,15 @@ class ConcertPostControllerTest @Autowired constructor(
     @DisplayName("게시글 수정 성공")
     fun updatePost() {
         val post = concertPostRepository.save(
-            ConcertPost.create(concert, userEntity, "제목", "내용")
+            ConcertPost.create(concert, userEntity, "제목", "내용", rating = 5, reviewType = ReviewType.REVIEW)
         )
 
         val requestBody = """
             {
               "title": "수정된 제목",
-              "content": "수정된 내용입니다."
+              "content": "수정된 내용입니다.",
+              "reviewType": "REVIEW",
+              "rating": 5
             }
         """.trimIndent()
 
@@ -268,13 +277,15 @@ class ConcertPostControllerTest @Autowired constructor(
     @DisplayName("게시글 수정 실패 - URL의 콘서트와 게시글의 콘서트가 다름")
     fun updatePostWithMismatchedConcert() {
         val post = concertPostRepository.save(
-            ConcertPost.create(concert, userEntity, "기존 제목", "기존 내용")
+            ConcertPost.create(concert, userEntity, "기존 제목", "기존 내용", rating = 5, reviewType = ReviewType.REVIEW)
         )
         val otherConcert = saveOtherConcert()
         val requestBody = """
             {
               "title": "수정 제목",
-              "content": "수정 내용"
+              "content": "수정 내용",
+              "reviewType": "REVIEW",
+              "rating": 5
             }
         """.trimIndent()
 
@@ -301,13 +312,15 @@ class ConcertPostControllerTest @Autowired constructor(
     fun updatePostForbidden() {
         val otherUser = userRepository.save(User.create("other2", "other2@test.com", "0000", "타인", LoginType.NORMAL))
         val post = concertPostRepository.save(
-            ConcertPost.create(concert, userEntity, "제목", "내용")
+            ConcertPost.create(concert, userEntity, "제목", "내용", rating = 5, reviewType = ReviewType.REVIEW)
         )
 
         val requestBody = """
             {
               "title": "해킹 제목",
-              "content": "해킹 내용"
+              "content": "해킹 내용",
+              "reviewType": "REVIEW",
+              "rating": 5
             }
         """.trimIndent()
 
@@ -326,7 +339,7 @@ class ConcertPostControllerTest @Autowired constructor(
     @DisplayName("게시글 삭제 성공")
     fun deletePost() {
         val post = concertPostRepository.save(
-            ConcertPost.create(concert, userEntity, "제목", "내용")
+            ConcertPost.create(concert, userEntity, "제목", "내용", rating = 5, reviewType = ReviewType.REVIEW)
         )
 
         mockMvc.perform(
@@ -345,7 +358,7 @@ class ConcertPostControllerTest @Autowired constructor(
     @DisplayName("게시글 삭제 실패 - URL의 콘서트와 게시글의 콘서트가 다름")
     fun deletePostWithMismatchedConcert() {
         val post = concertPostRepository.save(
-            ConcertPost.create(concert, userEntity, "제목", "내용")
+            ConcertPost.create(concert, userEntity, "제목", "내용", rating = 5, reviewType = ReviewType.REVIEW)
         )
         val otherConcert = saveOtherConcert()
 
@@ -368,7 +381,7 @@ class ConcertPostControllerTest @Autowired constructor(
     @DisplayName("댓글이 있는 게시글 삭제 성공 - 연관 댓글도 함께 삭제")
     fun deletePostWithComments() {
         val post = concertPostRepository.saveAndFlush(
-            ConcertPost.create(concert, userEntity, "댓글이 있는 게시글", "게시글 내용")
+            ConcertPost.create(concert, userEntity, "댓글이 있는 게시글", "게시글 내용", rating = 5, reviewType = ReviewType.REVIEW)
         )
         val comment = postCommentRepository.saveAndFlush(
             PostComment.create(post, userEntity, "삭제되어야 하는 댓글")
@@ -398,7 +411,7 @@ class ConcertPostControllerTest @Autowired constructor(
     fun deletePostForbidden() {
         val otherUser = userRepository.save(User.create("other3", "other3@test.com", "0000", "타인3", LoginType.NORMAL))
         val post = concertPostRepository.save(
-            ConcertPost.create(concert, userEntity, "제목", "내용")
+            ConcertPost.create(concert, userEntity, "제목", "내용", rating = 5, reviewType = ReviewType.REVIEW)
         )
 
         mockMvc.perform(
@@ -416,13 +429,15 @@ class ConcertPostControllerTest @Autowired constructor(
     @DisplayName("게시글 중복 작성 실패")
     fun createDuplicatePost() {
         concertPostRepository.save(
-            ConcertPost.create(concert, userEntity, "첫 번째 게시글", "내용")
+            ConcertPost.create(concert, userEntity, "첫 번째 게시글", "내용", rating = 5, reviewType = ReviewType.REVIEW)
         )
 
         val requestBody = """
             {
               "title": "두 번째 게시글",
-              "content": "내용"
+              "content": "내용",
+              "reviewType": "REVIEW",
+              "rating": 5
             }
         """.trimIndent()
 

@@ -2,6 +2,7 @@ package com.back.domain.user.service
 
 import com.back.domain.auth.service.EmailVerificationService
 import com.back.domain.auth.repository.UserSocialAuthRepository
+import com.back.domain.follow.service.FollowService
 import com.back.domain.ticket.repository.TicketRepository
 import com.back.domain.user.dto.*
 import com.back.domain.user.constant.LoginType
@@ -35,6 +36,7 @@ class UserService(
     private val userWithdrawalQueryService: UserWithdrawalQueryService,
     private val userWithdrawalCommandService: UserWithdrawalCommandService,
     private val fileStorage: FileStorage,
+    private val followService: FollowService,
 ) {
 
     @Transactional
@@ -169,6 +171,14 @@ class UserService(
             ?: throw ServiceException(ErrorCode.USER_NOT_FOUND)
 
         return user.profileImgUrlOrDefault
+    }
+
+    fun getPublicProfile(targetUserId: Long, currentUserId: Long?): UserProfileResponse {
+        val user = userRepository.findByUserIdAndDeletedAtIsNull(targetUserId)
+            ?: throw ServiceException(ErrorCode.USER_NOT_FOUND)
+
+        val isFollowing = currentUserId?.let { followService.isFollowing(it, targetUserId).isFollowing }
+        return UserProfileResponse.from(user, isFollowing)
     }
 
     companion object {

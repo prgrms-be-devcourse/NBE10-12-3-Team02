@@ -6,6 +6,7 @@ import java.time.LocalDateTime
 
 data class PostCommentResponse(
     val commentId: Long,
+    val authorId: Long,
     val authorName: String,
     val content: String,
     val createdAt: LocalDateTime?,
@@ -15,6 +16,7 @@ data class PostCommentResponse(
         fun of(comment: PostComment, currentUserId: Long?): PostCommentResponse =
             PostCommentResponse(
                 commentId = comment.commentId!!,
+                authorId = comment.user.userId!!,
                 authorName = comment.user.name,
                 content = comment.content,
                 createdAt = comment.createDate,
