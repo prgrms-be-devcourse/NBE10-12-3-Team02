@@ -4,6 +4,7 @@ import com.back.domain.concert.service.ConcertService
 import com.back.domain.schedule.repository.ScheduleSeatRepository
 import com.back.domain.user.repository.UserRepository
 import com.back.domain.waiting.dto.QueueConnectionState
+import com.back.domain.waiting.outbox.QueueSseOutboxPublisher
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
@@ -20,12 +21,14 @@ class WaitingQueueConnectionStateTest {
     private val userRepository = mock(UserRepository::class.java)
     private val concertService = mock(ConcertService::class.java)
     private val eventPublisher = mock(ApplicationEventPublisher::class.java)
+    private val outboxPublisher = mock(QueueSseOutboxPublisher::class.java)
     private val scheduleSeatRepository = mock(ScheduleSeatRepository::class.java)
     private val service = WaitingQueueService(
         waitingQueueManager,
         userRepository,
         concertService,
         eventPublisher,
+        outboxPublisher,
         scheduleSeatRepository,
         Duration.ofMinutes(10),
         2,

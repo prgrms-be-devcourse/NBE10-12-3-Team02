@@ -10,8 +10,10 @@ import com.back.domain.user.repository.UserRepository
 import com.back.domain.waiting.dto.WaitingQueueResponse
 import com.back.domain.waiting.dto.QueueConnectionEvent
 import com.back.domain.waiting.dto.QueueConnectionState
+import com.back.domain.waiting.outbox.QueueSseOutboxPublisher
 import com.back.global.exception.ErrorCode
 import com.back.global.exception.ServiceException
+import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Service
@@ -23,6 +25,7 @@ class WaitingQueueService(
     private val userRepository: UserRepository,
     private val concertService: ConcertService,
     private val eventPublisher: ApplicationEventPublisher,
+    private val outboxPublisher: QueueSseOutboxPublisher,
     private val scheduleSeatRepository: ScheduleSeatRepository,
     @Value("\${queue.entry-token.ttl}") private val entryTokenTtl: Duration,
     @Value("\${queue.batch-size}") private val batchSize: Int,
@@ -134,8 +137,8 @@ class WaitingQueueService(
         if (remainingSeats <= 0) {
             val status = waitingQueueManager.getQueueStatus(scheduleId)
             if (status.totalWaitingCount > 0) {
-                eventPublisher.publishEvent(
-                    QueueErrorEvent(scheduleId, null, "콘서트가 매진되어 대기열이 종료되었습니다.")
+                publishQueueError(
+                    QueueErrorEvent(scheduleId, null, "콘서트가 매진되어 대기열이 종료되었습니다."),
                 )
                 waitingQueueManager.clearWaitingQueue(scheduleId)
             }
@@ -146,8 +149,8 @@ class WaitingQueueService(
         val admissions = waitingQueueManager.addActiveUser(scheduleId, capacity, batchSize, entryTokenTtl)
 
         for (admission in admissions) {
-            eventPublisher.publishEvent(
-                EntryAllowedEvent(scheduleId, admission.userId, admission.entryToken, admission.expiredAt)
+            publishEntryAllowed(
+                EntryAllowedEvent(scheduleId, admission.userId, admission.entryToken, admission.expiredAt),
             )
         }
         publishQueueRank(scheduleId)
@@ -170,5 +173,37 @@ class WaitingQueueService(
     private fun validateUser(userId: Long) {
         userRepository.findByUserIdAndDeletedAtIsNull(userId)
             ?: throw ServiceException(ErrorCode.USER_NOT_FOUND)
+    }
+
+    private fun publishEntryAllowed(event: EntryAllowedEvent) {
+        try {
+            outboxPublisher.publishEntryAllowed(event)
+        } catch (e: Exception) {
+            log.error(
+                "입장 허용 Outbox 저장 실패로 인메모리 이벤트 대체 발행: scheduleId={}, userId={}",
+                event.scheduleId,
+                event.userId,
+                e,
+            )
+            eventPublisher.publishEvent(event)
+        }
+    }
+
+    private fun publishQueueError(event: QueueErrorEvent) {
+        try {
+            outboxPublisher.publishQueueError(event)
+        } catch (e: Exception) {
+            log.error(
+                "대기열 오류 Outbox 저장 실패로 인메모리 이벤트 대체 발행: scheduleId={}, userId={}",
+                event.scheduleId,
+                event.userId,
+                e,
+            )
+            eventPublisher.publishEvent(event)
+        }
+    }
+
+    companion object {
+        private val log = LoggerFactory.getLogger(WaitingQueueService::class.java)
     }
 }
