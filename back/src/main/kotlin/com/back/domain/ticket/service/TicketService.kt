@@ -11,6 +11,7 @@ import com.back.domain.ticket.dto.SeatHoldInfo
 import com.back.domain.ticket.dto.TicketGroupVerifyResponse
 import com.back.domain.ticket.entity.Ticket
 import com.back.domain.ticket.event.PaymentCompletedEvent
+import com.back.domain.ticket.event.SeatPurchasedCleanupEvent
 import com.back.domain.ticket.event.TicketCancelledEvent
 import com.back.domain.ticket.repository.TicketRepository
 import com.back.domain.user.repository.UserRepository
@@ -60,11 +61,10 @@ class TicketService(
         scheduleSeats.forEach { it.sell() }
 
         for (holdInfo in sortedSeatHolds) {
-            val redisKey = SeatOccupyManager.generateSeatOccupyKey(request.concertId, scheduleId, holdInfo.seatNumber)
-            seatOccupyManager.cleanupRedis(redisKey)
-            seatOccupyManager.removeFromExpireQueue(request.concertId, scheduleId, holdInfo.seatNumber)
             eventPublisher.publishEvent(SeatSoldEvent(request.concertId, scheduleId, holdInfo.seatNumber))
         }
+
+        eventPublisher.publishEvent(SeatPurchasedCleanupEvent(request.concertId, scheduleId, sortedSeatHolds))
 
         val groupToken = UUID.randomUUID().toString()
         val tickets = scheduleSeats.map { seat ->
@@ -93,10 +93,6 @@ class TicketService(
         val scheduleId = checkNotNull(ticket.schedule.scheduleId) { "Schedule ID is null" }
         val seatNumber = ticket.scheduleSeat.seatNumber
 
-        val redisKey = SeatOccupyManager.generateSeatOccupyKey(concertId, scheduleId, seatNumber)
-        seatOccupyManager.cleanupRedis(redisKey)
-
-        seatOccupyManager.removeFromExpireQueue(concertId, scheduleId, seatNumber)
         eventPublisher.publishEvent(SeatReleasedEvent(concertId, scheduleId, seatNumber))
 
         eventPublisher.publishEvent(TicketCancelledEvent(concertId, scheduleId, userId))
