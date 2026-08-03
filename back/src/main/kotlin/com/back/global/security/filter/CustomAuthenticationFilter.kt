@@ -70,8 +70,10 @@ class CustomAuthenticationFilter(
         SecurityContextHolder.getContext().authentication = authentication
     }
 
+    // request.servletPath는 이 프로젝트의 서블릿 매핑 구성상 항상 빈 문자열로 내려오므로
+    // (CustomAuthenticationFilterSkipMatcher와 달리) requestURI를 기준으로 판단한다.
     private fun isNotificationSubscribeRequest(request: HttpServletRequest): Boolean =
-        request.method == "GET" && NOTIFICATION_SUBSCRIBE_PATTERN.matches(request.servletPath)
+        request.method == "GET" && NOTIFICATION_SUBSCRIBE_PATTERN.matches(request.requestURI)
 
     override fun shouldNotFilter(request: HttpServletRequest): Boolean =
         skipMatcher.shouldSkip(request)

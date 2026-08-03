@@ -14,6 +14,7 @@ import org.slf4j.LoggerFactory
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.Pageable
 import org.springframework.stereotype.Service
+import org.springframework.transaction.annotation.Propagation
 import org.springframework.transaction.annotation.Transactional
 import org.springframework.transaction.event.TransactionPhase
 import org.springframework.transaction.event.TransactionalEventListener
@@ -26,7 +27,10 @@ class NotificationService(
 ) {
     private val log = LoggerFactory.getLogger(javaClass)
 
-    @Transactional
+    // AFTER_COMMIT 시점에는 원본 트랜잭션이 이미 종료되어 있으므로,
+    // 알림 저장을 위해 REQUIRES_NEW로 새 트랜잭션을 시작해야 한다.
+    // (Spring 7부터 @TransactionalEventListener + @Transactional 조합 시 REQUIRES_NEW/NOT_SUPPORTED 명시가 강제됨)
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
     fun onPostLiked(event: PostLikedEvent) {
         val receiver = userRepository.findByUserIdAndDeletedAtIsNull(event.postOwnerId) ?: return
@@ -38,7 +42,7 @@ class NotificationService(
         notificationSseEmitterRegistry.send(receiver.userId!!, NotificationPushPayload.from(notification))
     }
 
-    @Transactional
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
     fun onUserFollowed(event: UserFollowedEvent) {
         val receiver = userRepository.findByUserIdAndDeletedAtIsNull(event.followeeId) ?: return
