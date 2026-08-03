@@ -29,11 +29,19 @@ class NotificationSseEmitterRegistry {
 
     fun register(userId: Long, emitter: SseEmitter): SynchronizedEmitter {
         val wrapper = SynchronizedEmitter(emitter)
-        emitters.computeIfAbsent(userId) { CopyOnWriteArrayList() }.add(wrapper)
+        // compute()로 get-or-create와 add를 한 번에 묶어야, cleanup의 computeIfPresent와
+        // 같은 key에 대해 서로 끼어들 여지 없이 원자적으로 처리된다.
+        emitters.compute(userId) { _, list ->
+            (list ?: CopyOnWriteArrayList()).apply { add(wrapper) }
+        }
 
         val cleanup = Runnable {
-            val list = emitters[userId]
-            list?.remove(wrapper)
+            // list.remove와 "비었는지 확인 후 키 제거"를 한 번의 원자적 연산으로 묶어야
+            // 그 사이에 register()가 끼어들어 새로 추가된 emitter가 유실되는 일이 없다.
+            emitters.computeIfPresent(userId) { _, list ->
+                list.remove(wrapper)
+                if (list.isEmpty()) null else list
+            }
         }
         emitter.onCompletion(cleanup)
         emitter.onTimeout(cleanup)

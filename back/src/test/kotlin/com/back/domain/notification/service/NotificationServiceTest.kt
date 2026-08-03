@@ -9,7 +9,6 @@ import com.back.domain.notification.repository.NotificationRepository
 import com.back.domain.notification.sse.NotificationSseEmitterRegistry
 import com.back.domain.user.constant.LoginType
 import com.back.domain.user.entity.User
-import com.back.domain.user.repository.UserRepository
 import com.back.global.exception.ErrorCode
 import com.back.global.exception.ServiceException
 import org.assertj.core.api.Assertions.assertThat
@@ -31,12 +30,10 @@ import java.util.Optional
 
 class NotificationServiceTest {
     private val notificationRepository = mock(NotificationRepository::class.java)
-    private val userRepository = mock(UserRepository::class.java)
     private val notificationCommandService = mock(NotificationCommandService::class.java)
     private val sseEmitterRegistry = mock(NotificationSseEmitterRegistry::class.java)
     private val service = NotificationService(
         notificationRepository,
-        userRepository,
         notificationCommandService,
         sseEmitterRegistry,
     )
@@ -55,64 +52,52 @@ class NotificationServiceTest {
     }
 
     @Test
-    @DisplayName("좋아요 알림: receiver/actor가 모두 존재하면 알림을 저장하고 SSE로 push한다")
+    @DisplayName("좋아요 알림: NotificationCommandService가 알림을 반환하면 SSE로 push한다")
     fun onPostLiked_success() {
         val receiver = user(1L, "받는사람")
         val actor = user(2L, "누른사람")
-        `when`(userRepository.findByUserIdAndDeletedAtIsNull(1L)).thenReturn(receiver)
-        `when`(userRepository.findByUserIdAndDeletedAtIsNull(2L)).thenReturn(actor)
-
         val saved = Notification.ofLike(receiver, actor, 10L)
         ReflectionTestUtils.setField(saved, "notificationId", 100L)
-        `when`(notificationCommandService.saveLikeNotification(receiver, actor, 10L)).thenReturn(saved)
+        `when`(notificationCommandService.saveLikeNotification(1L, 2L, 10L)).thenReturn(saved)
 
         service.onPostLiked(PostLikedEvent(postId = 10L, postOwnerId = 1L, actorId = 2L))
 
-        verify(notificationCommandService, times(1)).saveLikeNotification(receiver, actor, 10L)
+        verify(notificationCommandService, times(1)).saveLikeNotification(1L, 2L, 10L)
         verify(sseEmitterRegistry, times(1)).send(eq(1L), anyObject<NotificationPushPayload>())
     }
 
     @Test
-    @DisplayName("좋아요 알림: receiver가 존재하지 않으면 알림을 저장하지 않는다")
-    fun onPostLiked_receiverNotFound_skips() {
-        `when`(userRepository.findByUserIdAndDeletedAtIsNull(1L)).thenReturn(null)
+    @DisplayName("좋아요 알림: NotificationCommandService가 null을 반환하면(탈퇴 등) SSE를 보내지 않는다")
+    fun onPostLiked_commandServiceReturnsNull_skips() {
+        `when`(notificationCommandService.saveLikeNotification(1L, 2L, 10L)).thenReturn(null)
 
         service.onPostLiked(PostLikedEvent(postId = 10L, postOwnerId = 1L, actorId = 2L))
 
-        verify(notificationCommandService, never())
-            .saveLikeNotification(anyObject<User>(), anyObject<User>(), anyLong())
         verify(sseEmitterRegistry, never()).send(anyLong(), anyObject<NotificationPushPayload>())
     }
 
     @Test
-    @DisplayName("팔로우 알림: receiver/actor가 모두 존재하면 알림을 저장하고 SSE로 push한다")
+    @DisplayName("팔로우 알림: NotificationCommandService가 알림을 반환하면 SSE로 push한다")
     fun onUserFollowed_success() {
         val receiver = user(1L, "팔로우당한사람")
         val actor = user(2L, "팔로우한사람")
-        `when`(userRepository.findByUserIdAndDeletedAtIsNull(1L)).thenReturn(receiver)
-        `when`(userRepository.findByUserIdAndDeletedAtIsNull(2L)).thenReturn(actor)
-
         val saved = Notification.ofFollow(receiver, actor)
         ReflectionTestUtils.setField(saved, "notificationId", 200L)
-        `when`(notificationCommandService.saveFollowNotification(receiver, actor)).thenReturn(saved)
+        `when`(notificationCommandService.saveFollowNotification(1L, 2L)).thenReturn(saved)
 
         service.onUserFollowed(UserFollowedEvent(followeeId = 1L, followerId = 2L))
 
-        verify(notificationCommandService, times(1)).saveFollowNotification(receiver, actor)
+        verify(notificationCommandService, times(1)).saveFollowNotification(1L, 2L)
         verify(sseEmitterRegistry, times(1)).send(eq(1L), anyObject<NotificationPushPayload>())
     }
 
     @Test
-    @DisplayName("팔로우 알림: actor가 존재하지 않으면 알림을 저장하지 않는다")
-    fun onUserFollowed_actorNotFound_skips() {
-        val receiver = user(1L, "팔로우당한사람")
-        `when`(userRepository.findByUserIdAndDeletedAtIsNull(1L)).thenReturn(receiver)
-        `when`(userRepository.findByUserIdAndDeletedAtIsNull(2L)).thenReturn(null)
+    @DisplayName("팔로우 알림: NotificationCommandService가 null을 반환하면(탈퇴 등) SSE를 보내지 않는다")
+    fun onUserFollowed_commandServiceReturnsNull_skips() {
+        `when`(notificationCommandService.saveFollowNotification(1L, 2L)).thenReturn(null)
 
         service.onUserFollowed(UserFollowedEvent(followeeId = 1L, followerId = 2L))
 
-        verify(notificationCommandService, never())
-            .saveFollowNotification(anyObject<User>(), anyObject<User>())
         verify(sseEmitterRegistry, never()).send(anyLong(), anyObject<NotificationPushPayload>())
     }
 
