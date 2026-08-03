@@ -8,6 +8,8 @@ import com.back.domain.schedule.constant.SeatStatus
 import com.back.domain.schedule.repository.ScheduleSeatRepository
 import com.back.domain.user.repository.UserRepository
 import com.back.domain.waiting.dto.WaitingQueueResponse
+import com.back.domain.waiting.dto.QueueConnectionEvent
+import com.back.domain.waiting.dto.QueueConnectionState
 import com.back.global.exception.ErrorCode
 import com.back.global.exception.ServiceException
 import org.springframework.beans.factory.annotation.Value
@@ -78,6 +80,51 @@ class WaitingQueueService(
             myQueueNumber,
             null
         )
+    }
+
+    fun getConnectionState(concertId: Long, scheduleId: Long, userId: Long): QueueConnectionEvent {
+        validateUser(userId)
+        concertService.validateConcertScheduleMatch(concertId, scheduleId)
+
+        waitingQueueManager.getActiveToken(scheduleId, userId)?.let { activeToken ->
+            return QueueConnectionEvent(
+                concertId = concertId,
+                scheduleId = scheduleId,
+                userId = userId,
+                state = QueueConnectionState.ACTIVE,
+                rank = 0L,
+                myQueueNumber = 0L,
+                entryToken = activeToken,
+            )
+        }
+
+        val rank = waitingQueueManager.findWaitingRank(scheduleId, userId)
+        if (rank != null) {
+            return QueueConnectionEvent(
+                concertId = concertId,
+                scheduleId = scheduleId,
+                userId = userId,
+                state = QueueConnectionState.WAITING,
+                rank = rank,
+                myQueueNumber = waitingQueueManager.getQueueSequence(scheduleId, userId),
+                entryToken = null,
+            )
+        }
+
+        return QueueConnectionEvent(
+            concertId = concertId,
+            scheduleId = scheduleId,
+            userId = userId,
+            state = QueueConnectionState.NOT_REGISTERED,
+            rank = 0L,
+            myQueueNumber = 0L,
+            entryToken = null,
+        )
+    }
+
+    fun validateSseSubscription(concertId: Long, scheduleId: Long, userId: Long) {
+        validateUser(userId)
+        concertService.validateConcertScheduleMatch(concertId, scheduleId)
     }
 
     fun cancelWaiting(concertId: Long, scheduleId: Long, userId: Long) {

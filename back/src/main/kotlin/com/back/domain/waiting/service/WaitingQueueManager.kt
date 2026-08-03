@@ -34,10 +34,13 @@ class WaitingQueueManager(
     }
 
     fun showWaitingRank(scheduleId: Long, userId: Long): Long =
+        findWaitingRank(scheduleId, userId)
+            ?: throw ServiceException(ErrorCode.WAITING_QUEUE_NOT_FOUND)
+
+    fun findWaitingRank(scheduleId: Long, userId: Long): Long? =
         stringRedisTemplate.opsForZSet()
             .rank(generateWaitKey(scheduleId), userId.toString())
             ?.let { it + 1L }
-            ?: throw ServiceException(ErrorCode.WAITING_QUEUE_NOT_FOUND)
 
     fun cancelWaiting(scheduleId: Long, userId: Long): Boolean =
         (stringRedisTemplate.opsForZSet().remove(generateWaitKey(scheduleId), userId.toString()) ?: 0L) > 0L
