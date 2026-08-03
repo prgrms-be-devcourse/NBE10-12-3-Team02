@@ -2,6 +2,7 @@
 
 import { showAlert } from "@/lib/alert";
 import ConcertPostSection from "./ConcertPostSection";
+import ShareButton from "@/app/components/ShareButton";
 import { apiFetch, decodeToken } from "@/lib/api";
 import {
   getConcertDetailImages,
@@ -158,9 +159,10 @@ export default function ConcertDetailPage({
             </div>
 
             <div className="p-8 flex-1">
-              <h1 className="text-2xl font-bold text-gray-800 mb-4">
-                {concert.concertName}
-              </h1>
+              <div className="flex items-start justify-between gap-2 mb-4">
+                <h1 className="text-2xl font-bold text-gray-800">{concert.concertName}</h1>
+                <ShareButton />
+              </div>
 
               <div className="mb-4">
                 <h2 className="font-bold text-gray-700 mb-2">공연 장소</h2>
