@@ -99,6 +99,29 @@ const REVIEW_TYPE_BADGE: Record<MyPostSummary["reviewType"], { label: string; cl
   EXPECTATION: { label: "기대평", className: "bg-amber-50 text-amber-600 border border-amber-200" },
 };
 
+const SOCIAL_LINK_ERROR_MESSAGES: Record<string, string> = {
+  oauth2_link_request_expired: "연동 요청이 만료되었습니다. 다시 시도해주세요.",
+  oauth2_provider_mismatch: "소셜 제공자 불일치 오류가 발생했습니다.",
+  oauth2_user_not_found: "계정 정보를 찾을 수 없습니다.",
+  oauth2_account_already_linked: "이미 소셜 계정이 연동되어 있습니다.",
+  oauth2_account_already_used: "이미 다른 계정에 연결된 소셜 계정입니다.",
+  oauth2_email_missing: "소셜 계정에서 이메일 정보를 가져오지 못했습니다.",
+  oauth2_email_not_verified: "소셜 계정의 이메일이 인증되지 않았습니다.",
+  oauth2_email_mismatch: "소셜 계정의 이메일이 현재 계정 이메일과 다릅니다.",
+};
+
+const SOCIAL_LINK_PROVIDERS = [
+  { key: "KAKAO", label: "카카오 계정 연동", icon: "/icons/kakao.png", className: "bg-[#FEE500] hover:bg-[#fada0a] text-[#191919]" },
+  { key: "NAVER", label: "네이버 계정 연동", icon: "/icons/naver.png", className: "bg-[#03C75A] hover:bg-[#02b350] text-white" },
+  { key: "GOOGLE", label: "Google 계정 연동", icon: "/icons/google.png", className: "bg-white hover:bg-gray-50 text-gray-700 border border-gray-200" },
+] as const;
+
+const PROVIDER_LABELS: Record<string, string> = {
+  KAKAO: "카카오",
+  NAVER: "네이버",
+  GOOGLE: "Google",
+};
+
 function RatingStars({ rating }: { rating: number }) {
   return (
     <div className="flex items-center gap-0.5">
@@ -118,7 +141,7 @@ const MY_POSTS_PAGE_SIZE = 5;
 const MY_BOOKMARKS_PAGE_SIZE = 5;
 const MY_LIKES_PAGE_SIZE = 5;
 
-function SocialBadge({ provider }: { provider: string }) {
+function SocialBadge({ provider, size = 18 }: { provider: string; size?: number }) {
   const iconMap: Record<string, string> = {
     KAKAO: "/icons/kakao.png",
     NAVER: "/icons/naver.png",
@@ -130,8 +153,8 @@ function SocialBadge({ provider }: { provider: string }) {
     <Image
       src={src}
       alt={provider}
-      width={18}
-      height={18}
+      width={size}
+      height={size}
       unoptimized
     />
   );
@@ -140,8 +163,10 @@ function SocialBadge({ provider }: { provider: string }) {
 export default function MyPage() {
   const router = useRouter();
   const hasCheckedAuth = useRef(false);
+  const hasSocialLinkHandledRef = useRef(false);
 
   const [data, setData] = useState<MyPageData | null>(null);
+
   const [loading, setLoading] = useState(true);
   const [showWithdrawModal, setShowWithdrawModal] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
@@ -238,6 +263,26 @@ export default function MyPage() {
     }
   };
 
+  interface SocialLinkStatus { linked: boolean; provider: string | null }
+  const [socialLinkStatus, setSocialLinkStatus] = useState<SocialLinkStatus | null>(null);
+  const [socialLinkLoading, setSocialLinkLoading] = useState(true);
+  const [socialLinkStarting, setSocialLinkStarting] = useState<string | null>(null);
+
+  const [activeTab, setActiveTab] = useState<"info" | "tickets" | "posts">("info");
+  const [postsSubTab, setPostsSubTab] = useState<"my" | "bookmarks" | "likes">("my");
+
+  const fetchSocialLinkStatus = async () => {
+    setSocialLinkLoading(true);
+    try {
+      const res = await apiFetch<SocialLinkStatus>("/users/me/social-links");
+      setSocialLinkStatus(res.data);
+    } catch {
+      setSocialLinkStatus(null);
+    } finally {
+      setSocialLinkLoading(false);
+    }
+  };
+
   useEffect(() => {
     if (hasCheckedAuth.current) return;
     hasCheckedAuth.current = true;
@@ -257,6 +302,7 @@ export default function MyPage() {
         fetchMyPosts(0);
         fetchBookmarks(0);
         fetchLikes(0);
+        fetchSocialLinkStatus();
       } catch (e) {
         showError(
           e instanceof Error ? e.message : "마이페이지 조회에 실패했습니다.",
@@ -267,6 +313,38 @@ export default function MyPage() {
     };
 
     initializeMyPage();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    if (hasSocialLinkHandledRef.current) return;
+    hasSocialLinkHandledRef.current = true;
+    const params = new URLSearchParams(window.location.search);
+    const linked = params.get("socialLink");
+    const linkError = params.get("socialLinkError");
+    if (!linked && !linkError) return;
+    if (linked === "success") {
+      showSuccess("소셜 계정 연동이 완료되었습니다.").then(() => {
+        fetchSocialLinkStatus();
+      });
+    } else if (linkError) {
+      showError(
+        SOCIAL_LINK_ERROR_MESSAGES[linkError] ?? "소셜 계정 연동 중 오류가 발생했습니다.",
+      );
+    }
+    router.replace("/mypage");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    const handlePageShow = (e: PageTransitionEvent) => {
+      if (e.persisted) {
+        setSocialLinkStarting(null);
+        fetchSocialLinkStatus();
+      }
+    };
+    window.addEventListener("pageshow", handlePageShow);
+    return () => window.removeEventListener("pageshow", handlePageShow);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -298,6 +376,21 @@ export default function MyPage() {
     setIsEditing(false);
     setEditPassword("");
     setEditPasswordCheck("");
+  };
+
+  const handleSocialLink = async (provider: string) => {
+    setSocialLinkStarting(provider);
+    try {
+      const res = await apiFetch<{ authorizationUrl: string }>(
+        `/users/me/social-links/${provider}`,
+        { method: "POST" },
+      );
+      // eslint-disable-next-line react-hooks/immutability
+      window.location.href = `${BASE_URL}${res.data.authorizationUrl}`;
+    } catch (e) {
+      showError(e instanceof Error ? e.message : "소셜 계정 연동을 시작할 수 없습니다.");
+      setSocialLinkStarting(null);
+    }
   };
 
   const handleSaveProfile = async () => {
@@ -440,11 +533,6 @@ export default function MyPage() {
 
   const isSocialLogin = data.loginType !== "NORMAL";
 
-  // 백엔드는 "같은 회차(scheduleId)"를 기준으로만 묶어주는데, 같은 회차를 여러 번 따로 결제한
-  // 경우(예: 취소한 옛날 예매 + 새로 산 예매)까지 하나로 합쳐버릴 수 있다.
-  // 그래서 그룹 안에서 다시 한번, "한 번의 결제로 생성된 티켓들은 ticketId가 바로 이어진다"는
-  // 규칙으로 진짜 예매 단위로 쪼갠다.
-  // 결제 단위(groupToken)별로 개별 예매 그룹으로 쪼갠다.
   const splitIntoReservations = (group: TicketGroupInfo): TicketGroupInfo[] => {
     const map = new Map<string, TicketSummary[]>();
     for (const ticket of group.tickets) {
@@ -460,7 +548,6 @@ export default function MyPage() {
   };
   const reservations = data.ticketGroups.flatMap(splitIntoReservations);
 
-  // 최근 예매가 먼저 보이도록, 그룹 안에서 가장 큰 ticketId를 기준으로 정렬한다.
   const sortedGroups = [...reservations].sort((a, b) => {
     const maxA = Math.max(...a.tickets.map((t) => t.ticketId));
     const maxB = Math.max(...b.tickets.map((t) => t.ticketId));
@@ -551,7 +638,8 @@ export default function MyPage() {
 
   return (
     <div className="min-h-screen bg-gray-50 p-10">
-      <div className="max-w-3xl mx-auto">
+      <div className="max-w-4xl mx-auto">
+
         <div className="flex justify-between items-center mb-8">
           <div>
             <p className="text-gray-400 text-sm">안녕하세요</p>
@@ -575,572 +663,466 @@ export default function MyPage() {
           </div>
         </div>
 
-        <div className="bg-white rounded-2xl shadow-sm p-8 mb-8">
-          <div className="flex flex-col items-center mb-6">
-            <div className="relative w-20 h-20 rounded-full overflow-hidden border-2 border-gray-100 mb-2">
-              <Image
-                src={
-                  profilePreviewUrl ||
-                  (!data.profileImageUrl || profileImgError
-                    ? "/default-avatar.svg"
-                    : `${data.profileImageUrl}?t=${profileCacheKey}`)
-                }
-                alt="프로필 사진"
-                fill
-                unoptimized
-                onError={() => setProfileImgError(true)}
-                className="object-cover"
-              />
-              <button
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                className="absolute inset-0 bg-black/30 flex items-center justify-center opacity-0 hover:opacity-100 transition"
-                aria-label="프로필 사진 변경"
-              >
-                <Camera size={18} className="text-white" />
-              </button>
+        <div className="flex gap-6 items-start">
+          <nav className="w-48 shrink-0">
+            <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
+              {(
+                [
+                  { key: "info", label: "내 정보" },
+                  { key: "tickets", label: "내 티켓" },
+                  { key: "posts", label: "내 게시글" },
+                ] as const
+              ).map((tab) => (
+                <button
+                  key={tab.key}
+                  onClick={() => setActiveTab(tab.key)}
+                  className={`w-full text-left px-4 py-3.5 text-sm font-semibold border-l-4 transition ${
+                    activeTab === tab.key
+                      ? "border-blue-600 bg-blue-50 text-blue-700"
+                      : "border-transparent text-gray-600 hover:bg-gray-50"
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              ))}
             </div>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept=".jpg,.jpeg,.png,.webp"
-              className="hidden"
-              onChange={handleProfileFileSelect}
-            />
-            {selectedProfileFile ? (
-              <div className="flex gap-2 mt-1">
-                <button
-                  type="button"
-                  onClick={cancelProfileEdit}
-                  className="text-xs text-gray-500 hover:text-gray-700 border border-gray-200 px-3 py-1 rounded-lg transition"
-                >
-                  취소
-                </button>
-                <button
-                  type="button"
-                  onClick={handleUploadProfileImage}
-                  disabled={isUploadingProfile}
-                  className="text-xs bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded-lg transition disabled:opacity-50"
-                >
-                  {isUploadingProfile ? "저장 중..." : "저장"}
-                </button>
-              </div>
-            ) : (
-              <button
-                type="button"
-                onClick={handleDeleteProfileImage}
-                className="text-xs text-gray-400 hover:text-gray-600 mt-1 transition"
-              >
-                기본 이미지로 변경
-              </button>
-            )}
-          </div>
+          </nav>
 
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-bold text-gray-700">내 정보</h2>
-            {!isEditing && (
-              <button
-                onClick={startEditing}
-                className="text-xs text-blue-600 hover:text-blue-700 border border-blue-200 hover:border-blue-300 px-3 py-1 rounded-lg transition"
-              >
-                정보 수정
-              </button>
-            )}
-          </div>
+          <div className="flex-1 min-w-0">
 
-          {isEditing ? (
-            <div className="space-y-3">
-              <div>
-                <label className="block text-xs text-gray-400 mb-1">이름</label>
-                <input
-                  type="text"
-                  value={editName}
-                  onChange={(e) => setEditName(e.target.value)}
-                  className="w-full p-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
-                />
-              </div>
-              <div>
-                <label className="block text-xs text-gray-400 mb-1">
-                  이메일
-                </label>
-                <input
-                  type="email"
-                  value={editEmail}
-                  onChange={(e) => setEditEmail(e.target.value)}
-                  className="w-full p-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
-                />
-              </div>
-              {!isSocialLogin && (
-                <>
-                  <div>
-                    <label className="block text-xs text-gray-400 mb-1">
-                      새 비밀번호 (변경 시에만 입력)
-                    </label>
-                    <input
-                      type="password"
-                      value={editPassword}
-                      onChange={(e) => setEditPassword(e.target.value)}
-                      placeholder="8자 이상"
-                      className="w-full p-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
-                    />
-                    <PasswordStrengthMeter password={editPassword} />
-                  </div>
-                  {editPassword !== "" && (
-                    <div>
-                      <label className="block text-xs text-gray-400 mb-1">
-                        새 비밀번호 확인
-                      </label>
-                      <input
-                        type="password"
-                        value={editPasswordCheck}
-                        onChange={(e) => setEditPasswordCheck(e.target.value)}
-                        className="w-full p-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
-                      />
-                    </div>
-                  )}
-                </>
-              )}
-              <div className="flex gap-2 pt-2">
-                <button
-                  onClick={cancelEditing}
-                  disabled={isSavingProfile}
-                  className="flex-1 p-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-semibold text-sm transition disabled:opacity-50"
-                >
-                  취소
-                </button>
-                <button
-                  onClick={handleSaveProfile}
-                  disabled={isSavingProfile}
-                  className="flex-1 p-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold text-sm transition disabled:opacity-50"
-                >
-                  {isSavingProfile ? "저장 중..." : "저장"}
-                </button>
-              </div>
-            </div>
-          ) : (
-            <div className="space-y-2 text-gray-600">
-              <p>
-                <span className="inline-block w-20 text-gray-400">이름</span>
-                {data.name}
-              </p>
-              {isSocialLogin ? (
-                <p className="flex items-center gap-1.5">
-                  <span className="inline-block w-20 shrink-0 text-gray-400">로그인 방식</span>
-                  <SocialBadge provider={data.loginType} />
-                </p>
-              ) : (
-                <p>
-                  <span className="inline-block w-20 text-gray-400">아이디</span>
-                  {data.id}
-                </p>
-              )}
-              <p>
-                <span className="inline-block w-20 text-gray-400">이메일</span>
-                {data.email}
-              </p>
-            </div>
-          )}
-        </div>
-
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-bold text-gray-700">내 티켓</h2>
-          <span className="text-sm text-gray-400">
-            {ticketGroups.reduce((sum, g) => sum + g.tickets.length, 0)}개의
-            티켓
-          </span>
-        </div>
-
-        <div className="flex gap-2 mb-4">
-          {(
-            [
-              { key: "all", label: "전체" },
-              { key: "valid", label: "예매완료" },
-              { key: "canceled", label: "취소됨" },
-            ] as const
-          ).map((f) => (
-            <button
-              key={f.key}
-              onClick={() => handleFilterChange(f.key)}
-              className={`px-3 py-1.5 rounded-lg text-sm font-semibold border transition ${
-                statusFilter === f.key
-                  ? "bg-blue-600 text-white border-blue-600"
-                  : "bg-white text-gray-600 border-gray-200 hover:border-blue-400"
-              }`}
-            >
-              {f.label}
-            </button>
-          ))}
-        </div>
-
-        {ticketGroups.length === 0 ? (
-          <p className="text-sm text-gray-400 text-center py-10">
-            해당 조건의 티켓이 없습니다.
-          </p>
-        ) : (
-          <div className="space-y-6">
-            {pagedGroups.map((group) => {
-              // "일부 취소"는 두지 않는다 — 한 장이라도 유효하면 "예매완료", 전부 취소됐을 때만 "취소됨".
-              const allInvalid = group.tickets.every((t) => !isTicketValid(t));
-              const statusLabel = allInvalid ? "취소됨" : "예매완료";
-              const statusClass = allInvalid
-                ? "bg-gray-100 text-gray-400"
-                : "bg-green-100 text-green-700";
-
-              return (
-                <div
-                  key={group.tickets[0].ticketId}
-                  onClick={() => goToTicketDetail(group)}
-                  role="button"
-                  tabIndex={0}
-                  className="w-full flex shadow-md rounded-2xl overflow-hidden text-left hover:shadow-lg transition cursor-pointer"
-                >
-                  <div className="flex-shrink-0 w-36 relative aspect-[3/4] bg-gradient-to-br from-blue-200 to-indigo-300 flex items-center justify-center text-white font-bold text-sm overflow-hidden">
-                    {group.urlPoster ? (
+            {activeTab === "info" && (
+              <>
+                <div className="bg-white rounded-2xl shadow-sm p-8 mb-6">
+                  <div className="flex flex-col items-center mb-6">
+                    <div className="relative w-20 h-20 rounded-full overflow-hidden border-2 border-gray-100 mb-2">
                       <Image
+                        src={
+                          profilePreviewUrl ||
+                          (!data.profileImageUrl || profileImgError
+                            ? "/default-avatar.svg"
+                            : `${data.profileImageUrl}?t=${profileCacheKey}`)
+                        }
+                        alt="프로필 사진"
                         fill
                         unoptimized
-                        src={getLocalConcertPoster(group.urlPoster)}
-                        alt={group.concertName}
-                        sizes="144px"
+                        onError={() => setProfileImgError(true)}
                         className="object-cover"
                       />
+                      <button
+                        type="button"
+                        onClick={() => fileInputRef.current?.click()}
+                        className="absolute inset-0 bg-black/30 flex items-center justify-center opacity-0 hover:opacity-100 transition"
+                        aria-label="프로필 사진 변경"
+                      >
+                        <Camera size={18} className="text-white" />
+                      </button>
+                    </div>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept=".jpg,.jpeg,.png,.webp"
+                      className="hidden"
+                      onChange={handleProfileFileSelect}
+                    />
+                    {selectedProfileFile ? (
+                      <div className="flex gap-2 mt-1">
+                        <button
+                          type="button"
+                          onClick={cancelProfileEdit}
+                          className="text-xs text-gray-500 hover:text-gray-700 border border-gray-200 px-3 py-1 rounded-lg transition"
+                        >
+                          취소
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleUploadProfileImage}
+                          disabled={isUploadingProfile}
+                          className="text-xs bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded-lg transition disabled:opacity-50"
+                        >
+                          {isUploadingProfile ? "저장 중..." : "저장"}
+                        </button>
+                      </div>
                     ) : (
-                      "포스터"
+                      <button
+                        type="button"
+                        onClick={handleDeleteProfileImage}
+                        className="text-xs text-gray-400 hover:text-gray-600 mt-1 transition"
+                      >
+                        기본 이미지로 변경
+                      </button>
                     )}
                   </div>
 
-                  <div className="border-l-2 border-dashed border-gray-200 my-4" />
+                  <div className="flex items-center justify-between mb-4">
+                    <h2 className="text-lg font-bold text-gray-700">내 정보</h2>
+                    {!isEditing && (
+                      <button
+                        onClick={startEditing}
+                        className="text-xs text-blue-600 hover:text-blue-700 border border-blue-200 hover:border-blue-300 px-3 py-1 rounded-lg transition"
+                      >
+                        정보 수정
+                      </button>
+                    )}
+                  </div>
 
-                  <div className="flex-1 bg-white p-6">
-                    <div className="flex justify-between items-start mb-3">
-                      <h3 className="font-bold text-gray-800 text-lg">
-                        {group.concertName}
-                      </h3>
-                      <div className="flex items-center gap-2">
-                        {!allInvalid && (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleCancelGroup(group);
-                            }}
-                            disabled={
-                              cancelingKey === group.tickets[0].ticketId
-                            }
-                            className="text-xs text-gray-400 hover:text-red-500 border border-gray-200 hover:border-red-300 px-3 py-1 rounded-lg transition disabled:opacity-50"
-                          >
-                            {cancelingKey === group.tickets[0].ticketId
-                              ? "취소 중..."
-                              : "예매 취소"}
-                          </button>
-                        )}
-                        <span
-                          className={`px-2 py-1 text-xs rounded-full font-semibold ${statusClass}`}
+                  {isEditing ? (
+                    <div className="space-y-3">
+                      <div>
+                        <label className="block text-xs text-gray-400 mb-1">이름</label>
+                        <input
+                          type="text"
+                          value={editName}
+                          onChange={(e) => setEditName(e.target.value)}
+                          className="w-full p-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs text-gray-400 mb-1">이메일</label>
+                        <input
+                          type="email"
+                          value={editEmail}
+                          onChange={(e) => setEditEmail(e.target.value)}
+                          className="w-full p-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
+                        />
+                      </div>
+                      {!isSocialLogin && (
+                        <>
+                          <div>
+                            <label className="block text-xs text-gray-400 mb-1">
+                              새 비밀번호 (변경 시에만 입력)
+                            </label>
+                            <input
+                              type="password"
+                              value={editPassword}
+                              onChange={(e) => setEditPassword(e.target.value)}
+                              placeholder="8자 이상"
+                              className="w-full p-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
+                            />
+                            <PasswordStrengthMeter password={editPassword} />
+                          </div>
+                          {editPassword !== "" && (
+                            <div>
+                              <label className="block text-xs text-gray-400 mb-1">
+                                새 비밀번호 확인
+                              </label>
+                              <input
+                                type="password"
+                                value={editPasswordCheck}
+                                onChange={(e) => setEditPasswordCheck(e.target.value)}
+                                className="w-full p-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
+                              />
+                            </div>
+                          )}
+                        </>
+                      )}
+                      <div className="flex gap-2 pt-2">
+                        <button
+                          onClick={cancelEditing}
+                          disabled={isSavingProfile}
+                          className="flex-1 p-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-semibold text-sm transition disabled:opacity-50"
                         >
-                          {statusLabel}
-                        </span>
+                          취소
+                        </button>
+                        <button
+                          onClick={handleSaveProfile}
+                          disabled={isSavingProfile}
+                          className="flex-1 p-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold text-sm transition disabled:opacity-50"
+                        >
+                          {isSavingProfile ? "저장 중..." : "저장"}
+                        </button>
                       </div>
                     </div>
-
-                    <div className="space-y-1 text-sm text-gray-500">
+                  ) : (
+                    <div className="space-y-2 text-gray-600">
                       <p>
-                        <span className="inline-block w-20 text-gray-400">
-                          좌석
-                        </span>
-                        {group.tickets.length}매 (
-                        {group.tickets.map((t) => t.seatNumber).join(", ")})
+                        <span className="inline-block w-20 text-gray-400">이름</span>
+                        {data.name}
                       </p>
+                      {isSocialLogin ? (
+                        <p className="flex items-center gap-1.5">
+                          <span className="inline-block w-20 shrink-0 text-gray-400">로그인 방식</span>
+                          <SocialBadge provider={data.loginType} />
+                        </p>
+                      ) : (
+                        <p>
+                          <span className="inline-block w-20 text-gray-400">아이디</span>
+                          {data.id}
+                        </p>
+                      )}
                       <p>
-                        <span className="inline-block w-20 text-gray-400">
-                          공연기간
-                        </span>
-                        {group.startDate} ~ {group.endDate}
-                      </p>
-                      <p>
-                        <span className="inline-block w-20 text-gray-400">
-                          결제금액
-                        </span>
-                        <span className="text-blue-600 font-bold">
-                          {group.totalPrice.toLocaleString()}원
-                        </span>
+                        <span className="inline-block w-20 text-gray-400">이메일</span>
+                        {data.email}
                       </p>
                     </div>
-                  </div>
+                  )}
                 </div>
-              );
-            })}
-          </div>
-        )}
 
-        {totalPages > 1 && (
-          <div className="flex items-center justify-center gap-2 mt-8">
-            <button
-              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-              disabled={currentPage === 1}
-              className="px-3 py-2 rounded-lg border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-default"
-            >
-              이전
-            </button>
-            {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-              <button
-                key={page}
-                onClick={() => setCurrentPage(page)}
-                className={`w-10 h-10 rounded-lg border text-sm font-semibold ${
-                  currentPage === page
-                    ? "bg-blue-600 border-blue-600 text-white"
-                    : "bg-white border-gray-200 text-gray-600 hover:bg-gray-50"
-                }`}
-              >
-                {page}
-              </button>
-            ))}
-            <button
-              onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-              disabled={currentPage === totalPages}
-              className="px-3 py-2 rounded-lg border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-default"
-            >
-              다음
-            </button>
-          </div>
-        )}
+                <div className="bg-white rounded-2xl shadow-sm p-8">
+                  <h2 className="text-lg font-bold text-gray-700 mb-4">소셜 계정 연동</h2>
+                  {socialLinkLoading ? (
+                    <p className="text-sm text-gray-400">불러오는 중...</p>
+                  ) : socialLinkStatus?.linked ? (
+                    <div className="flex items-center gap-3 p-4 bg-gray-50 rounded-xl border border-gray-100">
+                      <SocialBadge provider={socialLinkStatus.provider!} size={24} />
+                      <div>
+                        <p className="text-sm font-semibold text-gray-700">
+                          {PROVIDER_LABELS[socialLinkStatus.provider!] ?? socialLinkStatus.provider} 계정 연동됨
+                        </p>
+                        <p className="text-xs text-gray-400 mt-0.5">해당 소셜 계정으로 로그인할 수 있습니다.</p>
+                      </div>
+                    </div>
+                  ) : (
+                    <div>
+                      <p className="text-sm text-gray-500 mb-4">
+                        소셜 계정을 연동하면 해당 소셜 계정으로도 로그인할 수 있습니다.
+                      </p>
+                      <div className="flex flex-col gap-2">
+                        {SOCIAL_LINK_PROVIDERS.map((p) => (
+                          <button
+                            key={p.key}
+                            onClick={() => handleSocialLink(p.key)}
+                            disabled={!!socialLinkStarting}
+                            className={`flex items-center gap-3 px-4 py-3 rounded-lg font-semibold text-sm transition disabled:opacity-50 ${p.className}`}
+                          >
+                            <Image src={p.icon} alt={p.label} width={20} height={20} unoptimized />
+                            {socialLinkStarting === p.key ? "연결 중..." : p.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
 
-      <div className="bg-white rounded-2xl shadow-sm p-8 mb-8">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-bold text-gray-700">내 게시글</h2>
-          <span className="text-sm text-gray-400">{myPostsTotalElements}개의 게시글</span>
-        </div>
-
-        {myPostsLoading ? (
-          <p className="text-sm text-gray-400 text-center py-10">불러오는 중...</p>
-        ) : myPosts.length === 0 ? (
-          <p className="text-sm text-gray-400 text-center py-10">
-            작성한 게시글이 없습니다.
-          </p>
-        ) : (
-          <div className="space-y-3">
-            {myPosts.map((post) => (
-              <div
-                key={post.postId}
-                onClick={() => router.push(`/board/${post.postId}`)}
-                role="button"
-                tabIndex={0}
-                className="p-4 border border-gray-100 rounded-xl hover:shadow-md hover:border-blue-200 transition cursor-pointer"
-              >
-                <div className="flex items-center gap-2 mb-1">
-                  <h3 className="font-semibold text-gray-800 truncate">{post.title}</h3>
-                  <span
-                    className={`shrink-0 text-[10px] font-semibold rounded px-1.5 py-0.5 ${REVIEW_TYPE_BADGE[post.reviewType].className}`}
-                  >
-                    {REVIEW_TYPE_BADGE[post.reviewType].label}
+            {activeTab === "tickets" && (
+              <div className="bg-white rounded-2xl shadow-sm p-8">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-lg font-bold text-gray-700">내 티켓</h2>
+                  <span className="text-sm text-gray-400">
+                    {ticketGroups.reduce((sum, g) => sum + g.tickets.length, 0)}개의 티켓
                   </span>
                 </div>
-                {post.reviewType === "REVIEW" && post.rating !== null && (
-                  <div className="mb-1">
-                    <RatingStars rating={post.rating} />
+
+                <div className="flex gap-2 mb-6">
+                  {(
+                    [
+                      { key: "all", label: "전체" },
+                      { key: "valid", label: "예매완료" },
+                      { key: "canceled", label: "취소됨" },
+                    ] as const
+                  ).map((f) => (
+                    <button
+                      key={f.key}
+                      onClick={() => handleFilterChange(f.key)}
+                      className={`px-3 py-1.5 rounded-lg text-sm font-semibold border transition ${
+                        statusFilter === f.key
+                          ? "bg-blue-600 text-white border-blue-600"
+                          : "bg-white text-gray-600 border-gray-200 hover:border-blue-400"
+                      }`}
+                    >
+                      {f.label}
+                    </button>
+                  ))}
+                </div>
+
+                {ticketGroups.length === 0 ? (
+                  <p className="text-sm text-gray-400 text-center py-10">해당 조건의 티켓이 없습니다.</p>
+                ) : (
+                  <div className="space-y-6">
+                    {pagedGroups.map((group) => {
+                      const allInvalid = group.tickets.every((t) => !isTicketValid(t));
+                      const statusLabel = allInvalid ? "취소됨" : "예매완료";
+                      const statusClass = allInvalid ? "bg-gray-100 text-gray-400" : "bg-green-100 text-green-700";
+                      return (
+                        <div
+                          key={group.tickets[0].ticketId}
+                          onClick={() => goToTicketDetail(group)}
+                          role="button"
+                          tabIndex={0}
+                          className="w-full flex shadow-md rounded-2xl overflow-hidden text-left hover:shadow-lg transition cursor-pointer"
+                        >
+                          <div className="flex-shrink-0 w-36 relative aspect-[3/4] bg-gradient-to-br from-blue-200 to-indigo-300 flex items-center justify-center text-white font-bold text-sm overflow-hidden">
+                            {group.urlPoster ? (
+                              <Image fill unoptimized src={getLocalConcertPoster(group.urlPoster)} alt={group.concertName} sizes="144px" className="object-cover" />
+                            ) : "포스터"}
+                          </div>
+                          <div className="border-l-2 border-dashed border-gray-200 my-4" />
+                          <div className="flex-1 bg-white p-6">
+                            <div className="flex justify-between items-start mb-3">
+                              <h3 className="font-bold text-gray-800 text-lg">{group.concertName}</h3>
+                              <div className="flex items-center gap-2">
+                                {!allInvalid && (
+                                  <button
+                                    onClick={(e) => { e.stopPropagation(); handleCancelGroup(group); }}
+                                    disabled={cancelingKey === group.tickets[0].ticketId}
+                                    className="text-xs text-gray-400 hover:text-red-500 border border-gray-200 hover:border-red-300 px-3 py-1 rounded-lg transition disabled:opacity-50"
+                                  >
+                                    {cancelingKey === group.tickets[0].ticketId ? "취소 중..." : "예매 취소"}
+                                  </button>
+                                )}
+                                <span className={`px-2 py-1 text-xs rounded-full font-semibold ${statusClass}`}>{statusLabel}</span>
+                              </div>
+                            </div>
+                            <div className="space-y-1 text-sm text-gray-500">
+                              <p><span className="inline-block w-20 text-gray-400">좌석</span>{group.tickets.length}매 ({group.tickets.map((t) => t.seatNumber).join(", ")})</p>
+                              <p><span className="inline-block w-20 text-gray-400">공연기간</span>{group.startDate} ~ {group.endDate}</p>
+                              <p><span className="inline-block w-20 text-gray-400">결제금액</span><span className="text-blue-600 font-bold">{group.totalPrice.toLocaleString()}원</span></p>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
-                <p className="text-xs text-blue-600 font-semibold">{post.concertName}</p>
-                <p className="text-xs text-gray-400 mt-1">
-                  {formatDateTime(post.createdAt)} · 좋아요 {post.likeCount}
-                </p>
+
+                {totalPages > 1 && (
+                  <div className="flex items-center justify-center gap-2 mt-8">
+                    <button onClick={() => setCurrentPage((p) => Math.max(1, p - 1))} disabled={currentPage === 1} className="px-3 py-2 rounded-lg border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-default">이전</button>
+                    {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                      <button key={page} onClick={() => setCurrentPage(page)} className={`w-10 h-10 rounded-lg border text-sm font-semibold ${currentPage === page ? "bg-blue-600 border-blue-600 text-white" : "bg-white border-gray-200 text-gray-600 hover:bg-gray-50"}`}>{page}</button>
+                    ))}
+                    <button onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages} className="px-3 py-2 rounded-lg border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-default">다음</button>
+                  </div>
+                )}
               </div>
-            ))}
-          </div>
-        )}
+            )}
 
-        {myPostsTotalPages > 1 && (
-          <div className="flex items-center justify-center gap-2 mt-8">
-            <button
-              onClick={() => fetchMyPosts(myPostsPage - 1)}
-              disabled={myPostsPage === 0}
-              className="px-3 py-2 rounded-lg border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-default"
-            >
-              이전
-            </button>
-            {Array.from({ length: myPostsTotalPages }, (_, i) => i).map((page) => (
-              <button
-                key={page}
-                onClick={() => fetchMyPosts(page)}
-                className={`w-10 h-10 rounded-lg border text-sm font-semibold ${
-                  myPostsPage === page
-                    ? "bg-blue-600 border-blue-600 text-white"
-                    : "bg-white border-gray-200 text-gray-600 hover:bg-gray-50"
-                }`}
-              >
-                {page + 1}
-              </button>
-            ))}
-            <button
-              onClick={() => fetchMyPosts(myPostsPage + 1)}
-              disabled={myPostsPage >= myPostsTotalPages - 1}
-              className="px-3 py-2 rounded-lg border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-default"
-            >
-              다음
-            </button>
-          </div>
-        )}
-      </div>
+            {activeTab === "posts" && (
+              <div className="bg-white rounded-2xl shadow-sm p-8">
+                <div className="flex gap-2 mb-6">
+                  {(
+                    [
+                      { key: "my", label: "내 게시글" },
+                      { key: "bookmarks", label: "북마크" },
+                      { key: "likes", label: "좋아요" },
+                    ] as const
+                  ).map((st) => (
+                    <button
+                      key={st.key}
+                      onClick={() => setPostsSubTab(st.key)}
+                      className={`px-4 py-2 rounded-lg text-sm font-semibold border transition ${
+                        postsSubTab === st.key
+                          ? "bg-blue-600 text-white border-blue-600"
+                          : "bg-white text-gray-600 border-gray-200 hover:border-blue-400"
+                      }`}
+                    >
+                      {st.label}
+                    </button>
+                  ))}
+                </div>
 
-      <div className="bg-white rounded-2xl shadow-sm p-8 mb-8">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-bold text-gray-700">북마크한 게시글</h2>
-          <span className="text-sm text-gray-400">{bookmarksTotalElements}개의 북마크</span>
+                {postsSubTab === "my" && (
+                  <>
+                    <div className="flex items-center justify-between mb-4">
+                      <h2 className="text-lg font-bold text-gray-700">내 게시글</h2>
+                      <span className="text-sm text-gray-400">{myPostsTotalElements}개</span>
+                    </div>
+                    {myPostsLoading ? (
+                      <p className="text-sm text-gray-400 text-center py-10">불러오는 중...</p>
+                    ) : myPosts.length === 0 ? (
+                      <p className="text-sm text-gray-400 text-center py-10">작성한 게시글이 없습니다.</p>
+                    ) : (
+                      <div className="space-y-3">
+                        {myPosts.map((post) => (
+                          <div key={post.postId} onClick={() => router.push(`/board/${post.postId}`)} role="button" tabIndex={0} className="p-4 border border-gray-100 rounded-xl hover:shadow-md hover:border-blue-200 transition cursor-pointer">
+                            <div className="flex items-center gap-2 mb-1">
+                              <h3 className="font-semibold text-gray-800 truncate">{post.title}</h3>
+                              <span className={`shrink-0 text-[10px] font-semibold rounded px-1.5 py-0.5 ${REVIEW_TYPE_BADGE[post.reviewType].className}`}>{REVIEW_TYPE_BADGE[post.reviewType].label}</span>
+                            </div>
+                            {post.reviewType === "REVIEW" && post.rating !== null && <div className="mb-1"><RatingStars rating={post.rating} /></div>}
+                            <p className="text-xs text-blue-600 font-semibold">{post.concertName}</p>
+                            <p className="text-xs text-gray-400 mt-1">{formatDateTime(post.createdAt)} · 좋아요 {post.likeCount}</p>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    {myPostsTotalPages > 1 && (
+                      <div className="flex items-center justify-center gap-2 mt-8">
+                        <button onClick={() => fetchMyPosts(myPostsPage - 1)} disabled={myPostsPage === 0} className="px-3 py-2 rounded-lg border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-default">이전</button>
+                        {Array.from({ length: myPostsTotalPages }, (_, i) => i).map((page) => (<button key={page} onClick={() => fetchMyPosts(page)} className={`w-10 h-10 rounded-lg border text-sm font-semibold ${myPostsPage === page ? "bg-blue-600 border-blue-600 text-white" : "bg-white border-gray-200 text-gray-600 hover:bg-gray-50"}`}>{page + 1}</button>))}
+                        <button onClick={() => fetchMyPosts(myPostsPage + 1)} disabled={myPostsPage >= myPostsTotalPages - 1} className="px-3 py-2 rounded-lg border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-default">다음</button>
+                      </div>
+                    )}
+                  </>
+                )}
+
+                {postsSubTab === "bookmarks" && (
+                  <>
+                    <div className="flex items-center justify-between mb-4">
+                      <h2 className="text-lg font-bold text-gray-700">북마크한 게시글</h2>
+                      <span className="text-sm text-gray-400">{bookmarksTotalElements}개</span>
+                    </div>
+                    {bookmarksLoading ? (
+                      <p className="text-sm text-gray-400 text-center py-10">불러오는 중...</p>
+                    ) : bookmarks.length === 0 ? (
+                      <p className="text-sm text-gray-400 text-center py-10">북마크한 게시글이 없습니다.</p>
+                    ) : (
+                      <div className="space-y-3">
+                        {bookmarks.map((b) => (
+                          <div key={b.postId} onClick={() => router.push(`/board/${b.postId}`)} role="button" tabIndex={0} className="flex gap-3 p-4 border border-gray-100 rounded-xl hover:shadow-md hover:border-blue-200 transition cursor-pointer">
+                            <div className="relative shrink-0 w-12 h-16 rounded-lg overflow-hidden bg-gradient-to-br from-blue-100 to-indigo-200 flex items-center justify-center">
+                              {b.posterUrl ? <Image fill unoptimized src={getLocalConcertPoster(b.posterUrl)} alt={b.concertName} sizes="48px" className="object-cover" /> : <span className="text-[10px] text-gray-400">포스터</span>}
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <h3 className="font-semibold text-gray-800 truncate">{b.title}</h3>
+                              <p className="text-xs text-blue-600 font-semibold mt-0.5">{b.concertName}</p>
+                              <p className="text-xs text-gray-400 mt-1">{b.userName} · {formatDateTime(b.bookmarkedAt)} 북마크</p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    {bookmarksTotalPages > 1 && (
+                      <div className="flex items-center justify-center gap-2 mt-8">
+                        <button onClick={() => fetchBookmarks(bookmarksPage - 1)} disabled={bookmarksPage === 0} className="px-3 py-2 rounded-lg border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-default">이전</button>
+                        {Array.from({ length: bookmarksTotalPages }, (_, i) => i).map((page) => (<button key={page} onClick={() => fetchBookmarks(page)} className={`w-10 h-10 rounded-lg border text-sm font-semibold ${bookmarksPage === page ? "bg-blue-600 border-blue-600 text-white" : "bg-white border-gray-200 text-gray-600 hover:bg-gray-50"}`}>{page + 1}</button>))}
+                        <button onClick={() => fetchBookmarks(bookmarksPage + 1)} disabled={bookmarksPage >= bookmarksTotalPages - 1} className="px-3 py-2 rounded-lg border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-default">다음</button>
+                      </div>
+                    )}
+                  </>
+                )}
+
+                {postsSubTab === "likes" && (
+                  <>
+                    <div className="flex items-center justify-between mb-4">
+                      <h2 className="text-lg font-bold text-gray-700">좋아요한 게시글</h2>
+                      <span className="text-sm text-gray-400">{likesTotalElements}개</span>
+                    </div>
+                    {likesLoading ? (
+                      <p className="text-sm text-gray-400 text-center py-10">불러오는 중...</p>
+                    ) : likes.length === 0 ? (
+                      <p className="text-sm text-gray-400 text-center py-10">좋아요한 게시글이 없습니다.</p>
+                    ) : (
+                      <div className="space-y-3">
+                        {likes.map((l) => (
+                          <div key={l.postId} onClick={() => router.push(`/board/${l.postId}`)} role="button" tabIndex={0} className="flex gap-3 p-4 border border-gray-100 rounded-xl hover:shadow-md hover:border-blue-200 transition cursor-pointer">
+                            <div className="relative shrink-0 w-12 h-16 rounded-lg overflow-hidden bg-gradient-to-br from-blue-100 to-indigo-200 flex items-center justify-center">
+                              {l.posterUrl ? <Image fill unoptimized src={getLocalConcertPoster(l.posterUrl)} alt={l.concertName} sizes="48px" className="object-cover" /> : <span className="text-[10px] text-gray-400">포스터</span>}
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <h3 className="font-semibold text-gray-800 truncate">{l.title}</h3>
+                              <p className="text-xs text-blue-600 font-semibold mt-0.5">{l.concertName}</p>
+                              <p className="text-xs text-gray-400 mt-1">{l.userName} · {formatDateTime(l.likedAt)} 좋아요</p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    {likesTotalPages > 1 && (
+                      <div className="flex items-center justify-center gap-2 mt-8">
+                        <button onClick={() => fetchLikes(likesPage - 1)} disabled={likesPage === 0} className="px-3 py-2 rounded-lg border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-default">이전</button>
+                        {Array.from({ length: likesTotalPages }, (_, i) => i).map((page) => (<button key={page} onClick={() => fetchLikes(page)} className={`w-10 h-10 rounded-lg border text-sm font-semibold ${likesPage === page ? "bg-blue-600 border-blue-600 text-white" : "bg-white border-gray-200 text-gray-600 hover:bg-gray-50"}`}>{page + 1}</button>))}
+                        <button onClick={() => fetchLikes(likesPage + 1)} disabled={likesPage >= likesTotalPages - 1} className="px-3 py-2 rounded-lg border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-default">다음</button>
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+            )}
+
+          </div>
         </div>
-
-        {bookmarksLoading ? (
-          <p className="text-sm text-gray-400 text-center py-10">불러오는 중...</p>
-        ) : bookmarks.length === 0 ? (
-          <p className="text-sm text-gray-400 text-center py-10">
-            북마크한 게시글이 없습니다.
-          </p>
-        ) : (
-          <div className="space-y-3">
-            {bookmarks.map((b) => (
-              <div
-                key={b.postId}
-                onClick={() => router.push(`/board/${b.postId}`)}
-                role="button"
-                tabIndex={0}
-                className="flex gap-3 p-4 border border-gray-100 rounded-xl hover:shadow-md hover:border-blue-200 transition cursor-pointer"
-              >
-                <div className="relative shrink-0 w-12 h-16 rounded-lg overflow-hidden bg-gradient-to-br from-blue-100 to-indigo-200 flex items-center justify-center">
-                  {b.posterUrl ? (
-                    <Image
-                      fill
-                      unoptimized
-                      src={getLocalConcertPoster(b.posterUrl)}
-                      alt={b.concertName}
-                      sizes="48px"
-                      className="object-cover"
-                    />
-                  ) : (
-                    <span className="text-[10px] text-gray-400">포스터</span>
-                  )}
-                </div>
-                <div className="min-w-0 flex-1">
-                  <h3 className="font-semibold text-gray-800 truncate">{b.title}</h3>
-                  <p className="text-xs text-blue-600 font-semibold mt-0.5">{b.concertName}</p>
-                  <p className="text-xs text-gray-400 mt-1">
-                    {b.userName} · {formatDateTime(b.bookmarkedAt)} 북마크
-                  </p>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {bookmarksTotalPages > 1 && (
-          <div className="flex items-center justify-center gap-2 mt-8">
-            <button
-              onClick={() => fetchBookmarks(bookmarksPage - 1)}
-              disabled={bookmarksPage === 0}
-              className="px-3 py-2 rounded-lg border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-default"
-            >
-              이전
-            </button>
-            {Array.from({ length: bookmarksTotalPages }, (_, i) => i).map((page) => (
-              <button
-                key={page}
-                onClick={() => fetchBookmarks(page)}
-                className={`w-10 h-10 rounded-lg border text-sm font-semibold ${
-                  bookmarksPage === page
-                    ? "bg-blue-600 border-blue-600 text-white"
-                    : "bg-white border-gray-200 text-gray-600 hover:bg-gray-50"
-                }`}
-              >
-                {page + 1}
-              </button>
-            ))}
-            <button
-              onClick={() => fetchBookmarks(bookmarksPage + 1)}
-              disabled={bookmarksPage >= bookmarksTotalPages - 1}
-              className="px-3 py-2 rounded-lg border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-default"
-            >
-              다음
-            </button>
-          </div>
-        )}
-      </div>
-
-      <div className="bg-white rounded-2xl shadow-sm p-8 mb-8">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-bold text-gray-700">좋아요한 게시글</h2>
-          <span className="text-sm text-gray-400">{likesTotalElements}개의 좋아요</span>
-        </div>
-
-        {likesLoading ? (
-          <p className="text-sm text-gray-400 text-center py-10">불러오는 중...</p>
-        ) : likes.length === 0 ? (
-          <p className="text-sm text-gray-400 text-center py-10">
-            좋아요한 게시글이 없습니다.
-          </p>
-        ) : (
-          <div className="space-y-3">
-            {likes.map((l) => (
-              <div
-                key={l.postId}
-                onClick={() => router.push(`/board/${l.postId}`)}
-                role="button"
-                tabIndex={0}
-                className="flex gap-3 p-4 border border-gray-100 rounded-xl hover:shadow-md hover:border-blue-200 transition cursor-pointer"
-              >
-                <div className="relative shrink-0 w-12 h-16 rounded-lg overflow-hidden bg-gradient-to-br from-blue-100 to-indigo-200 flex items-center justify-center">
-                  {l.posterUrl ? (
-                    <Image
-                      fill
-                      unoptimized
-                      src={getLocalConcertPoster(l.posterUrl)}
-                      alt={l.concertName}
-                      sizes="48px"
-                      className="object-cover"
-                    />
-                  ) : (
-                    <span className="text-[10px] text-gray-400">포스터</span>
-                  )}
-                </div>
-                <div className="min-w-0 flex-1">
-                  <h3 className="font-semibold text-gray-800 truncate">{l.title}</h3>
-                  <p className="text-xs text-blue-600 font-semibold mt-0.5">{l.concertName}</p>
-                  <p className="text-xs text-gray-400 mt-1">
-                    {l.userName} · {formatDateTime(l.likedAt)} 좋아요
-                  </p>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {likesTotalPages > 1 && (
-          <div className="flex items-center justify-center gap-2 mt-8">
-            <button
-              onClick={() => fetchLikes(likesPage - 1)}
-              disabled={likesPage === 0}
-              className="px-3 py-2 rounded-lg border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-default"
-            >
-              이전
-            </button>
-            {Array.from({ length: likesTotalPages }, (_, i) => i).map((page) => (
-              <button
-                key={page}
-                onClick={() => fetchLikes(page)}
-                className={`w-10 h-10 rounded-lg border text-sm font-semibold ${
-                  likesPage === page
-                    ? "bg-blue-600 border-blue-600 text-white"
-                    : "bg-white border-gray-200 text-gray-600 hover:bg-gray-50"
-                }`}
-              >
-                {page + 1}
-              </button>
-            ))}
-            <button
-              onClick={() => fetchLikes(likesPage + 1)}
-              disabled={likesPage >= likesTotalPages - 1}
-              className="px-3 py-2 rounded-lg border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-default"
-            >
-              다음
-            </button>
-          </div>
-        )}
-      </div>
       </div>
 
       {showWithdrawModal && (
