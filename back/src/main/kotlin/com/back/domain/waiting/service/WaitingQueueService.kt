@@ -86,40 +86,22 @@ class WaitingQueueService(
         validateUser(userId)
         concertService.validateConcertScheduleMatch(concertId, scheduleId)
 
-        waitingQueueManager.getActiveToken(scheduleId, userId)?.let { activeToken ->
-            return QueueConnectionEvent(
-                concertId = concertId,
-                scheduleId = scheduleId,
-                userId = userId,
-                state = QueueConnectionState.ACTIVE,
-                rank = 0L,
-                myQueueNumber = 0L,
-                entryToken = activeToken,
+        return when (val snapshot = waitingQueueManager.getConnectionSnapshot(scheduleId, userId)) {
+            is QueueConnectionSnapshot.Active -> QueueConnectionEvent(
+                concertId, scheduleId, userId, QueueConnectionState.ACTIVE,
+                0L, 0L, snapshot.entryToken,
+            )
+
+            is QueueConnectionSnapshot.Waiting -> QueueConnectionEvent(
+                concertId, scheduleId, userId, QueueConnectionState.WAITING,
+                snapshot.rank, snapshot.myQueueNumber, null,
+            )
+
+            QueueConnectionSnapshot.NotRegistered -> QueueConnectionEvent(
+                concertId, scheduleId, userId, QueueConnectionState.NOT_REGISTERED,
+                0L, 0L, null,
             )
         }
-
-        val rank = waitingQueueManager.findWaitingRank(scheduleId, userId)
-        if (rank != null) {
-            return QueueConnectionEvent(
-                concertId = concertId,
-                scheduleId = scheduleId,
-                userId = userId,
-                state = QueueConnectionState.WAITING,
-                rank = rank,
-                myQueueNumber = waitingQueueManager.getQueueSequence(scheduleId, userId),
-                entryToken = null,
-            )
-        }
-
-        return QueueConnectionEvent(
-            concertId = concertId,
-            scheduleId = scheduleId,
-            userId = userId,
-            state = QueueConnectionState.NOT_REGISTERED,
-            rank = 0L,
-            myQueueNumber = 0L,
-            entryToken = null,
-        )
     }
 
     fun validateSseSubscription(concertId: Long, scheduleId: Long, userId: Long) {
@@ -164,14 +146,11 @@ class WaitingQueueService(
         }
 
         val capacity = minOf(remainingSeats, maxActiveUsers.toLong())
-        val userIds = waitingQueueManager.addActiveUser(scheduleId, capacity, batchSize, entryTokenTtl)
+        val admissions = waitingQueueManager.addActiveUser(scheduleId, capacity, batchSize, entryTokenTtl)
 
-        for (userId in userIds) {
-            val entryToken = waitingQueueManager.issueToken(scheduleId, userId, entryTokenTtl)
-            val expiredAt = System.currentTimeMillis() + entryTokenTtl.toMillis()
-
+        for (admission in admissions) {
             eventPublisher.publishEvent(
-                EntryAllowedEvent(scheduleId, userId, entryToken, expiredAt)
+                EntryAllowedEvent(scheduleId, admission.userId, admission.entryToken, admission.expiredAt)
             )
         }
         publishQueueRank(scheduleId)

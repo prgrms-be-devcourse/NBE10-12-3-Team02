@@ -36,7 +36,8 @@ class WaitingQueueConnectionStateTest {
     @DisplayName("이미 입장한 사용자는 SSE 연결 시 기존 입장 토큰을 복구한다")
     fun t1() {
         givenExistingUser()
-        `when`(waitingQueueManager.getActiveToken(SCHEDULE_ID, USER_ID)).thenReturn("entry-token")
+        `when`(waitingQueueManager.getConnectionSnapshot(SCHEDULE_ID, USER_ID))
+            .thenReturn(QueueConnectionSnapshot.Active("entry-token"))
 
         val result = service.getConnectionState(CONCERT_ID, SCHEDULE_ID, USER_ID)
 
@@ -49,9 +50,8 @@ class WaitingQueueConnectionStateTest {
     @DisplayName("대기 중인 사용자는 SSE 연결 시 현재 순번을 복구한다")
     fun t2() {
         givenExistingUser()
-        `when`(waitingQueueManager.getActiveToken(SCHEDULE_ID, USER_ID)).thenReturn(null)
-        `when`(waitingQueueManager.findWaitingRank(SCHEDULE_ID, USER_ID)).thenReturn(3L)
-        `when`(waitingQueueManager.getQueueSequence(SCHEDULE_ID, USER_ID)).thenReturn(7L)
+        `when`(waitingQueueManager.getConnectionSnapshot(SCHEDULE_ID, USER_ID))
+            .thenReturn(QueueConnectionSnapshot.Waiting(3L, 7L))
 
         val result = service.getConnectionState(CONCERT_ID, SCHEDULE_ID, USER_ID)
 
@@ -65,8 +65,8 @@ class WaitingQueueConnectionStateTest {
     @DisplayName("대기열에 없는 사용자는 SSE 연결 시 미등록 상태를 받는다")
     fun t3() {
         givenExistingUser()
-        `when`(waitingQueueManager.getActiveToken(SCHEDULE_ID, USER_ID)).thenReturn(null)
-        `when`(waitingQueueManager.findWaitingRank(SCHEDULE_ID, USER_ID)).thenReturn(null)
+        `when`(waitingQueueManager.getConnectionSnapshot(SCHEDULE_ID, USER_ID))
+            .thenReturn(QueueConnectionSnapshot.NotRegistered)
 
         val result = service.getConnectionState(CONCERT_ID, SCHEDULE_ID, USER_ID)
 
