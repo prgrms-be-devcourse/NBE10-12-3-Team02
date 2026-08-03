@@ -2,6 +2,7 @@ package com.back.domain.schedule.controller
 
 import com.back.domain.concert.entity.Concert
 import com.back.domain.concert.repository.ConcertRepository
+import com.back.domain.concert.sse.SeatStatusETagVersionManager
 import com.back.domain.schedule.constant.SeatStatus.*
 import com.back.domain.schedule.entity.Schedule
 import com.back.domain.schedule.entity.ScheduleSeat
@@ -13,6 +14,7 @@ import com.back.global.RedisTestConfig
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
+import org.mockito.BDDMockito.given
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
@@ -48,6 +50,9 @@ class ScheduleControllerTest @Autowired constructor(
     @MockitoBean
     private lateinit var stringRedisTemplate: StringRedisTemplate
 
+    @MockitoBean
+    private lateinit var eTagVersionManager: SeatStatusETagVersionManager
+
     @BeforeEach
     fun setUp() {
         concert = concertRepository.save(Concert.create(
@@ -70,9 +75,11 @@ class ScheduleControllerTest @Autowired constructor(
     @DisplayName("특정 회차 좌석 실시간 현황 조회 성공")
     fun showSchedule() {
         val scheduleId = checkNotNull(schedule.scheduleId)
-        val seats = scheduleSeatRepository.findByScheduleScheduleId(scheduleId)
-        val fingerprint = seats.joinToString(",") { "${it.seatNumber}:${it.seatStatus.name}" }.hashCode().toString()
-        val eTag = "\"${concert.concertId}-$scheduleId-$fingerprint\""
+        // ETag 핑거프린트는 이제 Redis 버전 카운터로 생성됩니다.
+        // mock이 0을 반환하므로 eTag는 "concertId-scheduleId-0" 형태입니다.
+        val mockVersion = 42L
+        given(eTagVersionManager.getVersion(scheduleId)).willReturn(mockVersion)
+        val eTag = "\"${concert.concertId}-$scheduleId-$mockVersion\""
 
         mockMvc.perform(get("/api/v1/schedules/{scheduleId}/seats/status", scheduleId)
                 .param("concertId", concert.concertId.toString()))
@@ -92,9 +99,10 @@ class ScheduleControllerTest @Autowired constructor(
     @DisplayName("30초 주기 폴링 시 If-None-Match ETag가 일치하면 304 Not Modified가 반환된다")
     fun showSchedule_pollingETag_returns304() {
         val scheduleId = checkNotNull(schedule.scheduleId)
-        val seats = scheduleSeatRepository.findByScheduleScheduleId(scheduleId)
-        val fingerprint = seats.joinToString(",") { "${it.seatNumber}:${it.seatStatus.name}" }.hashCode().toString()
-        val eTag = "\"${concert.concertId}-$scheduleId-$fingerprint\""
+        // ETag는 Redis 버전 카운터 기반으로 생성되므로, mock 버전으로 일치 여부를 검증합니다.
+        val mockVersion = 42L
+        given(eTagVersionManager.getVersion(scheduleId)).willReturn(mockVersion)
+        val eTag = "\"${concert.concertId}-$scheduleId-$mockVersion\""
 
         mockMvc.perform(get("/api/v1/schedules/{scheduleId}/seats/status", scheduleId)
                 .param("concertId", concert.concertId.toString())
