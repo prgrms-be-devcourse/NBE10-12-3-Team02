@@ -160,7 +160,9 @@ export default function ConcertDetailPage({
 
             <div className="p-8 flex-1">
               <div className="flex items-start justify-between gap-2 mb-4">
-                <h1 className="text-2xl font-bold text-gray-800">{concert.concertName}</h1>
+                <h1 className="text-2xl font-bold text-gray-800">
+                  {concert.concertName}
+                </h1>
                 <ShareButton />
               </div>
 
@@ -314,7 +316,9 @@ export default function ConcertDetailPage({
         {tab === "info" && (
           <section className="mt-4 bg-white rounded-2xl shadow-sm overflow-hidden">
             <div className="p-8">
-              <h2 className="text-xl font-bold text-gray-800 mb-6">상세 설명</h2>
+              <h2 className="text-xl font-bold text-gray-800 mb-6">
+                상세 설명
+              </h2>
 
               {detailImages.length > 0 ? (
                 detailImages.map((url) => (

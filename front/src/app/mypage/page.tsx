@@ -916,274 +916,274 @@ export default function MyPage() {
           </div>
         )}
 
-      <div className="bg-white rounded-2xl shadow-sm p-8 mb-8">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-bold text-gray-700">내 게시글</h2>
-          <span className="text-sm text-gray-400">
-            {myPostsTotalElements}개의 게시글
-          </span>
-        </div>
+        <div className="bg-white rounded-2xl shadow-sm p-8 mb-8">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-bold text-gray-700">내 게시글</h2>
+            <span className="text-sm text-gray-400">
+              {myPostsTotalElements}개의 게시글
+            </span>
+          </div>
 
-        {myPostsLoading ? (
-          <p className="text-sm text-gray-400 text-center py-10">
-            불러오는 중...
-          </p>
-        ) : myPosts.length === 0 ? (
-          <p className="text-sm text-gray-400 text-center py-10">
-            작성한 게시글이 없습니다.
-          </p>
-        ) : (
-          <div className="space-y-3">
-            {myPosts.map((post) => (
-              <div
-                key={post.postId}
-                onClick={() => router.push(`/board/${post.postId}`)}
-                role="button"
-                tabIndex={0}
-                className="p-4 border border-gray-100 rounded-xl hover:shadow-md hover:border-blue-200 transition cursor-pointer"
-              >
-                <div className="flex items-center gap-2 mb-1">
-                  <h3 className="font-semibold text-gray-800 truncate">
-                    {post.title}
-                  </h3>
-                  <span
-                    className={`shrink-0 text-[10px] font-semibold rounded px-1.5 py-0.5 ${REVIEW_TYPE_BADGE[post.reviewType].className}`}
-                  >
-                    {REVIEW_TYPE_BADGE[post.reviewType].label}
-                  </span>
-                </div>
-                {post.reviewType === "REVIEW" && post.rating !== null && (
-                  <div className="mb-1">
-                    <RatingStars rating={post.rating} />
+          {myPostsLoading ? (
+            <p className="text-sm text-gray-400 text-center py-10">
+              불러오는 중...
+            </p>
+          ) : myPosts.length === 0 ? (
+            <p className="text-sm text-gray-400 text-center py-10">
+              작성한 게시글이 없습니다.
+            </p>
+          ) : (
+            <div className="space-y-3">
+              {myPosts.map((post) => (
+                <div
+                  key={post.postId}
+                  onClick={() => router.push(`/board/${post.postId}`)}
+                  role="button"
+                  tabIndex={0}
+                  className="p-4 border border-gray-100 rounded-xl hover:shadow-md hover:border-blue-200 transition cursor-pointer"
+                >
+                  <div className="flex items-center gap-2 mb-1">
+                    <h3 className="font-semibold text-gray-800 truncate">
+                      {post.title}
+                    </h3>
+                    <span
+                      className={`shrink-0 text-[10px] font-semibold rounded px-1.5 py-0.5 ${REVIEW_TYPE_BADGE[post.reviewType].className}`}
+                    >
+                      {REVIEW_TYPE_BADGE[post.reviewType].label}
+                    </span>
                   </div>
-                )}
-                <p className="text-xs text-blue-600 font-semibold">
-                  {post.concertName}
-                </p>
-                <p className="text-xs text-gray-400 mt-1">
-                  {formatDateTime(post.createdAt)} · 좋아요 {post.likeCount}
-                </p>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {myPostsTotalPages > 1 && (
-          <div className="flex items-center justify-center gap-2 mt-8">
-            <button
-              onClick={() => fetchMyPosts(myPostsPage - 1)}
-              disabled={myPostsPage === 0}
-              className="px-3 py-2 rounded-lg border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-default"
-            >
-              이전
-            </button>
-            {Array.from({ length: myPostsTotalPages }, (_, i) => i).map(
-              (page) => (
-                <button
-                  key={page}
-                  onClick={() => fetchMyPosts(page)}
-                  className={`w-10 h-10 rounded-lg border text-sm font-semibold ${
-                    myPostsPage === page
-                      ? "bg-blue-600 border-blue-600 text-white"
-                      : "bg-white border-gray-200 text-gray-600 hover:bg-gray-50"
-                  }`}
-                >
-                  {page + 1}
-                </button>
-              ),
-            )}
-            <button
-              onClick={() => fetchMyPosts(myPostsPage + 1)}
-              disabled={myPostsPage >= myPostsTotalPages - 1}
-              className="px-3 py-2 rounded-lg border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-default"
-            >
-              다음
-            </button>
-          </div>
-        )}
-      </div>
-
-      <div className="bg-white rounded-2xl shadow-sm p-8 mb-8">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-bold text-gray-700">북마크한 게시글</h2>
-          <span className="text-sm text-gray-400">
-            {bookmarksTotalElements}개의 북마크
-          </span>
-        </div>
-
-        {bookmarksLoading ? (
-          <p className="text-sm text-gray-400 text-center py-10">
-            불러오는 중...
-          </p>
-        ) : bookmarks.length === 0 ? (
-          <p className="text-sm text-gray-400 text-center py-10">
-            북마크한 게시글이 없습니다.
-          </p>
-        ) : (
-          <div className="space-y-3">
-            {bookmarks.map((b) => (
-              <div
-                key={b.postId}
-                onClick={() => router.push(`/board/${b.postId}`)}
-                role="button"
-                tabIndex={0}
-                className="flex gap-3 p-4 border border-gray-100 rounded-xl hover:shadow-md hover:border-blue-200 transition cursor-pointer"
-              >
-                <div className="relative shrink-0 w-12 h-16 rounded-lg overflow-hidden bg-gradient-to-br from-blue-100 to-indigo-200 flex items-center justify-center">
-                  {b.posterUrl ? (
-                    <Image
-                      fill
-                      unoptimized
-                      src={getLocalConcertPoster(b.posterUrl)}
-                      alt={b.concertName}
-                      sizes="48px"
-                      className="object-cover"
-                    />
-                  ) : (
-                    <span className="text-[10px] text-gray-400">포스터</span>
+                  {post.reviewType === "REVIEW" && post.rating !== null && (
+                    <div className="mb-1">
+                      <RatingStars rating={post.rating} />
+                    </div>
                   )}
-                </div>
-                <div className="min-w-0 flex-1">
-                  <h3 className="font-semibold text-gray-800 truncate">
-                    {b.title}
-                  </h3>
-                  <p className="text-xs text-blue-600 font-semibold mt-0.5">
-                    {b.concertName}
+                  <p className="text-xs text-blue-600 font-semibold">
+                    {post.concertName}
                   </p>
                   <p className="text-xs text-gray-400 mt-1">
-                    {b.userName} · {formatDateTime(b.bookmarkedAt)} 북마크
+                    {formatDateTime(post.createdAt)} · 좋아요 {post.likeCount}
                   </p>
                 </div>
-              </div>
-            ))}
-          </div>
-        )}
+              ))}
+            </div>
+          )}
 
-        {bookmarksTotalPages > 1 && (
-          <div className="flex items-center justify-center gap-2 mt-8">
-            <button
-              onClick={() => fetchBookmarks(bookmarksPage - 1)}
-              disabled={bookmarksPage === 0}
-              className="px-3 py-2 rounded-lg border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-default"
-            >
-              이전
-            </button>
-            {Array.from({ length: bookmarksTotalPages }, (_, i) => i).map(
-              (page) => (
-                <button
-                  key={page}
-                  onClick={() => fetchBookmarks(page)}
-                  className={`w-10 h-10 rounded-lg border text-sm font-semibold ${
-                    bookmarksPage === page
-                      ? "bg-blue-600 border-blue-600 text-white"
-                      : "bg-white border-gray-200 text-gray-600 hover:bg-gray-50"
-                  }`}
-                >
-                  {page + 1}
-                </button>
-              ),
-            )}
-            <button
-              onClick={() => fetchBookmarks(bookmarksPage + 1)}
-              disabled={bookmarksPage >= bookmarksTotalPages - 1}
-              className="px-3 py-2 rounded-lg border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-default"
-            >
-              다음
-            </button>
-          </div>
-        )}
-      </div>
-
-      <div className="bg-white rounded-2xl shadow-sm p-8 mb-8">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-bold text-gray-700">좋아요한 게시글</h2>
-          <span className="text-sm text-gray-400">
-            {likesTotalElements}개의 좋아요
-          </span>
+          {myPostsTotalPages > 1 && (
+            <div className="flex items-center justify-center gap-2 mt-8">
+              <button
+                onClick={() => fetchMyPosts(myPostsPage - 1)}
+                disabled={myPostsPage === 0}
+                className="px-3 py-2 rounded-lg border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-default"
+              >
+                이전
+              </button>
+              {Array.from({ length: myPostsTotalPages }, (_, i) => i).map(
+                (page) => (
+                  <button
+                    key={page}
+                    onClick={() => fetchMyPosts(page)}
+                    className={`w-10 h-10 rounded-lg border text-sm font-semibold ${
+                      myPostsPage === page
+                        ? "bg-blue-600 border-blue-600 text-white"
+                        : "bg-white border-gray-200 text-gray-600 hover:bg-gray-50"
+                    }`}
+                  >
+                    {page + 1}
+                  </button>
+                ),
+              )}
+              <button
+                onClick={() => fetchMyPosts(myPostsPage + 1)}
+                disabled={myPostsPage >= myPostsTotalPages - 1}
+                className="px-3 py-2 rounded-lg border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-default"
+              >
+                다음
+              </button>
+            </div>
+          )}
         </div>
 
-        {likesLoading ? (
-          <p className="text-sm text-gray-400 text-center py-10">
-            불러오는 중...
-          </p>
-        ) : likes.length === 0 ? (
-          <p className="text-sm text-gray-400 text-center py-10">
-            좋아요한 게시글이 없습니다.
-          </p>
-        ) : (
-          <div className="space-y-3">
-            {likes.map((l) => (
-              <div
-                key={l.postId}
-                onClick={() => router.push(`/board/${l.postId}`)}
-                role="button"
-                tabIndex={0}
-                className="flex gap-3 p-4 border border-gray-100 rounded-xl hover:shadow-md hover:border-blue-200 transition cursor-pointer"
-              >
-                <div className="relative shrink-0 w-12 h-16 rounded-lg overflow-hidden bg-gradient-to-br from-blue-100 to-indigo-200 flex items-center justify-center">
-                  {l.posterUrl ? (
-                    <Image
-                      fill
-                      unoptimized
-                      src={getLocalConcertPoster(l.posterUrl)}
-                      alt={l.concertName}
-                      sizes="48px"
-                      className="object-cover"
-                    />
-                  ) : (
-                    <span className="text-[10px] text-gray-400">포스터</span>
-                  )}
-                </div>
-                <div className="min-w-0 flex-1">
-                  <h3 className="font-semibold text-gray-800 truncate">
-                    {l.title}
-                  </h3>
-                  <p className="text-xs text-blue-600 font-semibold mt-0.5">
-                    {l.concertName}
-                  </p>
-                  <p className="text-xs text-gray-400 mt-1">
-                    {l.userName} · {formatDateTime(l.likedAt)} 좋아요
-                  </p>
-                </div>
-              </div>
-            ))}
+        <div className="bg-white rounded-2xl shadow-sm p-8 mb-8">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-bold text-gray-700">북마크한 게시글</h2>
+            <span className="text-sm text-gray-400">
+              {bookmarksTotalElements}개의 북마크
+            </span>
           </div>
-        )}
 
-        {likesTotalPages > 1 && (
-          <div className="flex items-center justify-center gap-2 mt-8">
-            <button
-              onClick={() => fetchLikes(likesPage - 1)}
-              disabled={likesPage === 0}
-              className="px-3 py-2 rounded-lg border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-default"
-            >
-              이전
-            </button>
-            {Array.from({ length: likesTotalPages }, (_, i) => i).map(
-              (page) => (
-                <button
-                  key={page}
-                  onClick={() => fetchLikes(page)}
-                  className={`w-10 h-10 rounded-lg border text-sm font-semibold ${
-                    likesPage === page
-                      ? "bg-blue-600 border-blue-600 text-white"
-                      : "bg-white border-gray-200 text-gray-600 hover:bg-gray-50"
-                  }`}
+          {bookmarksLoading ? (
+            <p className="text-sm text-gray-400 text-center py-10">
+              불러오는 중...
+            </p>
+          ) : bookmarks.length === 0 ? (
+            <p className="text-sm text-gray-400 text-center py-10">
+              북마크한 게시글이 없습니다.
+            </p>
+          ) : (
+            <div className="space-y-3">
+              {bookmarks.map((b) => (
+                <div
+                  key={b.postId}
+                  onClick={() => router.push(`/board/${b.postId}`)}
+                  role="button"
+                  tabIndex={0}
+                  className="flex gap-3 p-4 border border-gray-100 rounded-xl hover:shadow-md hover:border-blue-200 transition cursor-pointer"
                 >
-                  {page + 1}
-                </button>
-              ),
-            )}
-            <button
-              onClick={() => fetchLikes(likesPage + 1)}
-              disabled={likesPage >= likesTotalPages - 1}
-              className="px-3 py-2 rounded-lg border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-default"
-            >
-              다음
-            </button>
+                  <div className="relative shrink-0 w-12 h-16 rounded-lg overflow-hidden bg-gradient-to-br from-blue-100 to-indigo-200 flex items-center justify-center">
+                    {b.posterUrl ? (
+                      <Image
+                        fill
+                        unoptimized
+                        src={getLocalConcertPoster(b.posterUrl)}
+                        alt={b.concertName}
+                        sizes="48px"
+                        className="object-cover"
+                      />
+                    ) : (
+                      <span className="text-[10px] text-gray-400">포스터</span>
+                    )}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <h3 className="font-semibold text-gray-800 truncate">
+                      {b.title}
+                    </h3>
+                    <p className="text-xs text-blue-600 font-semibold mt-0.5">
+                      {b.concertName}
+                    </p>
+                    <p className="text-xs text-gray-400 mt-1">
+                      {b.userName} · {formatDateTime(b.bookmarkedAt)} 북마크
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {bookmarksTotalPages > 1 && (
+            <div className="flex items-center justify-center gap-2 mt-8">
+              <button
+                onClick={() => fetchBookmarks(bookmarksPage - 1)}
+                disabled={bookmarksPage === 0}
+                className="px-3 py-2 rounded-lg border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-default"
+              >
+                이전
+              </button>
+              {Array.from({ length: bookmarksTotalPages }, (_, i) => i).map(
+                (page) => (
+                  <button
+                    key={page}
+                    onClick={() => fetchBookmarks(page)}
+                    className={`w-10 h-10 rounded-lg border text-sm font-semibold ${
+                      bookmarksPage === page
+                        ? "bg-blue-600 border-blue-600 text-white"
+                        : "bg-white border-gray-200 text-gray-600 hover:bg-gray-50"
+                    }`}
+                  >
+                    {page + 1}
+                  </button>
+                ),
+              )}
+              <button
+                onClick={() => fetchBookmarks(bookmarksPage + 1)}
+                disabled={bookmarksPage >= bookmarksTotalPages - 1}
+                className="px-3 py-2 rounded-lg border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-default"
+              >
+                다음
+              </button>
+            </div>
+          )}
+        </div>
+
+        <div className="bg-white rounded-2xl shadow-sm p-8 mb-8">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-bold text-gray-700">좋아요한 게시글</h2>
+            <span className="text-sm text-gray-400">
+              {likesTotalElements}개의 좋아요
+            </span>
           </div>
-        )}
-      </div>
+
+          {likesLoading ? (
+            <p className="text-sm text-gray-400 text-center py-10">
+              불러오는 중...
+            </p>
+          ) : likes.length === 0 ? (
+            <p className="text-sm text-gray-400 text-center py-10">
+              좋아요한 게시글이 없습니다.
+            </p>
+          ) : (
+            <div className="space-y-3">
+              {likes.map((l) => (
+                <div
+                  key={l.postId}
+                  onClick={() => router.push(`/board/${l.postId}`)}
+                  role="button"
+                  tabIndex={0}
+                  className="flex gap-3 p-4 border border-gray-100 rounded-xl hover:shadow-md hover:border-blue-200 transition cursor-pointer"
+                >
+                  <div className="relative shrink-0 w-12 h-16 rounded-lg overflow-hidden bg-gradient-to-br from-blue-100 to-indigo-200 flex items-center justify-center">
+                    {l.posterUrl ? (
+                      <Image
+                        fill
+                        unoptimized
+                        src={getLocalConcertPoster(l.posterUrl)}
+                        alt={l.concertName}
+                        sizes="48px"
+                        className="object-cover"
+                      />
+                    ) : (
+                      <span className="text-[10px] text-gray-400">포스터</span>
+                    )}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <h3 className="font-semibold text-gray-800 truncate">
+                      {l.title}
+                    </h3>
+                    <p className="text-xs text-blue-600 font-semibold mt-0.5">
+                      {l.concertName}
+                    </p>
+                    <p className="text-xs text-gray-400 mt-1">
+                      {l.userName} · {formatDateTime(l.likedAt)} 좋아요
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {likesTotalPages > 1 && (
+            <div className="flex items-center justify-center gap-2 mt-8">
+              <button
+                onClick={() => fetchLikes(likesPage - 1)}
+                disabled={likesPage === 0}
+                className="px-3 py-2 rounded-lg border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-default"
+              >
+                이전
+              </button>
+              {Array.from({ length: likesTotalPages }, (_, i) => i).map(
+                (page) => (
+                  <button
+                    key={page}
+                    onClick={() => fetchLikes(page)}
+                    className={`w-10 h-10 rounded-lg border text-sm font-semibold ${
+                      likesPage === page
+                        ? "bg-blue-600 border-blue-600 text-white"
+                        : "bg-white border-gray-200 text-gray-600 hover:bg-gray-50"
+                    }`}
+                  >
+                    {page + 1}
+                  </button>
+                ),
+              )}
+              <button
+                onClick={() => fetchLikes(likesPage + 1)}
+                disabled={likesPage >= likesTotalPages - 1}
+                className="px-3 py-2 rounded-lg border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-default"
+              >
+                다음
+              </button>
+            </div>
+          )}
+        </div>
       </div>
 
       {showWithdrawModal && (
