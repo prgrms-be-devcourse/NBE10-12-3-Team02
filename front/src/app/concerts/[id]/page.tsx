@@ -2,6 +2,7 @@
 
 import { showAlert } from "@/lib/alert";
 import ConcertPostSection from "./ConcertPostSection";
+import ShareButton from "@/app/components/ShareButton";
 import { apiFetch, decodeToken } from "@/lib/api";
 import {
   getConcertDetailImages,
@@ -48,6 +49,7 @@ export default function ConcertDetailPage({
   const [error, setError] = useState("");
   const [schedules, setSchedules] = useState<ScheduleItem[]>([]);
   const [selectedSchedule, setSelectedSchedule] = useState<number | null>(null);
+  const [tab, setTab] = useState<"info" | "review">("info");
 
   useEffect(() => {
     const fetchConcert = async () => {
@@ -157,9 +159,10 @@ export default function ConcertDetailPage({
             </div>
 
             <div className="p-8 flex-1">
-              <h1 className="text-2xl font-bold text-gray-800 mb-4">
-                {concert.concertName}
-              </h1>
+              <div className="flex items-start justify-between gap-2 mb-4">
+                <h1 className="text-2xl font-bold text-gray-800">{concert.concertName}</h1>
+                <ShareButton />
+              </div>
 
               <div className="mb-4">
                 <h2 className="font-bold text-gray-700 mb-2">공연 장소</h2>
@@ -292,32 +295,52 @@ export default function ConcertDetailPage({
           </div>
         </div>
 
-        <section className="mt-10 bg-white rounded-2xl shadow-sm overflow-hidden">
-          <div className="p-8">
-            <h2 className="text-xl font-bold text-gray-800 mb-6">상세 설명</h2>
+        <div className="flex gap-2 mt-8">
+          {(["info", "review"] as const).map((t) => (
+            <button
+              key={t}
+              onClick={() => setTab(t)}
+              className={`px-4 py-2 rounded-lg text-sm font-semibold border transition ${
+                tab === t
+                  ? "bg-blue-600 text-white border-blue-600"
+                  : "bg-white text-gray-600 border-gray-200 hover:border-blue-400"
+              }`}
+            >
+              {t === "info" ? "공연 상세 정보" : "리뷰"}
+            </button>
+          ))}
+        </div>
 
-            {detailImages.length > 0 ? (
-              detailImages.map((url) => (
-                <div key={url} className="w-full max-w-3xl mx-auto mb-4">
-                  <Image
-                    unoptimized
-                    src={url}
-                    alt="공연 상세 설명"
-                    width={800}
-                    height={1200}
-                    className="w-full h-auto rounded-xl border border-gray-200"
-                  />
-                </div>
-              ))
-            ) : (
-              <p className="text-sm text-gray-400">
-                등록된 상세 이미지가 없습니다.
-              </p>
-            )}
-          </div>
-        </section>
+        {tab === "info" && (
+          <section className="mt-4 bg-white rounded-2xl shadow-sm overflow-hidden">
+            <div className="p-8">
+              <h2 className="text-xl font-bold text-gray-800 mb-6">상세 설명</h2>
 
-        <ConcertPostSection concertId={concert.concertId} />
+              {detailImages.length > 0 ? (
+                detailImages.map((url) => (
+                  <div key={url} className="w-full max-w-3xl mx-auto mb-4">
+                    <Image
+                      unoptimized
+                      src={url}
+                      alt="공연 상세 설명"
+                      width={800}
+                      height={1200}
+                      className="w-full h-auto rounded-xl border border-gray-200"
+                    />
+                  </div>
+                ))
+              ) : (
+                <p className="text-sm text-gray-400">
+                  등록된 상세 이미지가 없습니다.
+                </p>
+              )}
+            </div>
+          </section>
+        )}
+
+        {tab === "review" && (
+          <ConcertPostSection concertId={concert.concertId} />
+        )}
       </div>
     </div>
   );

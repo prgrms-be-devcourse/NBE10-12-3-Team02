@@ -915,7 +915,6 @@ export default function MyPage() {
             </button>
           </div>
         )}
-      </div>
 
       <div className="bg-white rounded-2xl shadow-sm p-8 mb-8">
         <div className="flex items-center justify-between mb-4">
@@ -1184,6 +1183,7 @@ export default function MyPage() {
             </button>
           </div>
         )}
+      </div>
       </div>
 
       {showWithdrawModal && (

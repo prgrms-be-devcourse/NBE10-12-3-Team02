@@ -67,6 +67,10 @@ export default function ConcertPostSection({
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [form, setForm] = useState({ title: "", content: "" });
+  const [reviewType, setReviewType] = useState<"REVIEW" | "EXPECTATION">(
+    "REVIEW",
+  );
+  const [rating, setRating] = useState<number | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState("");
   const [refreshKey, setRefreshKey] = useState(0);
@@ -97,6 +101,8 @@ export default function ConcertPostSection({
 
   const resetForm = () => {
     setForm({ title: "", content: "" });
+    setReviewType("REVIEW");
+    setRating(null);
     setFormError("");
     setShowForm(false);
     setEditingId(null);
@@ -107,18 +113,27 @@ export default function ConcertPostSection({
       setFormError("제목과 내용을 입력해주세요.");
       return;
     }
+    if (reviewType === "REVIEW" && rating === null) {
+      setFormError("별점을 선택해주세요.");
+      return;
+    }
     setSubmitting(true);
     setFormError("");
+    const body = {
+      ...form,
+      reviewType,
+      ...(reviewType === "REVIEW" ? { rating } : {}),
+    };
     try {
       if (editingId !== null) {
         await apiFetch(`/concerts/${concertId}/posts/${editingId}`, {
           method: "PUT",
-          body: JSON.stringify(form),
+          body: JSON.stringify(body),
         });
       } else {
         await apiFetch(`/concerts/${concertId}/posts`, {
           method: "POST",
-          body: JSON.stringify(form),
+          body: JSON.stringify(body),
         });
       }
       resetForm();
@@ -136,6 +151,8 @@ export default function ConcertPostSection({
 
   const handleEdit = (post: ConcertPost) => {
     setForm({ title: post.title, content: post.content });
+    setReviewType(post.reviewType);
+    setRating(post.rating ?? null);
     setEditingId(post.postId);
     setShowForm(true);
     setFormError("");
@@ -172,6 +189,8 @@ export default function ConcertPostSection({
                 setShowForm(true);
                 setEditingId(null);
                 setForm({ title: "", content: "" });
+                setReviewType("REVIEW");
+                setRating(null);
                 setFormError("");
               }}
               className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
@@ -183,9 +202,28 @@ export default function ConcertPostSection({
 
         {showForm && (
           <div className="mb-8 p-5 bg-slate-50 rounded-xl border border-slate-200">
-            <h3 className="font-semibold text-gray-700 mb-4">
+            <h3 className="font-semibold text-gray-700 mb-3">
               {editingId !== null ? "게시글 수정" : "게시글 작성"}
             </h3>
+            <div className="flex gap-2 mb-4">
+              {(["REVIEW", "EXPECTATION"] as const).map((type) => (
+                <button
+                  key={type}
+                  type="button"
+                  onClick={() => {
+                    setReviewType(type);
+                    setRating(null);
+                  }}
+                  className={`px-3 py-1.5 rounded-lg text-sm font-semibold border transition ${
+                    reviewType === type
+                      ? "bg-blue-600 text-white border-blue-600"
+                      : "bg-white text-gray-600 border-gray-200 hover:border-blue-400"
+                  }`}
+                >
+                  {type === "REVIEW" ? "관람후기" : "기대평"}
+                </button>
+              ))}
+            </div>
             <div className="mb-3">
               <input
                 type="text"
@@ -210,6 +248,31 @@ export default function ConcertPostSection({
                 className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300 resize-none"
               />
             </div>
+            {reviewType === "REVIEW" && (
+              <div className="mb-3">
+                <label className="block text-xs text-gray-400 mb-1">별점</label>
+                <div className="flex gap-1">
+                  {[1, 2, 3, 4, 5].map((n) => (
+                    <button
+                      key={n}
+                      type="button"
+                      onClick={() => setRating(n)}
+                      aria-label={`${n}점`}
+                      className="p-0.5"
+                    >
+                      <Star
+                        size={24}
+                        className={
+                          rating !== null && n <= rating
+                            ? "fill-yellow-400 text-yellow-400"
+                            : "text-gray-300"
+                        }
+                      />
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
             {formError && (
               <p className="text-red-500 text-sm mb-3">{formError}</p>
             )}
