@@ -5,6 +5,7 @@ import com.back.domain.notification.repository.NotificationRepository
 import com.back.domain.user.constant.LoginType
 import com.back.domain.user.entity.User
 import com.back.domain.user.repository.UserRepository
+import com.back.global.RedisTestConfig
 import com.back.global.security.SecurityUser
 import com.back.global.security.jwt.JwtTokenProvider
 import org.assertj.core.api.Assertions.assertThat
@@ -14,6 +15,7 @@ import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
+import org.springframework.context.annotation.Import
 import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user
 import org.springframework.test.context.ActiveProfiles
 import org.springframework.test.web.servlet.MockMvc
@@ -25,9 +27,13 @@ import org.springframework.test.web.servlet.result.MockMvcResultMatchers.request
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 import org.springframework.transaction.annotation.Transactional
 
+// subscribe_withQueryToken_success는 .with(user(...))를 쓰지 않고 실제 필터 체인을 타므로
+// BlacklistRepository가 실제 Redis(StringRedisTemplate)를 호출한다. CI에는 Redis 서비스가 없어
+// RedisTestConfig 없이는 RedisConnectionFailureException으로 실패한다 (로컬은 개발용 Redis가 떠 있어 우연히 통과).
 @ActiveProfiles("test")
 @SpringBootTest
 @AutoConfigureMockMvc
+@Import(RedisTestConfig::class)
 @Transactional
 class NotificationControllerTest @Autowired constructor(
     private val mockMvc: MockMvc,
