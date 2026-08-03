@@ -19,9 +19,9 @@ data class NotificationResponse(
         fun from(notification: Notification): NotificationResponse {
             val actor = notification.actor
             return NotificationResponse(
-                notificationId = notification.notificationId!!,
+                notificationId = notification.notificationIdOrThrow,
                 type = notification.type,
-                actorId = actor.userId!!,
+                actorId = actor.userIdOrThrow,
                 actorName = actor.name,
                 actorProfileImgUrl = actor.profileImgUrlOrDefault,
                 targetType = notification.targetType,

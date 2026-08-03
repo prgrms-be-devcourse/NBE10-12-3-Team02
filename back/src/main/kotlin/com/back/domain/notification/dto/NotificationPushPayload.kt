@@ -17,9 +17,9 @@ data class NotificationPushPayload(
         fun from(notification: Notification): NotificationPushPayload {
             val actor = notification.actor
             return NotificationPushPayload(
-                notificationId = notification.notificationId!!,
+                notificationId = notification.notificationIdOrThrow,
                 type = notification.type.name,
-                actorId = actor.userId!!,
+                actorId = actor.userIdOrThrow,
                 actorName = actor.name,
                 actorProfileImgUrl = actor.profileImgUrlOrDefault,
                 targetType = notification.targetType,

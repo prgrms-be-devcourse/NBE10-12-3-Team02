@@ -34,7 +34,7 @@ class NotificationService(
             .saveLikeNotification(event.postOwnerId, event.actorId, event.postId) ?: return
         log.debug("좋아요 알림 생성: receiverId={}, actorId={}, postId={}", event.postOwnerId, event.actorId, event.postId)
 
-        notificationSseEmitterRegistry.send(notification.receiver.userId!!, NotificationPushPayload.from(notification))
+        notificationSseEmitterRegistry.send(notification.receiver.userIdOrThrow, NotificationPushPayload.from(notification))
     }
 
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
@@ -43,7 +43,7 @@ class NotificationService(
             .saveFollowNotification(event.followeeId, event.followerId) ?: return
         log.debug("팔로우 알림 생성: receiverId={}, actorId={}", event.followeeId, event.followerId)
 
-        notificationSseEmitterRegistry.send(notification.receiver.userId!!, NotificationPushPayload.from(notification))
+        notificationSseEmitterRegistry.send(notification.receiver.userIdOrThrow, NotificationPushPayload.from(notification))
     }
 
     @Transactional(readOnly = true)

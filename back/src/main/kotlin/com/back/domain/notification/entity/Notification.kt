@@ -48,6 +48,10 @@ class Notification private constructor(
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     val notificationId: Long? = null
 
+    // 저장 후에는 항상 not-null인 PK. 조회된(영속화된) Notification에서만 사용해야 한다.
+    val notificationIdOrThrow: Long
+        get() = checkNotNull(notificationId) { "notificationId must not be null after persist" }
+
     @Column(nullable = false)
     var isRead: Boolean = false
         protected set
