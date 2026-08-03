@@ -1,8 +1,8 @@
 package com.back.domain.ticket.service
 
+import com.back.domain.concert.event.SeatReleasedEvent
+import com.back.domain.concert.event.SeatSoldEvent
 import com.back.domain.concert.service.SeatOccupyManager
-import com.back.domain.concert.sse.SeatStatusSseEmitterRegistry
-import com.back.domain.schedule.constant.SeatStatus
 import com.back.domain.schedule.repository.ScheduleRepository
 import com.back.domain.schedule.repository.ScheduleSeatRepository
 import com.back.domain.ticket.dto.PaymentTicketRequest
@@ -29,8 +29,7 @@ class TicketService(
     private val scheduleRepository: ScheduleRepository,
     private val scheduleSeatRepository: ScheduleSeatRepository,
     private val eventPublisher: ApplicationEventPublisher,
-    private val seatOccupyManager: SeatOccupyManager,
-    private val sseEmitterRegistry: SeatStatusSseEmitterRegistry
+    private val seatOccupyManager: SeatOccupyManager
 ) {
 
     @Transactional
@@ -64,7 +63,7 @@ class TicketService(
             val redisKey = SeatOccupyManager.generateSeatOccupyKey(request.concertId, scheduleId, holdInfo.seatNumber)
             seatOccupyManager.cleanupRedis(redisKey)
             seatOccupyManager.removeFromExpireQueue(request.concertId, scheduleId, holdInfo.seatNumber)
-            sseEmitterRegistry.broadcast(scheduleId, holdInfo.seatNumber, SeatStatus.SOLD_OUT.name)
+            eventPublisher.publishEvent(SeatSoldEvent(request.concertId, scheduleId, holdInfo.seatNumber))
         }
 
         val groupToken = UUID.randomUUID().toString()
@@ -98,7 +97,7 @@ class TicketService(
         seatOccupyManager.cleanupRedis(redisKey)
 
         seatOccupyManager.removeFromExpireQueue(concertId, scheduleId, seatNumber)
-        sseEmitterRegistry.broadcast(scheduleId, seatNumber, SeatStatus.AVAILABLE.name)
+        eventPublisher.publishEvent(SeatReleasedEvent(concertId, scheduleId, seatNumber))
 
         eventPublisher.publishEvent(TicketCancelledEvent(concertId, scheduleId, userId))
     }

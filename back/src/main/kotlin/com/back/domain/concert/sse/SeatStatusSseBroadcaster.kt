@@ -3,6 +3,7 @@ package com.back.domain.concert.sse
 import com.back.domain.concert.event.SeatExpiredEvent
 import com.back.domain.concert.event.SeatOccupiedEvent
 import com.back.domain.concert.event.SeatReleasedEvent
+import com.back.domain.concert.event.SeatSoldEvent
 import com.back.domain.concert.sse.service.SseOutboxService
 import com.back.domain.schedule.constant.SeatStatus
 import com.back.domain.ticket.event.PaymentCompletedEvent
@@ -46,6 +47,14 @@ class SeatStatusSseBroadcaster(
         }
     }
 
+    @TransactionalEventListener(phase = TransactionPhase.BEFORE_COMMIT, fallbackExecution = true)
+    fun saveOutboxOnSeatSold(event: SeatSoldEvent) {
+        val outbox = sseOutboxService.saveOutboxEvent(event.scheduleId, event.seatNumber, SeatStatus.SOLD_OUT.name)
+        if (outbox != null) {
+            lastGeneratedEventIdMapThreadLocal.get()[getEventKey(event.scheduleId, event.seatNumber)] = outbox.eventId
+        }
+    }
+
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
     fun onSeatOccupied(event: SeatOccupiedEvent) {
         val map = lastGeneratedEventIdMapThreadLocal.get()
@@ -74,6 +83,16 @@ class SeatStatusSseBroadcaster(
         if (map.isEmpty()) lastGeneratedEventIdMapThreadLocal.remove()
         log.info("SSE 브로드캐스트 (만료 복구): scheduleId={}, seat={}, eventId={}", event.scheduleId, event.seatNumber, eventId)
         registry.broadcast(event.scheduleId, event.seatNumber, SeatStatus.AVAILABLE.name, eventId)
+    }
+
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
+    fun onSeatSold(event: SeatSoldEvent) {
+        val map = lastGeneratedEventIdMapThreadLocal.get()
+        val key = getEventKey(event.scheduleId, event.seatNumber)
+        val eventId = map.remove(key)
+        if (map.isEmpty()) lastGeneratedEventIdMapThreadLocal.remove()
+        log.info("SSE 브로드캐스트 (결제 판매완료): scheduleId={}, seat={}, eventId={}", event.scheduleId, event.seatNumber, eventId)
+        registry.broadcast(event.scheduleId, event.seatNumber, SeatStatus.SOLD_OUT.name, eventId)
     }
 
     @EventListener

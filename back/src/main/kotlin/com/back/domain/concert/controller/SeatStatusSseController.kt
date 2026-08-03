@@ -56,8 +56,10 @@ class SeatStatusSseController(
             }
             snapshot.append("]")
 
+            val snapshotId = "snapshot:$scheduleId:${System.currentTimeMillis()}"
             wrapper.send(
                 SseEmitter.event()
+                    .id(snapshotId)
                     .name("seat_snapshot")
                     .data(snapshot.toString())
             )
