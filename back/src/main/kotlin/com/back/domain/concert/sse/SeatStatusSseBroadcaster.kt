@@ -35,6 +35,7 @@ class SeatStatusSseBroadcaster(
 
     @TransactionalEventListener(phase = TransactionPhase.BEFORE_COMMIT, fallbackExecution = true)
     fun saveOutboxOnSeatOccupied(event: SeatOccupiedEvent) {
+        if (!TransactionSynchronizationManager.isActualTransactionActive()) return
         val outbox = sseOutboxService.saveOutboxEvent(event.scheduleId, event.seatNumber, SeatStatus.HOLD.name)
         if (outbox != null) {
             bindEventId(event.scheduleId, event.seatNumber, outbox.eventId)
@@ -43,6 +44,7 @@ class SeatStatusSseBroadcaster(
 
     @TransactionalEventListener(phase = TransactionPhase.BEFORE_COMMIT, fallbackExecution = true)
     fun saveOutboxOnSeatReleased(event: SeatReleasedEvent) {
+        if (!TransactionSynchronizationManager.isActualTransactionActive()) return
         val outbox = sseOutboxService.saveOutboxEvent(event.scheduleId, event.seatNumber, SeatStatus.AVAILABLE.name)
         if (outbox != null) {
             bindEventId(event.scheduleId, event.seatNumber, outbox.eventId)
@@ -51,6 +53,7 @@ class SeatStatusSseBroadcaster(
 
     @TransactionalEventListener(phase = TransactionPhase.BEFORE_COMMIT, fallbackExecution = true)
     fun saveOutboxOnSeatExpired(event: SeatExpiredEvent) {
+        if (!TransactionSynchronizationManager.isActualTransactionActive()) return
         val outbox = sseOutboxService.saveOutboxEvent(event.scheduleId, event.seatNumber, SeatStatus.AVAILABLE.name)
         if (outbox != null) {
             bindEventId(event.scheduleId, event.seatNumber, outbox.eventId)
@@ -59,6 +62,7 @@ class SeatStatusSseBroadcaster(
 
     @TransactionalEventListener(phase = TransactionPhase.BEFORE_COMMIT, fallbackExecution = true)
     fun saveOutboxOnSeatSold(event: SeatSoldEvent) {
+        if (!TransactionSynchronizationManager.isActualTransactionActive()) return
         val outbox = sseOutboxService.saveOutboxEvent(event.scheduleId, event.seatNumber, SeatStatus.SOLD_OUT.name)
         if (outbox != null) {
             bindEventId(event.scheduleId, event.seatNumber, outbox.eventId)
