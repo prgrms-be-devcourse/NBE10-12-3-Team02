@@ -1,5 +1,6 @@
 package com.back.domain.concert.controller
 
+import com.back.domain.concert.dto.SeatSnapshotResponse
 import com.back.domain.concert.sse.SeatStatusSseEmitterRegistry
 import com.back.domain.schedule.repository.ScheduleSeatRepository
 import com.back.global.annotation.ApiV1
@@ -44,10 +45,10 @@ class SeatStatusSseController(
         val emitter = SseEmitter(SSE_TIMEOUT_MS)
         val wrapper = registry.register(scheduleId, emitter, lastEventId)
 
-        try {
+        runCatching {
             val seats = scheduleSeatRepository.findByScheduleScheduleId(scheduleId)
             val snapshotList = seats.map { seat ->
-                mapOf("seatNumber" to seat.seatNumber, "status" to seat.seatStatus.name)
+                SeatSnapshotResponse(seat.seatNumber, seat.seatStatus.name)
             }
             val snapshotJson = objectMapper.writeValueAsString(snapshotList)
 
@@ -58,7 +59,7 @@ class SeatStatusSseController(
                     .name("seat_snapshot")
                     .data(snapshotJson)
             )
-        } catch (e: Exception) {
+        }.onFailure { e ->
             log.warn("SSE 스냅샷 전송 실패: scheduleId={}", scheduleId, e)
             emitter.complete()
         }

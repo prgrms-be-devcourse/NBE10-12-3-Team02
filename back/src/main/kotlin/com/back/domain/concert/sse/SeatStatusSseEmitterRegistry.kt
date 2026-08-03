@@ -10,7 +10,6 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter
 import java.io.IOException
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CopyOnWriteArrayList
-import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicLong
 import java.util.concurrent.locks.ReentrantLock
@@ -23,7 +22,6 @@ class SeatStatusSseEmitterRegistry(
     private val objectMapper: ObjectMapper
 ) {
     private val log = LoggerFactory.getLogger(javaClass)
-    private val defaultVirtualExecutor = Executors.newVirtualThreadPerTaskExecutor()
 
     class SynchronizedEmitter(
         val emitter: SseEmitter,
@@ -144,10 +142,6 @@ class SeatStatusSseEmitterRegistry(
     }
 
     private fun executeTask(task: Runnable) {
-        if (taskExecutor != null) {
-            taskExecutor.execute(task)
-        } else {
-            defaultVirtualExecutor.submit(task)
-        }
+        taskExecutor?.execute(task) ?: task.run()
     }
 }
