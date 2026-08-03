@@ -237,6 +237,7 @@ function SeatSelectContent({ params }: { params: Promise<{ id: string }> }) {
     let active = true;
     let sse: EventSource | null = null;
     let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+    let pollInterval: ReturnType<typeof setInterval> | null = null;
 
     const connectSse = () => {
       if (!active) return;
@@ -312,6 +313,19 @@ function SeatSelectContent({ params }: { params: Promise<{ id: string }> }) {
           setError("");
           connectSse();
 
+          pollInterval = setInterval(async () => {
+            if (!active) return;
+            try {
+              const refreshed = await apiFetch<SeatSelectionData>(
+                `/concerts/${id}/schedules/${scheduleId}/seats`,
+                { headers: { "X-Queue-Token": entryToken } },
+              );
+              if (active) setSeatData(refreshed.data);
+            } catch {
+              // 폴링 실패 시 SSE가 살아있으면 문제없으니 조용히 넘어간다.
+            }
+          }, 30_000);
+
           // 결제 페이지에서 뒤로가기 등으로 돌아왔을 때 백엔드의 DELETE /occupy 처리 완료 시점과의
           // 비동기 타이밍 차이(Race Condition)를 완전히 해소하기 위해 350ms 후 최신 상태를 1회 재조회한다.
           setTimeout(() => {
@@ -363,6 +377,7 @@ function SeatSelectContent({ params }: { params: Promise<{ id: string }> }) {
     return () => {
       active = false;
       if (reconnectTimer) clearTimeout(reconnectTimer);
+      if (pollInterval) clearInterval(pollInterval);
       sse?.close();
     };
   }, [id, scheduleId, entryToken, router]);
