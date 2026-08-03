@@ -1,5 +1,7 @@
-package com.back.domain.waiting.outbox
+package com.back.domain.waiting.outbox.entity
 
+import com.back.domain.waiting.outbox.constant.QueueSseOutboxEventType
+import com.back.domain.waiting.outbox.constant.QueueSseOutboxStatus
 import com.back.global.jpa.entity.BaseEntity
 import jakarta.persistence.Column
 import jakarta.persistence.Entity

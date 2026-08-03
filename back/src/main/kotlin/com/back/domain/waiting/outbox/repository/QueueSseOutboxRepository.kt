@@ -1,5 +1,7 @@
-package com.back.domain.waiting.outbox
+package com.back.domain.waiting.outbox.repository
 
+import com.back.domain.waiting.outbox.constant.QueueSseOutboxStatus
+import com.back.domain.waiting.outbox.entity.QueueSseOutboxEvent
 import org.springframework.data.domain.Pageable
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.data.jpa.repository.Modifying

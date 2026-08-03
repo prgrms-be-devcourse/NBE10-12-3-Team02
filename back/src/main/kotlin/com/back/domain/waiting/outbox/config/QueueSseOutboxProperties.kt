@@ -1,4 +1,4 @@
-package com.back.domain.waiting.outbox
+package com.back.domain.waiting.outbox.config
 
 import org.springframework.boot.context.properties.ConfigurationProperties
 import java.time.Duration

@@ -1,4 +1,4 @@
-package com.back.domain.waiting.outbox
+package com.back.domain.waiting.outbox.codec
 
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import org.springframework.stereotype.Component

@@ -7,7 +7,7 @@ import com.back.domain.schedule.constant.SeatStatus
 import com.back.domain.schedule.repository.ScheduleSeatRepository
 import com.back.domain.user.repository.UserRepository
 import com.back.domain.waiting.dto.QueueStatusDto
-import com.back.domain.waiting.outbox.QueueSseOutboxPublisher
+import com.back.domain.waiting.outbox.service.QueueSseOutboxPublisher
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito.doThrow

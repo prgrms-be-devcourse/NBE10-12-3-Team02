@@ -1,4 +1,4 @@
-package com.back.domain.waiting.outbox
+package com.back.domain.waiting.outbox.constant
 
 enum class QueueSseOutboxEventType {
     ENTRY_ALLOWED,

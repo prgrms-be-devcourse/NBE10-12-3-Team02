@@ -4,7 +4,7 @@ import com.back.domain.concert.service.ConcertService
 import com.back.domain.schedule.repository.ScheduleSeatRepository
 import com.back.domain.user.repository.UserRepository
 import com.back.domain.waiting.dto.QueueConnectionState
-import com.back.domain.waiting.outbox.QueueSseOutboxPublisher
+import com.back.domain.waiting.outbox.service.QueueSseOutboxPublisher
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
