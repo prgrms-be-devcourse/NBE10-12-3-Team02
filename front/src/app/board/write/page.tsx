@@ -128,7 +128,10 @@ export default function BoardWritePage() {
             </button>
           </div>
         ) : (
-          <form onSubmit={handleSubmit} className="bg-white rounded-2xl shadow-sm p-8 space-y-6">
+          <form
+            onSubmit={handleSubmit}
+            className="bg-white rounded-2xl shadow-sm p-8 space-y-6"
+          >
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2">
                 콘서트 선택
@@ -158,7 +161,9 @@ export default function BoardWritePage() {
                     placeholder="제목을 입력하세요 (최대 100자)"
                     maxLength={100}
                     value={form.title}
-                    onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, title: e.target.value }))
+                    }
                     className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
                   />
                 </div>
@@ -176,7 +181,9 @@ export default function BoardWritePage() {
                     maxLength={2000}
                     rows={8}
                     value={form.content}
-                    onChange={(e) => setForm((f) => ({ ...f, content: e.target.value }))}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, content: e.target.value }))
+                    }
                     className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300 resize-none"
                   />
                 </div>

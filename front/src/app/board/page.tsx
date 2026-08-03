@@ -34,9 +34,18 @@ const TYPE_FILTER_OPTIONS: { key: ReviewTypeFilter; label: string }[] = [
   { key: "EXPECTATION", label: "기대평" },
 ];
 
-const REVIEW_TYPE_BADGE: Record<PostCard["reviewType"], { label: string; className: string }> = {
-  REVIEW: { label: "관람후기", className: "bg-emerald-50 text-emerald-600 border border-emerald-200" },
-  EXPECTATION: { label: "기대평", className: "bg-amber-50 text-amber-600 border border-amber-200" },
+const REVIEW_TYPE_BADGE: Record<
+  PostCard["reviewType"],
+  { label: string; className: string }
+> = {
+  REVIEW: {
+    label: "관람후기",
+    className: "bg-emerald-50 text-emerald-600 border border-emerald-200",
+  },
+  EXPECTATION: {
+    label: "기대평",
+    className: "bg-amber-50 text-amber-600 border border-amber-200",
+  },
 };
 
 function RatingStars({ rating }: { rating: number }) {
@@ -46,7 +55,9 @@ function RatingStars({ rating }: { rating: number }) {
         <Star
           key={n}
           size={13}
-          className={n <= rating ? "fill-yellow-400 text-yellow-400" : "text-gray-200"}
+          className={
+            n <= rating ? "fill-yellow-400 text-yellow-400" : "text-gray-200"
+          }
         />
       ))}
     </div>
@@ -84,7 +95,9 @@ export default function BoardPage() {
   return (
     <div className="min-h-screen bg-gray-50 py-10">
       <div className="max-w-3xl mx-auto px-4">
-        <h1 className="text-2xl font-bold text-gray-800 mb-6">관람 후기 게시판</h1>
+        <h1 className="text-2xl font-bold text-gray-800 mb-6">
+          관람 후기 게시판
+        </h1>
 
         <div className="flex gap-2 mb-6">
           {TYPE_FILTER_OPTIONS.map((f) => (
@@ -125,7 +138,9 @@ export default function BoardPage() {
                       className="object-cover"
                     />
                   ) : (
-                    <span className="text-xs text-gray-400 text-center px-1">포스터</span>
+                    <span className="text-xs text-gray-400 text-center px-1">
+                      포스터
+                    </span>
                   )}
                 </div>
 
@@ -145,7 +160,9 @@ export default function BoardPage() {
                       </span>
                     )}
                   </div>
-                  <p className="font-semibold text-gray-800 truncate">{post.title}</p>
+                  <p className="font-semibold text-gray-800 truncate">
+                    {post.title}
+                  </p>
                   {post.reviewType === "REVIEW" && post.rating !== null && (
                     <div className="mt-1">
                       <RatingStars rating={post.rating} />
@@ -172,7 +189,9 @@ export default function BoardPage() {
                     <span className="flex items-center gap-0.5 text-xs text-gray-400">
                       <Heart
                         size={12}
-                        className={post.isLiked ? "fill-red-500 text-red-500" : ""}
+                        className={
+                          post.isLiked ? "fill-red-500 text-red-500" : ""
+                        }
                       />
                       {post.likeCount}
                     </span>

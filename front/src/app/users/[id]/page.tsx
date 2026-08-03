@@ -60,7 +60,9 @@ export default function UserProfilePage({
         setProfile({ ...profile, isFollowing: true });
       }
     } catch (e) {
-      showError(e instanceof ApiError ? e.message : "처리 중 오류가 발생했습니다.");
+      showError(
+        e instanceof ApiError ? e.message : "처리 중 오류가 발생했습니다.",
+      );
     } finally {
       setFollowPending(false);
     }
@@ -119,11 +121,17 @@ export default function UserProfilePage({
                   : "bg-blue-600 text-white hover:bg-blue-700"
               }`}
             >
-              {followPending ? "처리 중..." : profile.isFollowing ? "팔로우 중" : "팔로우"}
+              {followPending
+                ? "처리 중..."
+                : profile.isFollowing
+                  ? "팔로우 중"
+                  : "팔로우"}
             </button>
           ) : (
             <div className="text-center">
-              <p className="text-sm text-gray-400 mb-3">팔로우하려면 로그인이 필요합니다.</p>
+              <p className="text-sm text-gray-400 mb-3">
+                팔로우하려면 로그인이 필요합니다.
+              </p>
               <button
                 onClick={async () => {
                   await showAlert("로그인이 필요합니다.");

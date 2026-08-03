@@ -78,6 +78,9 @@ function SeatSelectContent({ params }: { params: Promise<{ id: string }> }) {
   const proceedingToPaymentRef = useRef(false);
   // 실제로 대기열에 진입해 대기 중인 상태인지를 기록하는 Ref (Strict Mode/새로고침 시의 오작동 방지)
   const isWaitingRef = useRef(false);
+  const lastEventIdRef = useRef<string>("");
+  const eTagRef = useRef<string>("");
+  const pollingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const [adultCount, setAdultCount] = useState(1);
   const [teenCount, setTeenCount] = useState(0);
@@ -240,15 +243,37 @@ function SeatSelectContent({ params }: { params: Promise<{ id: string }> }) {
 
     const connectSse = () => {
       if (!active) return;
+      const queryParam = lastEventIdRef.current
+        ? `?lastEventId=${encodeURIComponent(lastEventIdRef.current)}`
+        : "";
       sse = new EventSource(
-        `${BASE_URL}/api/v1/concerts/${id}/schedules/${scheduleId}/seats/status`,
+        `${BASE_URL}/api/v1/concerts/${id}/schedules/${scheduleId}/seats/status${queryParam}`,
       );
 
-      sse.addEventListener("seat_snapshot", (e) => {
+      sse.onopen = () => {
+        if (pollingTimerRef.current) {
+          clearInterval(pollingTimerRef.current);
+          pollingTimerRef.current = null;
+        }
+      };
+
+      sse.addEventListener("heartbeat", () => {
+        if (pollingTimerRef.current) {
+          clearInterval(pollingTimerRef.current);
+          pollingTimerRef.current = null;
+        }
+      });
+
+      sse.addEventListener("seat_snapshot", (e: Event) => {
         if (!active) return;
+        if (pollingTimerRef.current) {
+          clearInterval(pollingTimerRef.current);
+          pollingTimerRef.current = null;
+        }
+        const me = e as MessageEvent;
         try {
           const snapshot: { seatNumber: string; status: string }[] = JSON.parse(
-            e.data,
+            me.data,
           );
           const statusMap = new Map(
             snapshot.map((s) => [s.seatNumber, s.status]),
@@ -269,10 +294,18 @@ function SeatSelectContent({ params }: { params: Promise<{ id: string }> }) {
         }
       });
 
-      sse.addEventListener("seat_status_changed", (e) => {
+      sse.addEventListener("seat_status_changed", (e: Event) => {
         if (!active) return;
+        if (pollingTimerRef.current) {
+          clearInterval(pollingTimerRef.current);
+          pollingTimerRef.current = null;
+        }
+        const me = e as MessageEvent;
+        if (me.lastEventId) {
+          lastEventIdRef.current = me.lastEventId;
+        }
         try {
-          const { seatNumber, status } = JSON.parse(e.data) as {
+          const { seatNumber, status } = JSON.parse(me.data) as {
             seatNumber: string;
             status: string;
           };
@@ -297,6 +330,34 @@ function SeatSelectContent({ params }: { params: Promise<{ id: string }> }) {
         sse = null;
         if (active) {
           reconnectTimer = setTimeout(connectSse, 3000);
+
+          if (!pollingTimerRef.current) {
+            pollingTimerRef.current = setInterval(async () => {
+              if (!active) return;
+              try {
+                const statusRes = await apiFetch<unknown>(
+                  `/schedules/${scheduleId}/seats/status?concertId=${id}`,
+                  {
+                    headers: {
+                      ...(eTagRef.current
+                        ? { "If-None-Match": eTagRef.current }
+                        : {}),
+                    },
+                  },
+                );
+
+                if (statusRes.resultCode === "304") return;
+
+                const refreshed = await apiFetch<SeatSelectionData>(
+                  `/concerts/${id}/schedules/${scheduleId}/seats`,
+                  { headers: { "X-Queue-Token": entryToken } },
+                );
+                if (active) setSeatData(refreshed.data);
+              } catch {
+                /* 폴링 중 에러 발생 시 무시 */
+              }
+            }, 30000);
+          }
         }
       };
     };
@@ -363,6 +424,10 @@ function SeatSelectContent({ params }: { params: Promise<{ id: string }> }) {
     return () => {
       active = false;
       if (reconnectTimer) clearTimeout(reconnectTimer);
+      if (pollingTimerRef.current) {
+        clearInterval(pollingTimerRef.current);
+        pollingTimerRef.current = null;
+      }
       sse?.close();
     };
   }, [id, scheduleId, entryToken, router]);
@@ -716,7 +781,7 @@ function SeatSelectContent({ params }: { params: Promise<{ id: string }> }) {
                     <button
                       type="button"
                       onClick={() => setAdultCount((c) => Math.max(0, c - 1))}
-                      disabled={adultCount <= 0}
+                      disabled={adultCount <= 0 || adultCount + teenCount <= 1}
                       className="w-7 h-7 flex items-center justify-center rounded-full border border-gray-200 text-gray-600 hover:bg-blue-50 hover:border-blue-200 hover:text-blue-600 transition disabled:opacity-30 disabled:cursor-not-allowed"
                     >
                       <Minus size={12} />
@@ -751,7 +816,7 @@ function SeatSelectContent({ params }: { params: Promise<{ id: string }> }) {
                     <button
                       type="button"
                       onClick={() => setTeenCount((c) => Math.max(0, c - 1))}
-                      disabled={teenCount <= 0}
+                      disabled={teenCount <= 0 || adultCount + teenCount <= 1}
                       className="w-7 h-7 flex items-center justify-center rounded-full border border-gray-200 text-gray-600 hover:bg-blue-50 hover:border-blue-200 hover:text-blue-600 transition disabled:opacity-30 disabled:cursor-not-allowed"
                     >
                       <Minus size={12} />

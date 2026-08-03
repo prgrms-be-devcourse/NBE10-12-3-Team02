@@ -21,9 +21,18 @@ interface ConcertPost {
   updatedAt: string;
 }
 
-const REVIEW_TYPE_BADGE: Record<ConcertPost["reviewType"], { label: string; className: string }> = {
-  REVIEW: { label: "관람후기", className: "bg-emerald-50 text-emerald-600 border border-emerald-200" },
-  EXPECTATION: { label: "기대평", className: "bg-amber-50 text-amber-600 border border-amber-200" },
+const REVIEW_TYPE_BADGE: Record<
+  ConcertPost["reviewType"],
+  { label: string; className: string }
+> = {
+  REVIEW: {
+    label: "관람후기",
+    className: "bg-emerald-50 text-emerald-600 border border-emerald-200",
+  },
+  EXPECTATION: {
+    label: "기대평",
+    className: "bg-amber-50 text-amber-600 border border-amber-200",
+  },
 };
 
 function RatingStars({ rating }: { rating: number }) {
@@ -33,7 +42,9 @@ function RatingStars({ rating }: { rating: number }) {
         <Star
           key={n}
           size={13}
-          className={n <= rating ? "fill-yellow-400 text-yellow-400" : "text-gray-200"}
+          className={
+            n <= rating ? "fill-yellow-400 text-yellow-400" : "text-gray-200"
+          }
         />
       ))}
     </div>
@@ -46,13 +57,19 @@ const ELIGIBILITY_MESSAGES: Record<string, string> = {
   "409-4": "이미 해당 콘서트에 게시글을 작성했습니다.",
 };
 
-export default function ConcertPostSection({ concertId }: { concertId: number }) {
+export default function ConcertPostSection({
+  concertId,
+}: {
+  concertId: number;
+}) {
   const [posts, setPosts] = useState<ConcertPost[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [form, setForm] = useState({ title: "", content: "" });
-  const [reviewType, setReviewType] = useState<"REVIEW" | "EXPECTATION">("REVIEW");
+  const [reviewType, setReviewType] = useState<"REVIEW" | "EXPECTATION">(
+    "REVIEW",
+  );
   const [rating, setRating] = useState<number | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState("");
@@ -69,7 +86,9 @@ export default function ConcertPostSection({ concertId }: { concertId: number })
   useEffect(() => {
     const doFetch = async () => {
       try {
-        const res = await apiFetch<ConcertPost[]>(`/concerts/${concertId}/posts`);
+        const res = await apiFetch<ConcertPost[]>(
+          `/concerts/${concertId}/posts`,
+        );
         setPosts(res.data);
       } catch {
         setPosts([]);
@@ -142,7 +161,9 @@ export default function ConcertPostSection({ concertId }: { concertId: number })
   const handleDelete = async (postId: number) => {
     if (!confirm("게시글을 삭제하시겠습니까?")) return;
     try {
-      await apiFetch(`/concerts/${concertId}/posts/${postId}`, { method: "DELETE" });
+      await apiFetch(`/concerts/${concertId}/posts/${postId}`, {
+        method: "DELETE",
+      });
       setRefreshKey((k) => k + 1);
     } catch {
       alert("삭제에 실패했습니다.");
@@ -150,12 +171,17 @@ export default function ConcertPostSection({ concertId }: { concertId: number })
   };
 
   return (
-    <section id="posts" className="mt-10 bg-white rounded-2xl shadow-sm overflow-hidden">
+    <section
+      id="posts"
+      className="mt-10 bg-white rounded-2xl shadow-sm overflow-hidden"
+    >
       <div className="p-8">
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-xl font-bold text-gray-800">
             관람 후기
-            <span className="ml-2 text-base font-normal text-gray-400">({posts.length}개)</span>
+            <span className="ml-2 text-base font-normal text-gray-400">
+              ({posts.length}개)
+            </span>
           </h2>
           {me && !showForm && (
             <button
@@ -184,7 +210,10 @@ export default function ConcertPostSection({ concertId }: { concertId: number })
                 <button
                   key={type}
                   type="button"
-                  onClick={() => { setReviewType(type); setRating(null); }}
+                  onClick={() => {
+                    setReviewType(type);
+                    setRating(null);
+                  }}
                   className={`px-3 py-1.5 rounded-lg text-sm font-semibold border transition ${
                     reviewType === type
                       ? "bg-blue-600 text-white border-blue-600"
@@ -201,7 +230,9 @@ export default function ConcertPostSection({ concertId }: { concertId: number })
                 placeholder="제목 (최대 100자)"
                 maxLength={100}
                 value={form.title}
-                onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, title: e.target.value }))
+                }
                 className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
               />
             </div>
@@ -211,7 +242,9 @@ export default function ConcertPostSection({ concertId }: { concertId: number })
                 maxLength={2000}
                 rows={4}
                 value={form.content}
-                onChange={(e) => setForm((f) => ({ ...f, content: e.target.value }))}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, content: e.target.value }))
+                }
                 className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300 resize-none"
               />
             </div>
@@ -240,14 +273,20 @@ export default function ConcertPostSection({ concertId }: { concertId: number })
                 </div>
               </div>
             )}
-            {formError && <p className="text-red-500 text-sm mb-3">{formError}</p>}
+            {formError && (
+              <p className="text-red-500 text-sm mb-3">{formError}</p>
+            )}
             <div className="flex gap-2">
               <button
                 onClick={handleSubmit}
                 disabled={submitting}
                 className="px-5 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 disabled:opacity-50 transition"
               >
-                {submitting ? "저장 중..." : editingId !== null ? "수정하기" : "등록하기"}
+                {submitting
+                  ? "저장 중..."
+                  : editingId !== null
+                    ? "수정하기"
+                    : "등록하기"}
               </button>
               <button
                 onClick={resetForm}
@@ -266,11 +305,16 @@ export default function ConcertPostSection({ concertId }: { concertId: number })
         ) : (
           <ul className="space-y-5">
             {posts.map((post) => (
-              <li key={post.postId} className="border-b border-gray-100 pb-5 last:border-0">
+              <li
+                key={post.postId}
+                className="border-b border-gray-100 pb-5 last:border-0"
+              >
                 <div className="flex items-start justify-between">
                   <div>
                     <div className="flex items-center gap-2">
-                      <p className="font-semibold text-gray-800">{post.title}</p>
+                      <p className="font-semibold text-gray-800">
+                        {post.title}
+                      </p>
                       <span
                         className={`shrink-0 text-[10px] font-semibold rounded px-1.5 py-0.5 ${REVIEW_TYPE_BADGE[post.reviewType].className}`}
                       >
@@ -294,7 +338,9 @@ export default function ConcertPostSection({ concertId }: { concertId: number })
                       <span className="flex items-center gap-0.5 text-xs text-gray-400">
                         <Heart
                           size={12}
-                          className={post.isLiked ? "fill-red-500 text-red-500" : ""}
+                          className={
+                            post.isLiked ? "fill-red-500 text-red-500" : ""
+                          }
                         />
                         {post.likeCount}
                       </span>

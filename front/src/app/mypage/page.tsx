@@ -94,9 +94,18 @@ interface PageResponse<T> {
   last: boolean;
 }
 
-const REVIEW_TYPE_BADGE: Record<MyPostSummary["reviewType"], { label: string; className: string }> = {
-  REVIEW: { label: "관람후기", className: "bg-emerald-50 text-emerald-600 border border-emerald-200" },
-  EXPECTATION: { label: "기대평", className: "bg-amber-50 text-amber-600 border border-amber-200" },
+const REVIEW_TYPE_BADGE: Record<
+  MyPostSummary["reviewType"],
+  { label: string; className: string }
+> = {
+  REVIEW: {
+    label: "관람후기",
+    className: "bg-emerald-50 text-emerald-600 border border-emerald-200",
+  },
+  EXPECTATION: {
+    label: "기대평",
+    className: "bg-amber-50 text-amber-600 border border-amber-200",
+  },
 };
 
 const SOCIAL_LINK_ERROR_MESSAGES: Record<string, string> = {
@@ -129,7 +138,9 @@ function RatingStars({ rating }: { rating: number }) {
         <Star
           key={n}
           size={13}
-          className={n <= rating ? "fill-yellow-400 text-yellow-400" : "text-gray-200"}
+          className={
+            n <= rating ? "fill-yellow-400 text-yellow-400" : "text-gray-200"
+          }
         />
       ))}
     </div>
@@ -182,8 +193,12 @@ export default function MyPage() {
   const [isSavingProfile, setIsSavingProfile] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [profilePreviewUrl, setProfilePreviewUrl] = useState<string | null>(null);
-  const [selectedProfileFile, setSelectedProfileFile] = useState<File | null>(null);
+  const [profilePreviewUrl, setProfilePreviewUrl] = useState<string | null>(
+    null,
+  );
+  const [selectedProfileFile, setSelectedProfileFile] = useState<File | null>(
+    null,
+  );
   const [isUploadingProfile, setIsUploadingProfile] = useState(false);
   const [profileCacheKey, setProfileCacheKey] = useState(() => Date.now());
   const [profileImgError, setProfileImgError] = useState(false);
@@ -480,7 +495,9 @@ export default function MyPage() {
       });
       if (!res.ok) {
         const json = await res.json().catch(() => ({}));
-        throw new Error((json as { msg?: string }).msg || "업로드에 실패했습니다.");
+        throw new Error(
+          (json as { msg?: string }).msg || "업로드에 실패했습니다.",
+        );
       }
       const newToken = res.headers.get("Authorization");
       if (newToken?.startsWith("Bearer ")) setAccessToken(newToken.slice(7));
