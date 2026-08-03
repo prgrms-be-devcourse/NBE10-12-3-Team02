@@ -17,8 +17,8 @@ data class PostBookmarkResponse(
         fun from(bookmark: PostBookmark): PostBookmarkResponse {
             val post = bookmark.post
             return PostBookmarkResponse(
-                postId = post.postId!!,
-                concertId = post.concert.concertId!!,
+                postId = post.postIdOrThrow,
+                concertId = post.concert.concertIdOrThrow,
                 concertName = post.concert.concertName,
                 userName = post.user.name,
                 title = post.title,

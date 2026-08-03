@@ -32,7 +32,7 @@ class PostLikeCommandService(
 
         postLikeRepository.saveAndFlush(PostLike.create(post, user))
 
-        val postOwnerId = post.user.userId!!
+        val postOwnerId = post.user.userIdOrThrow
         if (postOwnerId != userId) {
             eventPublisher.publishEvent(PostLikedEvent(postId, postOwnerId, userId))
         }

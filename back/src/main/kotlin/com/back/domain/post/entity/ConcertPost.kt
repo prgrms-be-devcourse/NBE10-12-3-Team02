@@ -21,6 +21,10 @@ open class ConcertPost protected constructor() : BaseEntity() {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     val postId: Long? = null
 
+    // 저장 후에는 항상 not-null인 PK. 조회된(영속화된) ConcertPost에서만 사용해야 한다.
+    val postIdOrThrow: Long
+        get() = checkNotNull(postId) { "postId must not be null after persist" }
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "concert_id", nullable = false)
     lateinit var concert: Concert
