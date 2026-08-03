@@ -42,6 +42,10 @@ class User(
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     val userId: Long? = null
 
+    // 저장 후에는 항상 not-null인 PK. 조회된(영속화된) User에서만 사용해야 한다.
+    val userIdOrThrow: Long
+        get() = checkNotNull(userId) { "userId must not be null after persist" }
+
     var deletedAt: LocalDate? = null
         protected set
 
