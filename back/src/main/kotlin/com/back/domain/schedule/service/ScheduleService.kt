@@ -31,11 +31,8 @@ class ScheduleService(
         return ShowScheduleResponse.of(schedule, remainingSeats)
     }
 
-    /**
-     * 좌석 상태 ETag 핑거프린트를 반환합니다.
-     * DB 전체 좌석 조회 대신 Redis 버전 카운터를 사용하여 DB 부하를 제거합니다.
-     * 좌석 상태 변경 이벤트 발생 시 SeatStatusSseBroadcaster가 Redis 버전을 증가시킵니다.
-     */
+     // DB 전체 좌석 조회 대신 Redis 버전 카운터를 사용하여 DB 부하를 제거
+     // 좌석 상태 변경 이벤트 발생 시 SeatStatusSseBroadcaster가 Redis 버전을 증가
     fun getSeatStatusFingerprint(scheduleId: Long): String =
         eTagVersionManager.getVersion(scheduleId).toString()
 

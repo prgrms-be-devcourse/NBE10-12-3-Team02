@@ -26,9 +26,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
 import org.springframework.test.web.servlet.result.MockMvcResultHandlers.print
-import org.springframework.test.web.servlet.result.MockMvcResultMatchers.header
-import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
-import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
+import org.springframework.test.web.servlet.result.MockMvcResultMatchers.*
 import org.springframework.transaction.annotation.Transactional
 import java.time.LocalDateTime
 
@@ -75,8 +73,6 @@ class ScheduleControllerTest @Autowired constructor(
     @DisplayName("특정 회차 좌석 실시간 현황 조회 성공")
     fun showSchedule() {
         val scheduleId = checkNotNull(schedule.scheduleId)
-        // ETag 핑거프린트는 이제 Redis 버전 카운터로 생성됩니다.
-        // mock이 0을 반환하므로 eTag는 "concertId-scheduleId-0" 형태입니다.
         val mockVersion = 42L
         given(eTagVersionManager.getVersion(scheduleId)).willReturn(mockVersion)
         val eTag = "\"${concert.concertId}-$scheduleId-$mockVersion\""
@@ -99,7 +95,6 @@ class ScheduleControllerTest @Autowired constructor(
     @DisplayName("30초 주기 폴링 시 If-None-Match ETag가 일치하면 304 Not Modified가 반환된다")
     fun showSchedule_pollingETag_returns304() {
         val scheduleId = checkNotNull(schedule.scheduleId)
-        // ETag는 Redis 버전 카운터 기반으로 생성되므로, mock 버전으로 일치 여부를 검증합니다.
         val mockVersion = 42L
         given(eTagVersionManager.getVersion(scheduleId)).willReturn(mockVersion)
         val eTag = "\"${concert.concertId}-$scheduleId-$mockVersion\""

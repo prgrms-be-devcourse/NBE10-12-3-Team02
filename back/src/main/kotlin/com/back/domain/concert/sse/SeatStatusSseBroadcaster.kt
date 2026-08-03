@@ -19,10 +19,7 @@ class SeatStatusSseBroadcaster(
 ) {
     private val log = LoggerFactory.getLogger(javaClass)
 
-    // ──────────────────────────────────────────────────────────────────────────
     // BEFORE_COMMIT: Outbox 저장 후 eventId를 트랜잭션 컨텍스트에 바인딩
-    // ──────────────────────────────────────────────────────────────────────────
-
     @TransactionalEventListener(phase = TransactionPhase.BEFORE_COMMIT, fallbackExecution = true)
     fun saveOutboxOnSeatEvent(event: SeatEvent) {
         if (!TransactionSynchronizationManager.isActualTransactionActive()) return
@@ -32,10 +29,7 @@ class SeatStatusSseBroadcaster(
         }
     }
 
-    // ──────────────────────────────────────────────────────────────────────────
     // AFTER_COMMIT: eventId 조회 후 SSE 브로드캐스트 및 ETag 버전 증가
-    // ──────────────────────────────────────────────────────────────────────────
-
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
     fun onSeatEvent(event: SeatEvent) {
         val eventId = unbindEventId(event.scheduleId, event.seatNumber)
@@ -44,10 +38,7 @@ class SeatStatusSseBroadcaster(
         eTagVersionManager.increment(event.scheduleId)
     }
 
-    // ──────────────────────────────────────────────────────────────────────────
     // AFTER_ROLLBACK: 트랜잭션 롤백 시 바인딩 해제 (메모리 누수 방지)
-    // ──────────────────────────────────────────────────────────────────────────
-
     @TransactionalEventListener(phase = TransactionPhase.AFTER_ROLLBACK)
     fun cleanupOnRollback(event: SeatEvent) {
         unbindEventId(event.scheduleId, event.seatNumber)
@@ -58,10 +49,7 @@ class SeatStatusSseBroadcaster(
         log.debug("SSE 브로드캐스트 (결제 완료): scheduleId={}", event.scheduleId)
     }
 
-    // ──────────────────────────────────────────────────────────────────────────
-    // Helper: TransactionSynchronizationManager 바인딩/해제 (타입 안전한 Object Key & Holder 사용)
-    // ──────────────────────────────────────────────────────────────────────────
-
+    // Helper: TransactionSynchronizationManager 바인딩/해제
     private fun seatKey(scheduleId: Long, seatNumber: String) = "$scheduleId:$seatNumber"
 
     @Suppress("UNCHECKED_CAST")
