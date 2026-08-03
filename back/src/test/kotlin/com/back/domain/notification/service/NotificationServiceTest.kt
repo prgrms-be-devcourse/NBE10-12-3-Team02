@@ -32,8 +32,14 @@ import java.util.Optional
 class NotificationServiceTest {
     private val notificationRepository = mock(NotificationRepository::class.java)
     private val userRepository = mock(UserRepository::class.java)
+    private val notificationCommandService = mock(NotificationCommandService::class.java)
     private val sseEmitterRegistry = mock(NotificationSseEmitterRegistry::class.java)
-    private val service = NotificationService(notificationRepository, userRepository, sseEmitterRegistry)
+    private val service = NotificationService(
+        notificationRepository,
+        userRepository,
+        notificationCommandService,
+        sseEmitterRegistry,
+    )
 
     // Mockito의 any(Class)는 null을 반환하는데, Kotlin 비-null 파라미터 위치에 그대로 쓰면
     // "any(...) must not be null" NPE가 발생하므로 우회용 헬퍼를 사용한다.
@@ -58,11 +64,11 @@ class NotificationServiceTest {
 
         val saved = Notification.ofLike(receiver, actor, 10L)
         ReflectionTestUtils.setField(saved, "notificationId", 100L)
-        `when`(notificationRepository.save(any(Notification::class.java))).thenReturn(saved)
+        `when`(notificationCommandService.saveLikeNotification(receiver, actor, 10L)).thenReturn(saved)
 
         service.onPostLiked(PostLikedEvent(postId = 10L, postOwnerId = 1L, actorId = 2L))
 
-        verify(notificationRepository, times(1)).save(any(Notification::class.java))
+        verify(notificationCommandService, times(1)).saveLikeNotification(receiver, actor, 10L)
         verify(sseEmitterRegistry, times(1)).send(eq(1L), anyObject<NotificationPushPayload>())
     }
 
@@ -73,7 +79,8 @@ class NotificationServiceTest {
 
         service.onPostLiked(PostLikedEvent(postId = 10L, postOwnerId = 1L, actorId = 2L))
 
-        verify(notificationRepository, never()).save(any(Notification::class.java))
+        verify(notificationCommandService, never())
+            .saveLikeNotification(anyObject<User>(), anyObject<User>(), anyLong())
         verify(sseEmitterRegistry, never()).send(anyLong(), anyObject<NotificationPushPayload>())
     }
 
@@ -87,11 +94,11 @@ class NotificationServiceTest {
 
         val saved = Notification.ofFollow(receiver, actor)
         ReflectionTestUtils.setField(saved, "notificationId", 200L)
-        `when`(notificationRepository.save(any(Notification::class.java))).thenReturn(saved)
+        `when`(notificationCommandService.saveFollowNotification(receiver, actor)).thenReturn(saved)
 
         service.onUserFollowed(UserFollowedEvent(followeeId = 1L, followerId = 2L))
 
-        verify(notificationRepository, times(1)).save(any(Notification::class.java))
+        verify(notificationCommandService, times(1)).saveFollowNotification(receiver, actor)
         verify(sseEmitterRegistry, times(1)).send(eq(1L), anyObject<NotificationPushPayload>())
     }
 
@@ -104,7 +111,8 @@ class NotificationServiceTest {
 
         service.onUserFollowed(UserFollowedEvent(followeeId = 1L, followerId = 2L))
 
-        verify(notificationRepository, never()).save(any(Notification::class.java))
+        verify(notificationCommandService, never())
+            .saveFollowNotification(anyObject<User>(), anyObject<User>())
         verify(sseEmitterRegistry, never()).send(anyLong(), anyObject<NotificationPushPayload>())
     }
 

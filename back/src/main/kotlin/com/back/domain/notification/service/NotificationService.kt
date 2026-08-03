@@ -2,7 +2,6 @@ package com.back.domain.notification.service
 
 import com.back.domain.notification.dto.NotificationPushPayload
 import com.back.domain.notification.dto.NotificationResponse
-import com.back.domain.notification.entity.Notification
 import com.back.domain.notification.event.PostLikedEvent
 import com.back.domain.notification.event.UserFollowedEvent
 import com.back.domain.notification.repository.NotificationRepository
@@ -14,7 +13,6 @@ import org.slf4j.LoggerFactory
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.Pageable
 import org.springframework.stereotype.Service
-import org.springframework.transaction.annotation.Propagation
 import org.springframework.transaction.annotation.Transactional
 import org.springframework.transaction.event.TransactionPhase
 import org.springframework.transaction.event.TransactionalEventListener
@@ -23,33 +21,31 @@ import org.springframework.transaction.event.TransactionalEventListener
 class NotificationService(
     private val notificationRepository: NotificationRepository,
     private val userRepository: UserRepository,
+    private val notificationCommandService: NotificationCommandService,
     private val notificationSseEmitterRegistry: NotificationSseEmitterRegistry,
 ) {
     private val log = LoggerFactory.getLogger(javaClass)
 
-    // AFTER_COMMIT 시점엔 원본 트랜잭션이 이미 끝나 있어 REQUIRES_NEW/NOT_SUPPORTED 외의 propagation은
-    // Spring의 RestrictedTransactionalEventListenerFactory(spring-tx, @since 6.1)가 컨텍스트 로딩 시점에 거부한다.
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    // DB 저장을 NotificationCommandService의 REQUIRES_NEW 트랜잭션으로 완전히 커밋(커넥션 반납)한
+    // 뒤에 SSE를 전송한다. 같은 트랜잭션 안에서 send()까지 하면 SSE 전송 동안 DB 커넥션을 붙잡고,
+    // 커밋 전에 알림이 화면에 뜨는 데이터 불일치가 생길 수 있어 분리했다.
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
     fun onPostLiked(event: PostLikedEvent) {
         val receiver = userRepository.findByUserIdAndDeletedAtIsNull(event.postOwnerId) ?: return
         val actor = userRepository.findByUserIdAndDeletedAtIsNull(event.actorId) ?: return
 
-        val notification = notificationRepository.save(Notification.ofLike(receiver, actor, event.postId))
+        val notification = notificationCommandService.saveLikeNotification(receiver, actor, event.postId)
         log.debug("좋아요 알림 생성: receiverId={}, actorId={}, postId={}", event.postOwnerId, event.actorId, event.postId)
 
         notificationSseEmitterRegistry.send(receiver.userId!!, NotificationPushPayload.from(notification))
     }
 
-    // AFTER_COMMIT 시점엔 원본 트랜잭션이 이미 끝나 있어 REQUIRES_NEW/NOT_SUPPORTED 외의 propagation은
-    // Spring의 RestrictedTransactionalEventListenerFactory(spring-tx, @since 6.1)가 컨텍스트 로딩 시점에 거부한다.
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
     fun onUserFollowed(event: UserFollowedEvent) {
         val receiver = userRepository.findByUserIdAndDeletedAtIsNull(event.followeeId) ?: return
         val actor = userRepository.findByUserIdAndDeletedAtIsNull(event.followerId) ?: return
 
-        val notification = notificationRepository.save(Notification.ofFollow(receiver, actor))
+        val notification = notificationCommandService.saveFollowNotification(receiver, actor)
         log.debug("팔로우 알림 생성: receiverId={}, actorId={}", event.followeeId, event.followerId)
 
         notificationSseEmitterRegistry.send(receiver.userId!!, NotificationPushPayload.from(notification))
