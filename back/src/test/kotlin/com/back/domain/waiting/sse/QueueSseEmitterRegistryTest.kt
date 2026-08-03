@@ -1,6 +1,7 @@
 package com.back.domain.waiting.sse
 
 import com.back.domain.queue.event.EntryAllowedEvent
+import com.back.domain.queue.event.QueueErrorEvent
 import com.back.domain.queue.event.QueueStatusEvent
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
@@ -71,6 +72,36 @@ class QueueSseEmitterRegistryTest {
 
         verify(failedEmitter, times(1)).send(any(SseEmitter.SseEventBuilder::class.java))
         verify(healthyEmitter, times(2)).send(any(SseEmitter.SseEventBuilder::class.java))
+    }
+
+    @Test
+    @DisplayName("회차 전체 오류는 해당 회차 구독자에게만 전송한다")
+    fun t4() {
+        val registry = QueueSseEmitterRegistry()
+        val targetScheduleEmitter = mock(SseEmitter::class.java)
+        val otherScheduleEmitter = mock(SseEmitter::class.java)
+        registry.register(SCHEDULE_ID, TARGET_USER_ID, targetScheduleEmitter)
+        registry.register(OTHER_SCHEDULE_ID, OTHER_USER_ID, otherScheduleEmitter)
+
+        registry.sendError(QueueErrorEvent(SCHEDULE_ID, null, "대기열 종료"))
+
+        verify(targetScheduleEmitter).send(any(SseEmitter.SseEventBuilder::class.java))
+        verify(otherScheduleEmitter, never()).send(any(SseEmitter.SseEventBuilder::class.java))
+    }
+
+    @Test
+    @DisplayName("heartbeat는 모든 회차의 구독자에게 전송한다")
+    fun t5() {
+        val registry = QueueSseEmitterRegistry()
+        val firstEmitter = mock(SseEmitter::class.java)
+        val secondEmitter = mock(SseEmitter::class.java)
+        registry.register(SCHEDULE_ID, TARGET_USER_ID, firstEmitter)
+        registry.register(OTHER_SCHEDULE_ID, OTHER_USER_ID, secondEmitter)
+
+        registry.sendHeartbeat()
+
+        verify(firstEmitter).send(any(SseEmitter.SseEventBuilder::class.java))
+        verify(secondEmitter).send(any(SseEmitter.SseEventBuilder::class.java))
     }
 
     companion object {

@@ -14,11 +14,6 @@ import kotlin.concurrent.withLock
 
 @Component
 class QueueSseEmitterRegistry {
-    data class SubscriberKey(
-        val scheduleId: Long,
-        val userId: Long,
-    )
-
     class SynchronizedEmitter(
         val emitter: SseEmitter,
         private val lock: ReentrantLock = ReentrantLock(),
@@ -30,14 +25,17 @@ class QueueSseEmitterRegistry {
         }
     }
 
-    private val emitters = ConcurrentHashMap<SubscriberKey, MutableList<SynchronizedEmitter>>()
+    private val emitters =
+        ConcurrentHashMap<Long, ConcurrentHashMap<Long, MutableList<SynchronizedEmitter>>>()
 
     fun register(scheduleId: Long, userId: Long, emitter: SseEmitter): SynchronizedEmitter {
-        val key = SubscriberKey(scheduleId, userId)
         val wrapper = SynchronizedEmitter(emitter)
-        emitters.computeIfAbsent(key) { CopyOnWriteArrayList() }.add(wrapper)
+        emitters
+            .computeIfAbsent(scheduleId) { ConcurrentHashMap() }
+            .computeIfAbsent(userId) { CopyOnWriteArrayList() }
+            .add(wrapper)
 
-        val cleanup = Runnable { remove(key, wrapper) }
+        val cleanup = Runnable { remove(scheduleId, userId, wrapper) }
         emitter.onCompletion(cleanup)
         emitter.onTimeout(cleanup)
         emitter.onError { cleanup.run() }
@@ -47,9 +45,10 @@ class QueueSseEmitterRegistry {
     }
 
     fun broadcastStatus(scheduleId: Long, event: QueueStatusEvent) {
-        subscribers(scheduleId).forEach { (key, wrapper) ->
+        subscribers(scheduleId).forEach { (userId, wrapper) ->
             sendOrRemove(
-                key,
+                scheduleId,
+                userId,
                 wrapper,
                 SseEmitter.event()
                     .name(QUEUE_STATUS_EVENT)
@@ -59,10 +58,10 @@ class QueueSseEmitterRegistry {
     }
 
     fun sendEntryAllowed(event: EntryAllowedEvent) {
-        val key = SubscriberKey(event.scheduleId, event.userId)
-        emitters[key]?.toList()?.forEach { wrapper ->
+        emitters[event.scheduleId]?.get(event.userId)?.toList()?.forEach { wrapper ->
             sendOrRemove(
-                key,
+                event.scheduleId,
+                event.userId,
                 wrapper,
                 SseEmitter.event()
                     .name(ENTRY_ALLOWED_EVENT)
@@ -73,9 +72,10 @@ class QueueSseEmitterRegistry {
 
     fun sendError(event: QueueErrorEvent) {
         if (event.userId == null) {
-            subscribers(event.scheduleId).forEach { (key, wrapper) ->
+            subscribers(event.scheduleId).forEach { (userId, wrapper) ->
                 sendOrRemove(
-                    key,
+                    event.scheduleId,
+                    userId,
                     wrapper,
                     SseEmitter.event()
                         .name(QUEUE_ERROR_EVENT)
@@ -85,10 +85,10 @@ class QueueSseEmitterRegistry {
             return
         }
 
-        val key = SubscriberKey(event.scheduleId, event.userId)
-        emitters[key]?.toList()?.forEach { wrapper ->
+        emitters[event.scheduleId]?.get(event.userId)?.toList()?.forEach { wrapper ->
             sendOrRemove(
-                key,
+                event.scheduleId,
+                event.userId,
                 wrapper,
                 SseEmitter.event()
                     .name(QUEUE_ERROR_EVENT)
@@ -98,28 +98,33 @@ class QueueSseEmitterRegistry {
     }
 
     fun sendHeartbeat() {
-        emitters.entries.toList().forEach { (key, wrappers) ->
-            wrappers.toList().forEach { wrapper ->
-                sendOrRemove(
-                    key,
-                    wrapper,
-                    SseEmitter.event()
-                        .name(HEARTBEAT_EVENT)
-                        .data(mapOf("serverTime" to Instant.now().toString())),
-                )
+        emitters.entries.toList().forEach { (scheduleId, users) ->
+            users.entries.toList().forEach { (userId, wrappers) ->
+                wrappers.toList().forEach { wrapper ->
+                    sendOrRemove(
+                        scheduleId,
+                        userId,
+                        wrapper,
+                        SseEmitter.event()
+                            .name(HEARTBEAT_EVENT)
+                            .data(mapOf("serverTime" to Instant.now().toString())),
+                    )
+                }
             }
         }
     }
 
-    private fun subscribers(scheduleId: Long): List<Pair<SubscriberKey, SynchronizedEmitter>> =
-        emitters.entries
+    private fun subscribers(scheduleId: Long): List<Pair<Long, SynchronizedEmitter>> {
+        val users = emitters[scheduleId] ?: return emptyList()
+        return users.entries
             .asSequence()
-            .filter { it.key.scheduleId == scheduleId }
-            .flatMap { entry -> entry.value.asSequence().map { entry.key to it } }
+            .flatMap { (userId, wrappers) -> wrappers.asSequence().map { userId to it } }
             .toList()
+    }
 
     private fun sendOrRemove(
-        key: SubscriberKey,
+        scheduleId: Long,
+        userId: Long,
         wrapper: SynchronizedEmitter,
         event: SseEmitter.SseEventBuilder,
     ) {
@@ -128,19 +133,22 @@ class QueueSseEmitterRegistry {
         } catch (e: Exception) {
             log.debug(
                 "대기열 SSE 전송 실패로 연결 제거: scheduleId={}, userId={}, error={}",
-                key.scheduleId,
-                key.userId,
+                scheduleId,
+                userId,
                 e.message,
             )
-            remove(key, wrapper)
+            remove(scheduleId, userId, wrapper)
             runCatching { wrapper.emitter.completeWithError(e) }
         }
     }
 
-    private fun remove(key: SubscriberKey, wrapper: SynchronizedEmitter) {
-        emitters.computeIfPresent(key) { _, wrappers ->
-            wrappers.remove(wrapper)
-            wrappers.takeIf { it.isNotEmpty() }
+    private fun remove(scheduleId: Long, userId: Long, wrapper: SynchronizedEmitter) {
+        emitters.computeIfPresent(scheduleId) { _, users ->
+            users.computeIfPresent(userId) { _, wrappers ->
+                wrappers.remove(wrapper)
+                wrappers.takeIf { it.isNotEmpty() }
+            }
+            users.takeIf { it.isNotEmpty() }
         }
     }
 
