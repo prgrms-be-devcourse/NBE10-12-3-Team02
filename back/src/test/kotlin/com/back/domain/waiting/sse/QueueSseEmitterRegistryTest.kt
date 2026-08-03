@@ -6,6 +6,7 @@ import com.back.domain.queue.event.QueueStatusEvent
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import org.mockito.ArgumentMatchers.any
+import org.mockito.ArgumentCaptor
 import org.mockito.Mockito.doThrow
 import org.mockito.Mockito.mock
 import org.mockito.Mockito.never
@@ -14,6 +15,7 @@ import org.mockito.Mockito.verify
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter
 import java.io.IOException
 import java.time.LocalDateTime
+import java.util.function.Consumer
 
 class QueueSseEmitterRegistryTest {
     @Test
@@ -120,6 +122,72 @@ class QueueSseEmitterRegistryTest {
 
         verify(emitter, times(2)).send(any(SseEmitter.SseEventBuilder::class.java))
         verify(emitter, never()).complete()
+    }
+
+    @Test
+    @DisplayName("SSE 연결 완료 콜백이 실행되면 emitter를 레지스트리에서 제거한다")
+    fun t7() {
+        val registry = QueueSseEmitterRegistry()
+        val emitter = mock(SseEmitter::class.java)
+        val completionCaptor = ArgumentCaptor.forClass(Runnable::class.java)
+        registry.register(SCHEDULE_ID, TARGET_USER_ID, emitter)
+        verify(emitter).onCompletion(completionCaptor.capture())
+
+        completionCaptor.value.run()
+        registry.sendHeartbeat()
+
+        verify(emitter, never()).send(any(SseEmitter.SseEventBuilder::class.java))
+    }
+
+    @Test
+    @DisplayName("SSE timeout 콜백이 실행되면 emitter를 레지스트리에서 제거한다")
+    fun t8() {
+        val registry = QueueSseEmitterRegistry()
+        val emitter = mock(SseEmitter::class.java)
+        val timeoutCaptor = ArgumentCaptor.forClass(Runnable::class.java)
+        registry.register(SCHEDULE_ID, TARGET_USER_ID, emitter)
+        verify(emitter).onTimeout(timeoutCaptor.capture())
+
+        timeoutCaptor.value.run()
+        registry.sendHeartbeat()
+
+        verify(emitter, never()).send(any(SseEmitter.SseEventBuilder::class.java))
+    }
+
+    @Test
+    @DisplayName("동일 사용자에게 등록된 여러 연결은 모두 최종 이벤트를 받고 제거된다")
+    fun t9() {
+        val registry = QueueSseEmitterRegistry()
+        val firstEmitter = mock(SseEmitter::class.java)
+        val secondEmitter = mock(SseEmitter::class.java)
+        registry.register(SCHEDULE_ID, TARGET_USER_ID, firstEmitter)
+        registry.register(SCHEDULE_ID, TARGET_USER_ID, secondEmitter)
+
+        registry.sendEntryAllowed(
+            EntryAllowedEvent(SCHEDULE_ID, TARGET_USER_ID, "entry-token", 1000L),
+        )
+        registry.sendHeartbeat()
+
+        verify(firstEmitter, times(1)).send(any(SseEmitter.SseEventBuilder::class.java))
+        verify(secondEmitter, times(1)).send(any(SseEmitter.SseEventBuilder::class.java))
+        verify(firstEmitter).complete()
+        verify(secondEmitter).complete()
+    }
+
+    @Test
+    @DisplayName("SSE 오류 콜백이 실행되면 emitter를 레지스트리에서 제거한다")
+    @Suppress("UNCHECKED_CAST")
+    fun t10() {
+        val registry = QueueSseEmitterRegistry()
+        val emitter = mock(SseEmitter::class.java)
+        val errorCaptor = ArgumentCaptor.forClass(Consumer::class.java) as ArgumentCaptor<Consumer<Throwable>>
+        registry.register(SCHEDULE_ID, TARGET_USER_ID, emitter)
+        verify(emitter).onError(errorCaptor.capture())
+
+        errorCaptor.value.accept(IOException("disconnected"))
+        registry.sendHeartbeat()
+
+        verify(emitter, never()).send(any(SseEmitter.SseEventBuilder::class.java))
     }
 
     companion object {
