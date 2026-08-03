@@ -766,7 +766,7 @@ function SeatSelectContent({ params }: { params: Promise<{ id: string }> }) {
                     <button
                       type="button"
                       onClick={() => setAdultCount((c) => Math.max(0, c - 1))}
-                      disabled={adultCount <= 0}
+                      disabled={adultCount <= 0 || adultCount + teenCount <= 1}
                       className="w-7 h-7 flex items-center justify-center rounded-full border border-gray-200 text-gray-600 hover:bg-blue-50 hover:border-blue-200 hover:text-blue-600 transition disabled:opacity-30 disabled:cursor-not-allowed"
                     >
                       <Minus size={12} />
@@ -801,7 +801,7 @@ function SeatSelectContent({ params }: { params: Promise<{ id: string }> }) {
                     <button
                       type="button"
                       onClick={() => setTeenCount((c) => Math.max(0, c - 1))}
-                      disabled={teenCount <= 0}
+                      disabled={teenCount <= 0 || adultCount + teenCount <= 1}
                       className="w-7 h-7 flex items-center justify-center rounded-full border border-gray-200 text-gray-600 hover:bg-blue-50 hover:border-blue-200 hover:text-blue-600 transition disabled:opacity-30 disabled:cursor-not-allowed"
                     >
                       <Minus size={12} />
