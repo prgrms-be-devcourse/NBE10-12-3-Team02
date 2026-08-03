@@ -2,6 +2,7 @@ package com.back.domain.waiting.controller
 
 import com.back.domain.waiting.service.WaitingQueueService
 import com.back.domain.waiting.sse.QueueSseEmitterRegistry
+import com.back.domain.waiting.sse.QueueSseEventName
 import com.back.global.annotation.ApiV1
 import com.back.global.exception.ErrorCode
 import com.back.global.exception.ServiceException
@@ -52,7 +53,7 @@ class WaitingQueueSseController(
             val connectionState = waitingQueueService.getConnectionStateAfterValidation(concertId, scheduleId, actor.id)
             wrapper.send(
                 SseEmitter.event()
-                    .name(QueueSseEmitterRegistry.CONNECTED_EVENT)
+                    .name(QueueSseEventName.CONNECTED)
                     .data(connectionState),
             )
         } catch (e: Exception) {

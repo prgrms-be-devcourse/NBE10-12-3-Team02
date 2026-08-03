@@ -51,7 +51,7 @@ class QueueSseEmitterRegistry {
                 userId,
                 wrapper,
                 SseEmitter.event()
-                    .name(QUEUE_STATUS_EVENT)
+                    .name(QueueSseEventName.QUEUE_STATUS)
                     .data(event),
             )
         }
@@ -64,7 +64,7 @@ class QueueSseEmitterRegistry {
                 event.userId,
                 wrapper,
                 SseEmitter.event()
-                    .name(ENTRY_ALLOWED_EVENT)
+                    .name(QueueSseEventName.ENTRY_ALLOWED)
                     .data(event),
             )
         }
@@ -78,7 +78,7 @@ class QueueSseEmitterRegistry {
                     userId,
                     wrapper,
                     SseEmitter.event()
-                        .name(QUEUE_ERROR_EVENT)
+                        .name(QueueSseEventName.QUEUE_ERROR)
                         .data(event),
                 )
             }
@@ -91,7 +91,7 @@ class QueueSseEmitterRegistry {
                 event.userId,
                 wrapper,
                 SseEmitter.event()
-                    .name(QUEUE_ERROR_EVENT)
+                    .name(QueueSseEventName.QUEUE_ERROR)
                     .data(event),
             )
         }
@@ -106,7 +106,7 @@ class QueueSseEmitterRegistry {
                         userId,
                         wrapper,
                         SseEmitter.event()
-                            .name(HEARTBEAT_EVENT)
+                            .name(QueueSseEventName.HEARTBEAT)
                             .data(mapOf("serverTime" to Instant.now().toString())),
                     )
                 }
@@ -183,12 +183,6 @@ class QueueSseEmitterRegistry {
     }
 
     companion object {
-        const val CONNECTED_EVENT = "connected"
-        const val QUEUE_STATUS_EVENT = "queue-status"
-        const val ENTRY_ALLOWED_EVENT = "entry-allowed"
-        const val QUEUE_ERROR_EVENT = "queue-error"
-        const val HEARTBEAT_EVENT = "heartbeat"
-
         private val log = LoggerFactory.getLogger(QueueSseEmitterRegistry::class.java)
     }
 }
