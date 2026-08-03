@@ -23,7 +23,6 @@ import org.springframework.transaction.annotation.Transactional
 import java.time.LocalDateTime
 
 @Service
-@Transactional(readOnly = true)
 class ConcertPostService(
     private val concertPostRepository: ConcertPostRepository,
     private val concertRepository: ConcertRepository,
@@ -31,9 +30,9 @@ class ConcertPostService(
     private val ticketRepository: TicketRepository,
     private val postLikeRepository: PostLikeRepository,
     private val postBookmarkRepository: PostBookmarkRepository,
+    private val concertPostCommandService: ConcertPostCommandService,
 ) {
 
-    @Transactional
     fun create(concertId: Long, userId: Long, request: ConcertPostCreateRequest): ConcertPostResponse {
         val concert = concertRepository.findById(concertId).orElseThrow {
             ServiceException(ErrorCode.CONCERT_NOT_FOUND)
@@ -74,13 +73,14 @@ class ConcertPostService(
 
         val post = ConcertPost.create(concert, user, request.title, request.content, request.rating, request.reviewType)
         val saved = try {
-            concertPostRepository.saveAndFlush(post)
+            concertPostCommandService.save(post)
         } catch (e: DataIntegrityViolationException) {
             throw ServiceException(ErrorCode.POST_ALREADY_EXISTS)
         }
         return toResponse(saved, userId)
     }
 
+    @Transactional(readOnly = true)
     fun getList(concertId: Long, currentUserId: Long?): List<ConcertPostResponse> {
         if (!concertRepository.existsById(concertId)) {
             throw ServiceException(ErrorCode.CONCERT_NOT_FOUND)
@@ -89,6 +89,7 @@ class ConcertPostService(
         return toResponses(posts, currentUserId)
     }
 
+    @Transactional(readOnly = true)
     fun getDetail(postId: Long, currentUserId: Long?): ConcertPostResponse {
         val post = concertPostRepository.findById(postId).orElseThrow {
             ServiceException(ErrorCode.POST_NOT_FOUND)
@@ -96,6 +97,7 @@ class ConcertPostService(
         return toResponse(post, currentUserId)
     }
 
+    @Transactional(readOnly = true)
     fun getDetail(concertId: Long, postId: Long, currentUserId: Long?): ConcertPostResponse {
         val post = findByConcertIdAndPostId(concertId, postId)
         return toResponse(post, currentUserId)
@@ -117,17 +119,20 @@ class ConcertPostService(
         return toResponse(post, userId)
     }
 
+    @Transactional(readOnly = true)
     fun getAllPosts(currentUserId: Long?): List<ConcertPostResponse> {
         val posts = concertPostRepository.findAllWithConcertAndUser()
         return toResponses(posts, currentUserId)
     }
 
+    @Transactional(readOnly = true)
     fun getMyPosts(userId: Long, pageable: Pageable): Page<ConcertPostResponse> {
         val posts = concertPostRepository.findAllByUser_UserId(userId, pageable)
         val responses = toResponses(posts.content, userId)
         return PageImpl(responses, pageable, posts.totalElements)
     }
 
+    @Transactional(readOnly = true)
     fun getEligibleConcerts(userId: Long, reviewType: ReviewType): List<EligibleConcertResponse> {
         val concerts = when (reviewType) {
             ReviewType.REVIEW -> {
