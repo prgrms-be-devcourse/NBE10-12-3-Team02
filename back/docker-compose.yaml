@@ -4,7 +4,7 @@ services:
     container_name: redis-primary
     ports:
       - "6379:6379"
-    command: redis-server --appendonly yes --replica-announce-ip redis-primary --requirepass ""
+    command: redis-server --appendonly yes --replica-announce-ip 127.0.0.1 --requirepass ""
     volumes:
       - redis-primary-data:/data
     labels:
@@ -17,7 +17,7 @@ services:
     container_name: redis-replica
     ports:
       - "6380:6379"
-    command: redis-server --appendonly yes --replicaof redis-primary 6379 --replica-announce-ip redis-replica --requirepass "" --masterauth ""
+    command: redis-server --appendonly yes --replicaof redis-primary 6379 --replica-announce-ip 127.0.0.1 --requirepass "" --masterauth ""
     volumes:
       - redis-replica-data:/data
     labels:
@@ -38,13 +38,13 @@ services:
       - |
         cat <<EOF > /tmp/sentinel.conf
         port 26379
-        sentinel monitor mymaster redis-primary 6379 2
+        sentinel monitor mymaster 127.0.0.1 6379 2
         sentinel down-after-milliseconds mymaster 5000
         sentinel failover-timeout mymaster 10000
         sentinel parallel-syncs mymaster 1
         sentinel resolve-hostnames yes
         sentinel announce-hostnames yes
-        sentinel announce-ip redis-sentinel-1
+        sentinel announce-ip 127.0.0.1
         EOF
         exec redis-sentinel /tmp/sentinel.conf
     labels:
@@ -66,13 +66,13 @@ services:
       - |
         cat <<EOF > /tmp/sentinel.conf
         port 26379
-        sentinel monitor mymaster redis-primary 6379 2
+        sentinel monitor mymaster 127.0.0.1 6379 2
         sentinel down-after-milliseconds mymaster 5000
         sentinel failover-timeout mymaster 10000
         sentinel parallel-syncs mymaster 1
         sentinel resolve-hostnames yes
         sentinel announce-hostnames yes
-        sentinel announce-ip redis-sentinel-2
+        sentinel announce-ip 127.0.0.1
         EOF
         exec redis-sentinel /tmp/sentinel.conf
     labels:
@@ -94,13 +94,13 @@ services:
       - |
         cat <<EOF > /tmp/sentinel.conf
         port 26379
-        sentinel monitor mymaster redis-primary 6379 2
+        sentinel monitor mymaster 127.0.0.1 6379 2
         sentinel down-after-milliseconds mymaster 5000
         sentinel failover-timeout mymaster 10000
         sentinel parallel-syncs mymaster 1
         sentinel resolve-hostnames yes
         sentinel announce-hostnames yes
-        sentinel announce-ip redis-sentinel-3
+        sentinel announce-ip 127.0.0.1
         EOF
         exec redis-sentinel /tmp/sentinel.conf
     labels:
