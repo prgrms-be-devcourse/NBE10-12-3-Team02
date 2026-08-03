@@ -1,17 +1,20 @@
 package com.back.domain.concert.controller
 
+import com.back.domain.concert.dto.SeatSnapshotResponse
 import com.back.domain.concert.sse.SeatStatusSseEmitterRegistry
 import com.back.domain.schedule.repository.ScheduleSeatRepository
 import com.back.global.annotation.ApiV1
+import com.fasterxml.jackson.databind.ObjectMapper
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.tags.Tag
 import org.slf4j.LoggerFactory
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
+import org.springframework.web.bind.annotation.RequestHeader
 import org.springframework.web.bind.annotation.RequestMapping
+import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter
-import java.io.IOException
 
 @ApiV1
 @RestController
@@ -19,7 +22,8 @@ import java.io.IOException
 @Tag(name = "Concert SSE", description = "실시간 좌석 상태 SSE API")
 class SeatStatusSseController(
     private val registry: SeatStatusSseEmitterRegistry,
-    private val scheduleSeatRepository: ScheduleSeatRepository
+    private val scheduleSeatRepository: ScheduleSeatRepository,
+    private val objectMapper: ObjectMapper
 ) {
     private val log = LoggerFactory.getLogger(javaClass)
 
@@ -33,36 +37,34 @@ class SeatStatusSseController(
     )
     fun seatStatusStream(
         @PathVariable concertId: Long,
-        @PathVariable scheduleId: Long
+        @PathVariable scheduleId: Long,
+        @RequestHeader(value = "Last-Event-ID", required = false) lastEventHeader: String?,
+        @RequestParam(value = "lastEventId", required = false) lastEventParam: String?
     ): SseEmitter {
+        val lastEventId = lastEventHeader?.takeIf { it.isNotBlank() } ?: lastEventParam?.takeIf { it.isNotBlank() }
         val emitter = SseEmitter(SSE_TIMEOUT_MS)
-        val wrapper = registry.register(scheduleId, emitter)
+        val wrapper = registry.register(scheduleId, emitter, lastEventId)
 
-        try {
+        runCatching {
             val seats = scheduleSeatRepository.findByScheduleScheduleId(scheduleId)
-            val snapshot = StringBuilder("[")
-            for (i in seats.indices) {
-                val seat = seats[i]
-                snapshot.append("{\"seatNumber\":\"")
-                    .append(seat.seatNumber)
-                    .append("\",\"status\":\"")
-                    .append(seat.seatStatus.name)
-                    .append("\"}")
-                if (i < seats.size - 1) snapshot.append(",")
+            val snapshotList = seats.map { seat ->
+                SeatSnapshotResponse(seat.seatNumber, seat.seatStatus.name)
             }
-            snapshot.append("]")
+            val snapshotJson = objectMapper.writeValueAsString(snapshotList)
 
+            val snapshotId = "snapshot:$scheduleId:${System.currentTimeMillis()}"
             wrapper.send(
                 SseEmitter.event()
+                    .id(snapshotId)
                     .name("seat_snapshot")
-                    .data(snapshot.toString())
+                    .data(snapshotJson)
             )
-        } catch (e: Exception) {
+        }.onFailure { e ->
             log.warn("SSE 스냅샷 전송 실패: scheduleId={}", scheduleId, e)
             emitter.complete()
         }
 
-        log.debug("SSE 스트림 연결: concertId={}, scheduleId={}", concertId, scheduleId)
+        log.debug("SSE 스트림 연결: concertId={}, scheduleId={}, lastEventId={}", concertId, scheduleId, lastEventId)
         return emitter
     }
 

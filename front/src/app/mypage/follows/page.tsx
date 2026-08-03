@@ -58,7 +58,8 @@ export default function MyFollowsPage() {
   const fetchList = async (targetTab: FollowTab, targetPage: number) => {
     setLoading(true);
     try {
-      const path = targetTab === "followings" ? "/follows/me" : "/follows/me/followers";
+      const path =
+        targetTab === "followings" ? "/follows/me" : "/follows/me/followers";
       const res = await apiFetch<PageResponse<FollowUser>>(
         `${path}?page=${targetPage}&size=${PAGE_SIZE}`,
       );
@@ -100,7 +101,9 @@ export default function MyFollowsPage() {
   };
 
   const emptyMessage =
-    tab === "followings" ? "아직 팔로우한 사람이 없습니다." : "아직 팔로워가 없습니다.";
+    tab === "followings"
+      ? "아직 팔로우한 사람이 없습니다."
+      : "아직 팔로워가 없습니다.";
 
   return (
     <div className="min-h-screen bg-gray-50 p-10">
@@ -140,9 +143,13 @@ export default function MyFollowsPage() {
           </div>
 
           {loading ? (
-            <p className="text-sm text-gray-400 text-center py-10">불러오는 중...</p>
+            <p className="text-sm text-gray-400 text-center py-10">
+              불러오는 중...
+            </p>
           ) : users.length === 0 ? (
-            <p className="text-sm text-gray-400 text-center py-10">{emptyMessage}</p>
+            <p className="text-sm text-gray-400 text-center py-10">
+              {emptyMessage}
+            </p>
           ) : (
             <div className="space-y-3">
               {users.map((u) => (
@@ -153,7 +160,9 @@ export default function MyFollowsPage() {
                 >
                   <FollowUserAvatar src={u.profileImgUrl} alt={u.name} />
                   <div className="min-w-0">
-                    <p className="font-semibold text-gray-800 truncate">{u.name}</p>
+                    <p className="font-semibold text-gray-800 truncate">
+                      {u.name}
+                    </p>
                     {u.followedAt && (
                       <p className="text-xs text-gray-400 mt-0.5">
                         {formatDateTime(u.followedAt)}부터 팔로우

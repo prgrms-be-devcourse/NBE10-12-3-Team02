@@ -1,42 +1,82 @@
 package com.back.domain.concert.sse
 
-import com.back.domain.concert.event.SeatExpiredEvent
-import com.back.domain.concert.event.SeatOccupiedEvent
-import com.back.domain.concert.event.SeatReleasedEvent
-import com.back.domain.schedule.constant.SeatStatus
+import com.back.domain.concert.event.SeatEvent
+import com.back.domain.concert.sse.service.SseOutboxService
 import com.back.domain.ticket.event.PaymentCompletedEvent
 import org.slf4j.LoggerFactory
 import org.springframework.context.event.EventListener
 import org.springframework.stereotype.Component
 import org.springframework.transaction.event.TransactionPhase
 import org.springframework.transaction.event.TransactionalEventListener
+import org.springframework.transaction.support.TransactionSynchronizationManager
+import java.util.concurrent.ConcurrentHashMap
 
 @Component
 class SeatStatusSseBroadcaster(
-    private val registry: SeatStatusSseEmitterRegistry
+    private val registry: SeatStatusSseEmitterRegistry,
+    private val sseOutboxService: SseOutboxService,
+    private val eTagVersionManager: SeatStatusETagVersionManager
 ) {
     private val log = LoggerFactory.getLogger(javaClass)
 
-    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
-    fun onSeatOccupied(event: SeatOccupiedEvent) {
-        log.info("SSE 브로드캐스트 (선점): scheduleId={}, seat={}", event.scheduleId, event.seatNumber)
-        registry.broadcast(event.scheduleId, event.seatNumber, SeatStatus.HOLD.name)
+    // BEFORE_COMMIT: Outbox 저장 후 eventId를 트랜잭션 컨텍스트에 바인딩
+    @TransactionalEventListener(phase = TransactionPhase.BEFORE_COMMIT, fallbackExecution = true)
+    fun saveOutboxOnSeatEvent(event: SeatEvent) {
+        if (!TransactionSynchronizationManager.isActualTransactionActive()) return
+        val outbox = sseOutboxService.saveOutboxEvent(event.scheduleId, event.seatNumber, event.status.name)
+        if (outbox != null) {
+            bindEventId(event.scheduleId, event.seatNumber, outbox.eventId)
+        }
     }
 
+    // AFTER_COMMIT: eventId 조회 후 SSE 브로드캐스트 및 ETag 버전 증가
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
-    fun onSeatReleased(event: SeatReleasedEvent) {
-        log.info("SSE 브로드캐스트 (선점 취소): scheduleId={}, seat={}", event.scheduleId, event.seatNumber)
-        registry.broadcast(event.scheduleId, event.seatNumber, SeatStatus.AVAILABLE.name)
+    fun onSeatEvent(event: SeatEvent) {
+        val eventId = unbindEventId(event.scheduleId, event.seatNumber)
+        log.info("SSE 브로드캐스트 (상태={}): scheduleId={}, seat={}, eventId={}", event.status, event.scheduleId, event.seatNumber, eventId)
+        registry.broadcast(event.scheduleId, event.seatNumber, event.status.name, eventId)
+        eTagVersionManager.increment(event.scheduleId)
     }
 
-    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
-    fun onSeatExpired(event: SeatExpiredEvent) {
-        log.info("SSE 브로드캐스트 (만료 복구): scheduleId={}, seat={}", event.scheduleId, event.seatNumber)
-        registry.broadcast(event.scheduleId, event.seatNumber, SeatStatus.AVAILABLE.name)
+    // AFTER_ROLLBACK: 트랜잭션 롤백 시 바인딩 해제 (메모리 누수 방지)
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_ROLLBACK)
+    fun cleanupOnRollback(event: SeatEvent) {
+        unbindEventId(event.scheduleId, event.seatNumber)
     }
 
     @EventListener
     fun onPaymentCompleted(event: PaymentCompletedEvent) {
         log.debug("SSE 브로드캐스트 (결제 완료): scheduleId={}", event.scheduleId)
+    }
+
+    // Helper: TransactionSynchronizationManager 바인딩/해제
+    private fun seatKey(scheduleId: Long, seatNumber: String) = "$scheduleId:$seatNumber"
+
+    @Suppress("UNCHECKED_CAST")
+    private fun getOrCreateHolder(): ConcurrentHashMap<String, String> {
+        var holder = TransactionSynchronizationManager.getResource(SseBroadcasterTxKey) as? ConcurrentHashMap<String, String>
+        if (holder == null) {
+            holder = ConcurrentHashMap()
+            TransactionSynchronizationManager.bindResource(SseBroadcasterTxKey, holder)
+        }
+        return holder
+    }
+
+    private fun bindEventId(scheduleId: Long, seatNumber: String, eventId: String) {
+        getOrCreateHolder()[seatKey(scheduleId, seatNumber)] = eventId
+    }
+
+    @Suppress("UNCHECKED_CAST")
+    private fun unbindEventId(scheduleId: Long, seatNumber: String): String? {
+        val holder = TransactionSynchronizationManager.getResource(SseBroadcasterTxKey) as? ConcurrentHashMap<String, String>
+        val eventId = holder?.remove(seatKey(scheduleId, seatNumber))
+        if (holder != null && holder.isEmpty()) {
+            TransactionSynchronizationManager.unbindResourceIfPossible(SseBroadcasterTxKey)
+        }
+        return eventId
+    }
+
+    companion object {
+        private object SseBroadcasterTxKey
     }
 }

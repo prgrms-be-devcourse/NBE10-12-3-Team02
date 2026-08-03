@@ -93,6 +93,15 @@ export async function apiFetch<T>(
     },
   });
 
+  // 304 Not Modified 응답 처리 (ETag 폴링용)
+  if (res.status === 304) {
+    return {
+      resultCode: "304",
+      msg: "Not Modified",
+      data: null as unknown as T,
+    };
+  }
+
   // 토큰이 만료된 채로 요청한 경우(401), 사용자에게 에러를 보여주는 대신
   // 조용히 refresh 후 원래 요청을 한 번만 다시 시도한다.
   if (res.status === 401 && !_isRetry && !path.startsWith("/auth/")) {
