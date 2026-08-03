@@ -1,0 +1,9 @@
+<svg width="800" height="147" viewBox="0 0 800 147" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect x="4" y="15" width="117" height="117" rx="26" fill="#2563EB"/>
+  <path d="M31 54C31 46.8203 36.8203 41 44 41H81C88.1797 41 94 46.8203 94 54V61C86.8203 61 81 66.8203 81 74C81 81.1797 86.8203 87 94 87V100C94 107.18 88.1797 113 81 113H44C36.8203 113 31 107.18 31 100V87C38.1797 87 44 81.1797 44 74C44 66.8203 38.1797 61 31 61V54Z" fill="white"/>
+  <path d="M51 59H74" stroke="#2563EB" stroke-width="8" stroke-linecap="round"/>
+  <path d="M62.5 59V91" stroke="#2563EB" stroke-width="8" stroke-linecap="round"/>
+  <path d="M50 91H76" stroke="#2563EB" stroke-width="8" stroke-linecap="round"/>
+  <text x="148" y="93" fill="#111827" font-family="Arial, sans-serif" font-size="54" font-weight="800">티케팅고</text>
+  <text x="389" y="93" fill="#2563EB" font-family="Arial, sans-serif" font-size="54" font-weight="800">Ticketing Go</text>
+</svg>
