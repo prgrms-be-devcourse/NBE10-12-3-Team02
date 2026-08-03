@@ -2,7 +2,6 @@ package com.back.domain.follow.service
 
 import com.back.domain.follow.dto.FollowStatusResponse
 import com.back.domain.follow.dto.FollowUserResponse
-import com.back.domain.follow.entity.Follow
 import com.back.domain.follow.repository.FollowRepository
 import com.back.domain.user.repository.UserRepository
 import com.back.global.exception.ErrorCode
@@ -14,13 +13,12 @@ import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 
 @Service
-@Transactional(readOnly = true)
 class FollowService(
     private val followRepository: FollowRepository,
     private val userRepository: UserRepository,
+    private val followCommandService: FollowCommandService,
 ) {
 
-    @Transactional
     fun follow(followerId: Long, followeeId: Long) {
         if (followerId == followeeId) {
             throw ServiceException(ErrorCode.FOLLOW_SELF_NOT_ALLOWED)
@@ -36,7 +34,7 @@ class FollowService(
         }
 
         try {
-            followRepository.saveAndFlush(Follow.create(follower, followee))
+            followCommandService.save(follower, followee)
         } catch (e: DataIntegrityViolationException) {
             throw ServiceException(ErrorCode.FOLLOW_ALREADY_EXISTS)
         }
@@ -54,10 +52,12 @@ class FollowService(
             isFollowing = followRepository.existsByFollower_UserIdAndFollowee_UserId(followerId, followeeId)
         )
 
+    @Transactional(readOnly = true)
     fun getFollowings(followerId: Long, pageable: Pageable): Page<FollowUserResponse> =
         followRepository.findAllByFollower_UserId(followerId, pageable)
             .map { FollowUserResponse.ofFollowee(it) }
 
+    @Transactional(readOnly = true)
     fun getFollowers(followeeId: Long, pageable: Pageable): Page<FollowUserResponse> =
         followRepository.findAllByFollowee_UserId(followeeId, pageable)
             .map { FollowUserResponse.ofFollower(it) }
