@@ -81,8 +81,8 @@ class SeatOccupyManager(
             throw ServiceException(ErrorCode.SEAT_HELD_BY_OTHER_USER)
         }
 
-        // Redis 정리는 AFTER_COMMIT 리스너(TicketCleanupEventListener.onSeatReleasedCleanup)에서의 위임
-        // DB 코밋 이후에 Redis를 정리해야 DB 롤백 시 Redis 선점 키가 안전하게 보존됩니다.
+        // Redis 정리는 AFTER_COMMIT 리스너에 위임
+        // DB 커밋 이후에 Redis를 정리해야 DB 롤백 시 Redis 선점 키가 안전하게 보존됨
         val seat = scheduleSeatRepository.findBySchedule_ScheduleIdAndSeatNumber(scheduleId, seatNumber)
         seat?.releaseToAvailable()
 

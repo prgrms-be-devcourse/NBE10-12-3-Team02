@@ -79,6 +79,7 @@ function SeatSelectContent({ params }: { params: Promise<{ id: string }> }) {
   // 실제로 대기열에 진입해 대기 중인 상태인지를 기록하는 Ref (Strict Mode/새로고침 시의 오작동 방지)
   const isWaitingRef = useRef(false);
   const lastEventIdRef = useRef<string>("");
+  const eTagRef = useRef<string>("");
   const pollingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const [adultCount, setAdultCount] = useState(1);
@@ -331,16 +332,30 @@ function SeatSelectContent({ params }: { params: Promise<{ id: string }> }) {
           reconnectTimer = setTimeout(connectSse, 3000);
 
           if (!pollingTimerRef.current) {
-            pollingTimerRef.current = setInterval(() => {
+            pollingTimerRef.current = setInterval(async () => {
               if (!active) return;
-              apiFetch<SeatSelectionData>(
-                `/concerts/${id}/schedules/${scheduleId}/seats`,
-                { headers: { "X-Queue-Token": entryToken } },
-              )
-                .then((refreshed) => {
-                  if (active) setSeatData(refreshed.data);
-                })
-                .catch(() => {});
+              try {
+                const statusRes = await apiFetch<unknown>(
+                  `/schedules/${scheduleId}/seats/status?concertId=${id}`,
+                  {
+                    headers: {
+                      ...(eTagRef.current
+                        ? { "If-None-Match": eTagRef.current }
+                        : {}),
+                    },
+                  },
+                );
+
+                if (statusRes.resultCode === "304") return;
+
+                const refreshed = await apiFetch<SeatSelectionData>(
+                  `/concerts/${id}/schedules/${scheduleId}/seats`,
+                  { headers: { "X-Queue-Token": entryToken } },
+                );
+                if (active) setSeatData(refreshed.data);
+              } catch {
+                /* 폴링 중 에러 발생 시 무시 */
+              }
             }, 30000);
           }
         }

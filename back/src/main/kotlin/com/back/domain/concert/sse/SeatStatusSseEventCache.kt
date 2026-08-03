@@ -57,12 +57,16 @@ class SeatStatusSseEventCache {
         val expireTime = System.currentTimeMillis() - CACHE_TTL_MS
         var totalRemoved = 0
 
-        for ((scheduleId, deque) in cacheMap) {
-            deque.removeIf { it.timestamp < expireTime }
-            if (deque.isEmpty()) {
-                cacheMap.remove(scheduleId)
-                sequenceMap.remove(scheduleId)
-                totalRemoved++
+        cacheMap.keys.forEach { scheduleId ->
+            cacheMap.computeIfPresent(scheduleId) { _, deque ->
+                deque.removeIf { it.timestamp < expireTime }
+                if (deque.isEmpty()) {
+                    sequenceMap.remove(scheduleId)
+                    totalRemoved++
+                    null
+                } else {
+                    deque
+                }
             }
         }
         if (totalRemoved > 0) {

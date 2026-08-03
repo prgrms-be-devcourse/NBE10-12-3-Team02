@@ -7,7 +7,6 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.tags.Tag
 import org.slf4j.LoggerFactory
-import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.RequestHeader
@@ -23,7 +22,7 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter
 class SeatStatusSseController(
     private val registry: SeatStatusSseEmitterRegistry,
     private val scheduleSeatRepository: ScheduleSeatRepository,
-    @Autowired(required = false) private val objectMapper: ObjectMapper = ObjectMapper()
+    private val objectMapper: ObjectMapper
 ) {
     private val log = LoggerFactory.getLogger(javaClass)
 
