@@ -34,7 +34,7 @@ class NotificationController(
     @Operation(summary = "알림 실시간 구독", description = "좋아요/팔로우 알림을 SSE로 실시간 수신합니다.")
     fun subscribe(): SseEmitter {
         val actor = requestContext.actor ?: throw IllegalStateException("Actor must not be null")
-        val emitter = SseEmitter(SSE_TIMEOUT_MS)
+        val emitter = SseEmitter(NOTIFICATION_SSE_TIMEOUT_MS)
         val wrapper = notificationSseEmitterRegistry.register(actor.id, emitter)
 
         try {
@@ -82,6 +82,13 @@ class NotificationController(
     }
 
     companion object {
-        private const val SSE_TIMEOUT_MS = 30 * 60 * 1000L // 30분
+        // SSE는 최초 연결 시에만 인증을 검증하고, 이후 스트림이 열려있는 동안엔 재검증하지 않는다.
+        // accessToken TTL은 10분인데, 네이티브 EventSource는 재연결 시 최초 연결에 쓴 URL(과 그 안의
+        // 쿼리파라미터 토큰)을 그대로 재사용하므로, 재연결 시점에 토큰이 만료돼있으면 401로 재연결이
+        // 막힌다. 이 문제는 백엔드 타임아웃 값을 조정해서 해결할 수 없고, 프론트에서 재연결마다
+        // 새 accessToken으로 URL을 재생성해야 한다.
+        // (SeatStatusSseController와 값은 같지만 좌석 SSE와는 별개의 상수 - 좌석 SSE 타임아웃을
+        // 바꾸더라도 이 값에 영향이 없어야 한다)
+        private const val NOTIFICATION_SSE_TIMEOUT_MS = 30 * 60 * 1000L // 30분
     }
 }
