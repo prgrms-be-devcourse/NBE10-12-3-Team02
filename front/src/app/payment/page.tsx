@@ -48,7 +48,13 @@ function PaymentContent() {
   const [ticketResults, setTicketResults] = useState<PaymentTicketResponse[]>(
     [],
   );
-  const [timeLeft, setTimeLeft] = useState(600);
+  const [timeLeft, setTimeLeft] = useState(() => {
+    if (typeof window === "undefined") return 600;
+    const rawActive = sessionStorage.getItem("paymentActive");
+    const activeTime = rawActive ? Number(rawActive) : Date.now();
+    const elapsedSeconds = Math.floor((Date.now() - activeTime) / 1000);
+    return Math.max(0, 600 - elapsedSeconds);
+  });
   const paymentCompletedRef = useRef(false);
   const isMountedRef = useRef(false);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -73,12 +79,6 @@ function PaymentContent() {
 
   useEffect(() => {
     restoreSession();
-    const rawActive = sessionStorage.getItem("paymentActive");
-    const activeTime = rawActive ? Number(rawActive) : Date.now();
-    const elapsedSeconds = Math.floor((Date.now() - activeTime) / 1000);
-    const initialTimeLeft = Math.max(0, 600 - elapsedSeconds);
-    setTimeLeft(initialTimeLeft);
-
     const timer = setInterval(() => {
       setTimeLeft((prev) => {
         if (prev <= 1) {

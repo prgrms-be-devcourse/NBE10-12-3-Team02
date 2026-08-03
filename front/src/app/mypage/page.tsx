@@ -94,9 +94,18 @@ interface PageResponse<T> {
   last: boolean;
 }
 
-const REVIEW_TYPE_BADGE: Record<MyPostSummary["reviewType"], { label: string; className: string }> = {
-  REVIEW: { label: "관람후기", className: "bg-emerald-50 text-emerald-600 border border-emerald-200" },
-  EXPECTATION: { label: "기대평", className: "bg-amber-50 text-amber-600 border border-amber-200" },
+const REVIEW_TYPE_BADGE: Record<
+  MyPostSummary["reviewType"],
+  { label: string; className: string }
+> = {
+  REVIEW: {
+    label: "관람후기",
+    className: "bg-emerald-50 text-emerald-600 border border-emerald-200",
+  },
+  EXPECTATION: {
+    label: "기대평",
+    className: "bg-amber-50 text-amber-600 border border-amber-200",
+  },
 };
 
 function RatingStars({ rating }: { rating: number }) {
@@ -106,7 +115,9 @@ function RatingStars({ rating }: { rating: number }) {
         <Star
           key={n}
           size={13}
-          className={n <= rating ? "fill-yellow-400 text-yellow-400" : "text-gray-200"}
+          className={
+            n <= rating ? "fill-yellow-400 text-yellow-400" : "text-gray-200"
+          }
         />
       ))}
     </div>
@@ -126,15 +137,7 @@ function SocialBadge({ provider }: { provider: string }) {
   };
   const src = iconMap[provider];
   if (!src) return null;
-  return (
-    <Image
-      src={src}
-      alt={provider}
-      width={18}
-      height={18}
-      unoptimized
-    />
-  );
+  return <Image src={src} alt={provider} width={18} height={18} unoptimized />;
 }
 
 export default function MyPage() {
@@ -157,8 +160,12 @@ export default function MyPage() {
   const [isSavingProfile, setIsSavingProfile] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [profilePreviewUrl, setProfilePreviewUrl] = useState<string | null>(null);
-  const [selectedProfileFile, setSelectedProfileFile] = useState<File | null>(null);
+  const [profilePreviewUrl, setProfilePreviewUrl] = useState<string | null>(
+    null,
+  );
+  const [selectedProfileFile, setSelectedProfileFile] = useState<File | null>(
+    null,
+  );
   const [isUploadingProfile, setIsUploadingProfile] = useState(false);
   const [profileCacheKey, setProfileCacheKey] = useState(() => Date.now());
   const [profileImgError, setProfileImgError] = useState(false);
@@ -387,7 +394,9 @@ export default function MyPage() {
       });
       if (!res.ok) {
         const json = await res.json().catch(() => ({}));
-        throw new Error((json as { msg?: string }).msg || "업로드에 실패했습니다.");
+        throw new Error(
+          (json as { msg?: string }).msg || "업로드에 실패했습니다.",
+        );
       }
       const newToken = res.headers.get("Authorization");
       if (newToken?.startsWith("Bearer ")) setAccessToken(newToken.slice(7));
@@ -725,12 +734,16 @@ export default function MyPage() {
               </p>
               {isSocialLogin ? (
                 <p className="flex items-center gap-1.5">
-                  <span className="inline-block w-20 shrink-0 text-gray-400">로그인 방식</span>
+                  <span className="inline-block w-20 shrink-0 text-gray-400">
+                    로그인 방식
+                  </span>
                   <SocialBadge provider={data.loginType} />
                 </p>
               ) : (
                 <p>
-                  <span className="inline-block w-20 text-gray-400">아이디</span>
+                  <span className="inline-block w-20 text-gray-400">
+                    아이디
+                  </span>
                   {data.id}
                 </p>
               )}
@@ -907,11 +920,15 @@ export default function MyPage() {
       <div className="bg-white rounded-2xl shadow-sm p-8 mb-8">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-bold text-gray-700">내 게시글</h2>
-          <span className="text-sm text-gray-400">{myPostsTotalElements}개의 게시글</span>
+          <span className="text-sm text-gray-400">
+            {myPostsTotalElements}개의 게시글
+          </span>
         </div>
 
         {myPostsLoading ? (
-          <p className="text-sm text-gray-400 text-center py-10">불러오는 중...</p>
+          <p className="text-sm text-gray-400 text-center py-10">
+            불러오는 중...
+          </p>
         ) : myPosts.length === 0 ? (
           <p className="text-sm text-gray-400 text-center py-10">
             작성한 게시글이 없습니다.
@@ -927,7 +944,9 @@ export default function MyPage() {
                 className="p-4 border border-gray-100 rounded-xl hover:shadow-md hover:border-blue-200 transition cursor-pointer"
               >
                 <div className="flex items-center gap-2 mb-1">
-                  <h3 className="font-semibold text-gray-800 truncate">{post.title}</h3>
+                  <h3 className="font-semibold text-gray-800 truncate">
+                    {post.title}
+                  </h3>
                   <span
                     className={`shrink-0 text-[10px] font-semibold rounded px-1.5 py-0.5 ${REVIEW_TYPE_BADGE[post.reviewType].className}`}
                   >
@@ -939,7 +958,9 @@ export default function MyPage() {
                     <RatingStars rating={post.rating} />
                   </div>
                 )}
-                <p className="text-xs text-blue-600 font-semibold">{post.concertName}</p>
+                <p className="text-xs text-blue-600 font-semibold">
+                  {post.concertName}
+                </p>
                 <p className="text-xs text-gray-400 mt-1">
                   {formatDateTime(post.createdAt)} · 좋아요 {post.likeCount}
                 </p>
@@ -957,19 +978,21 @@ export default function MyPage() {
             >
               이전
             </button>
-            {Array.from({ length: myPostsTotalPages }, (_, i) => i).map((page) => (
-              <button
-                key={page}
-                onClick={() => fetchMyPosts(page)}
-                className={`w-10 h-10 rounded-lg border text-sm font-semibold ${
-                  myPostsPage === page
-                    ? "bg-blue-600 border-blue-600 text-white"
-                    : "bg-white border-gray-200 text-gray-600 hover:bg-gray-50"
-                }`}
-              >
-                {page + 1}
-              </button>
-            ))}
+            {Array.from({ length: myPostsTotalPages }, (_, i) => i).map(
+              (page) => (
+                <button
+                  key={page}
+                  onClick={() => fetchMyPosts(page)}
+                  className={`w-10 h-10 rounded-lg border text-sm font-semibold ${
+                    myPostsPage === page
+                      ? "bg-blue-600 border-blue-600 text-white"
+                      : "bg-white border-gray-200 text-gray-600 hover:bg-gray-50"
+                  }`}
+                >
+                  {page + 1}
+                </button>
+              ),
+            )}
             <button
               onClick={() => fetchMyPosts(myPostsPage + 1)}
               disabled={myPostsPage >= myPostsTotalPages - 1}
@@ -984,11 +1007,15 @@ export default function MyPage() {
       <div className="bg-white rounded-2xl shadow-sm p-8 mb-8">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-bold text-gray-700">북마크한 게시글</h2>
-          <span className="text-sm text-gray-400">{bookmarksTotalElements}개의 북마크</span>
+          <span className="text-sm text-gray-400">
+            {bookmarksTotalElements}개의 북마크
+          </span>
         </div>
 
         {bookmarksLoading ? (
-          <p className="text-sm text-gray-400 text-center py-10">불러오는 중...</p>
+          <p className="text-sm text-gray-400 text-center py-10">
+            불러오는 중...
+          </p>
         ) : bookmarks.length === 0 ? (
           <p className="text-sm text-gray-400 text-center py-10">
             북마크한 게시글이 없습니다.
@@ -1018,8 +1045,12 @@ export default function MyPage() {
                   )}
                 </div>
                 <div className="min-w-0 flex-1">
-                  <h3 className="font-semibold text-gray-800 truncate">{b.title}</h3>
-                  <p className="text-xs text-blue-600 font-semibold mt-0.5">{b.concertName}</p>
+                  <h3 className="font-semibold text-gray-800 truncate">
+                    {b.title}
+                  </h3>
+                  <p className="text-xs text-blue-600 font-semibold mt-0.5">
+                    {b.concertName}
+                  </p>
                   <p className="text-xs text-gray-400 mt-1">
                     {b.userName} · {formatDateTime(b.bookmarkedAt)} 북마크
                   </p>
@@ -1038,19 +1069,21 @@ export default function MyPage() {
             >
               이전
             </button>
-            {Array.from({ length: bookmarksTotalPages }, (_, i) => i).map((page) => (
-              <button
-                key={page}
-                onClick={() => fetchBookmarks(page)}
-                className={`w-10 h-10 rounded-lg border text-sm font-semibold ${
-                  bookmarksPage === page
-                    ? "bg-blue-600 border-blue-600 text-white"
-                    : "bg-white border-gray-200 text-gray-600 hover:bg-gray-50"
-                }`}
-              >
-                {page + 1}
-              </button>
-            ))}
+            {Array.from({ length: bookmarksTotalPages }, (_, i) => i).map(
+              (page) => (
+                <button
+                  key={page}
+                  onClick={() => fetchBookmarks(page)}
+                  className={`w-10 h-10 rounded-lg border text-sm font-semibold ${
+                    bookmarksPage === page
+                      ? "bg-blue-600 border-blue-600 text-white"
+                      : "bg-white border-gray-200 text-gray-600 hover:bg-gray-50"
+                  }`}
+                >
+                  {page + 1}
+                </button>
+              ),
+            )}
             <button
               onClick={() => fetchBookmarks(bookmarksPage + 1)}
               disabled={bookmarksPage >= bookmarksTotalPages - 1}
@@ -1065,11 +1098,15 @@ export default function MyPage() {
       <div className="bg-white rounded-2xl shadow-sm p-8 mb-8">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-bold text-gray-700">좋아요한 게시글</h2>
-          <span className="text-sm text-gray-400">{likesTotalElements}개의 좋아요</span>
+          <span className="text-sm text-gray-400">
+            {likesTotalElements}개의 좋아요
+          </span>
         </div>
 
         {likesLoading ? (
-          <p className="text-sm text-gray-400 text-center py-10">불러오는 중...</p>
+          <p className="text-sm text-gray-400 text-center py-10">
+            불러오는 중...
+          </p>
         ) : likes.length === 0 ? (
           <p className="text-sm text-gray-400 text-center py-10">
             좋아요한 게시글이 없습니다.
@@ -1099,8 +1136,12 @@ export default function MyPage() {
                   )}
                 </div>
                 <div className="min-w-0 flex-1">
-                  <h3 className="font-semibold text-gray-800 truncate">{l.title}</h3>
-                  <p className="text-xs text-blue-600 font-semibold mt-0.5">{l.concertName}</p>
+                  <h3 className="font-semibold text-gray-800 truncate">
+                    {l.title}
+                  </h3>
+                  <p className="text-xs text-blue-600 font-semibold mt-0.5">
+                    {l.concertName}
+                  </p>
                   <p className="text-xs text-gray-400 mt-1">
                     {l.userName} · {formatDateTime(l.likedAt)} 좋아요
                   </p>
@@ -1119,19 +1160,21 @@ export default function MyPage() {
             >
               이전
             </button>
-            {Array.from({ length: likesTotalPages }, (_, i) => i).map((page) => (
-              <button
-                key={page}
-                onClick={() => fetchLikes(page)}
-                className={`w-10 h-10 rounded-lg border text-sm font-semibold ${
-                  likesPage === page
-                    ? "bg-blue-600 border-blue-600 text-white"
-                    : "bg-white border-gray-200 text-gray-600 hover:bg-gray-50"
-                }`}
-              >
-                {page + 1}
-              </button>
-            ))}
+            {Array.from({ length: likesTotalPages }, (_, i) => i).map(
+              (page) => (
+                <button
+                  key={page}
+                  onClick={() => fetchLikes(page)}
+                  className={`w-10 h-10 rounded-lg border text-sm font-semibold ${
+                    likesPage === page
+                      ? "bg-blue-600 border-blue-600 text-white"
+                      : "bg-white border-gray-200 text-gray-600 hover:bg-gray-50"
+                  }`}
+                >
+                  {page + 1}
+                </button>
+              ),
+            )}
             <button
               onClick={() => fetchLikes(likesPage + 1)}
               disabled={likesPage >= likesTotalPages - 1}

@@ -28,9 +28,18 @@ interface PostDetail {
   posterUrl: string | null;
 }
 
-const REVIEW_TYPE_BADGE: Record<PostDetail["reviewType"], { label: string; className: string }> = {
-  REVIEW: { label: "관람후기", className: "bg-emerald-50 text-emerald-600 border border-emerald-200" },
-  EXPECTATION: { label: "기대평", className: "bg-amber-50 text-amber-600 border border-amber-200" },
+const REVIEW_TYPE_BADGE: Record<
+  PostDetail["reviewType"],
+  { label: string; className: string }
+> = {
+  REVIEW: {
+    label: "관람후기",
+    className: "bg-emerald-50 text-emerald-600 border border-emerald-200",
+  },
+  EXPECTATION: {
+    label: "기대평",
+    className: "bg-amber-50 text-amber-600 border border-amber-200",
+  },
 };
 
 function RatingStars({ rating }: { rating: number }) {
@@ -40,7 +49,9 @@ function RatingStars({ rating }: { rating: number }) {
         <Star
           key={n}
           size={16}
-          className={n <= rating ? "fill-yellow-400 text-yellow-400" : "text-gray-200"}
+          className={
+            n <= rating ? "fill-yellow-400 text-yellow-400" : "text-gray-200"
+          }
         />
       ))}
     </div>
@@ -135,12 +146,14 @@ export default function PostDetailPage({
     try {
       const updated = await apiFetch<PostDetail>(
         `/concerts/${post!.concertId}/posts/${postId}`,
-        { method: "PUT", body: JSON.stringify(editForm) }
+        { method: "PUT", body: JSON.stringify(editForm) },
       );
       setPost(updated.data);
       setEditMode(false);
     } catch (e) {
-      setEditError(e instanceof ApiError ? e.message : "수정 중 오류가 발생했습니다.");
+      setEditError(
+        e instanceof ApiError ? e.message : "수정 중 오류가 발생했습니다.",
+      );
     } finally {
       setEditSubmitting(false);
     }
@@ -149,7 +162,9 @@ export default function PostDetailPage({
   const handleDelete = async () => {
     if (!confirm("게시글을 삭제하시겠습니까?")) return;
     try {
-      await apiFetch(`/concerts/${post!.concertId}/posts/${postId}`, { method: "DELETE" });
+      await apiFetch(`/concerts/${post!.concertId}/posts/${postId}`, {
+        method: "DELETE",
+      });
       router.push("/board");
     } catch {
       alert("삭제에 실패했습니다.");
@@ -219,7 +234,9 @@ export default function PostDetailPage({
       setCommentInput("");
       setCommentRefreshKey((k) => k + 1);
     } catch (e) {
-      setCommentError(e instanceof ApiError ? e.message : "댓글 등록 중 오류가 발생했습니다.");
+      setCommentError(
+        e instanceof ApiError ? e.message : "댓글 등록 중 오류가 발생했습니다.",
+      );
     } finally {
       setCommentSubmitting(false);
     }
@@ -228,7 +245,9 @@ export default function PostDetailPage({
   const handleCommentDelete = async (commentId: number) => {
     if (!confirm("댓글을 삭제하시겠습니까?")) return;
     try {
-      await apiFetch(`/posts/${postId}/comments/${commentId}`, { method: "DELETE" });
+      await apiFetch(`/posts/${postId}/comments/${commentId}`, {
+        method: "DELETE",
+      });
       setCommentRefreshKey((k) => k + 1);
     } catch {
       alert("댓글 삭제에 실패했습니다.");
@@ -256,7 +275,6 @@ export default function PostDetailPage({
   return (
     <div className="min-h-screen bg-gray-50 py-10">
       <div className="max-w-2xl mx-auto px-4 space-y-6">
-
         {/* 게시글 본문 */}
         <div className="bg-white rounded-2xl shadow-sm p-6">
           <button
@@ -283,7 +301,9 @@ export default function PostDetailPage({
             </div>
             <div>
               <div className="flex items-center gap-2 mb-0.5">
-                <p className="text-xs text-blue-600 font-semibold">{post.concertName}</p>
+                <p className="text-xs text-blue-600 font-semibold">
+                  {post.concertName}
+                </p>
                 <span
                   className={`text-[10px] font-semibold rounded px-1.5 py-0.5 ${REVIEW_TYPE_BADGE[post.reviewType].className}`}
                 >
@@ -294,7 +314,10 @@ export default function PostDetailPage({
                 {post.isMine ? (
                   post.userName
                 ) : (
-                  <Link href={`/users/${post.userId}`} className="hover:text-blue-500 hover:underline">
+                  <Link
+                    href={`/users/${post.userId}`}
+                    className="hover:text-blue-500 hover:underline"
+                  >
                     {post.userName}
                   </Link>
                 )}{" "}
@@ -314,25 +337,33 @@ export default function PostDetailPage({
                 type="text"
                 maxLength={100}
                 value={editForm.title}
-                onChange={(e) => setEditForm((f) => ({ ...f, title: e.target.value }))}
+                onChange={(e) =>
+                  setEditForm((f) => ({ ...f, title: e.target.value }))
+                }
                 className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
               />
               <textarea
                 maxLength={2000}
                 rows={6}
                 value={editForm.content}
-                onChange={(e) => setEditForm((f) => ({ ...f, content: e.target.value }))}
+                onChange={(e) =>
+                  setEditForm((f) => ({ ...f, content: e.target.value }))
+                }
                 className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300 resize-none"
               />
               {editForm.reviewType === "REVIEW" && (
                 <div>
-                  <label className="block text-xs text-gray-400 mb-1">별점</label>
+                  <label className="block text-xs text-gray-400 mb-1">
+                    별점
+                  </label>
                   <div className="flex gap-1">
                     {[1, 2, 3, 4, 5].map((n) => (
                       <button
                         key={n}
                         type="button"
-                        onClick={() => setEditForm((f) => ({ ...f, rating: n }))}
+                        onClick={() =>
+                          setEditForm((f) => ({ ...f, rating: n }))
+                        }
                         aria-label={`${n}점`}
                         className="p-0.5"
                       >
@@ -359,7 +390,10 @@ export default function PostDetailPage({
                   {editSubmitting ? "저장 중..." : "수정 완료"}
                 </button>
                 <button
-                  onClick={() => { setEditMode(false); setEditError(""); }}
+                  onClick={() => {
+                    setEditMode(false);
+                    setEditError("");
+                  }}
                   className="px-4 py-2 bg-gray-100 text-gray-600 text-sm rounded-lg hover:bg-gray-200 transition"
                 >
                   취소
@@ -369,7 +403,9 @@ export default function PostDetailPage({
           ) : (
             <>
               <div className="flex items-start justify-between">
-                <h1 className="text-xl font-bold text-gray-800">{post.title}</h1>
+                <h1 className="text-xl font-bold text-gray-800">
+                  {post.title}
+                </h1>
                 <div className="flex items-center gap-3 ml-4 shrink-0">
                   {me && (
                     <button
@@ -378,7 +414,10 @@ export default function PostDetailPage({
                       aria-label={liked ? "좋아요 취소" : "좋아요"}
                       className="flex items-center gap-1 text-gray-400 hover:text-red-500 disabled:opacity-50 transition"
                     >
-                      <Heart size={20} className={liked ? "fill-red-500 text-red-500" : ""} />
+                      <Heart
+                        size={20}
+                        className={liked ? "fill-red-500 text-red-500" : ""}
+                      />
                       <span className="text-xs">{likeCount}</span>
                     </button>
                   )}
@@ -391,7 +430,9 @@ export default function PostDetailPage({
                     >
                       <Bookmark
                         size={20}
-                        className={bookmarked ? "fill-blue-500 text-blue-500" : ""}
+                        className={
+                          bookmarked ? "fill-blue-500 text-blue-500" : ""
+                        }
                       />
                     </button>
                   )}
@@ -411,14 +452,19 @@ export default function PostDetailPage({
                       >
                         수정
                       </button>
-                      <button onClick={handleDelete} className="text-xs text-red-400 hover:text-red-600">
+                      <button
+                        onClick={handleDelete}
+                        className="text-xs text-red-400 hover:text-red-600"
+                      >
                         삭제
                       </button>
                     </div>
                   )}
                 </div>
               </div>
-              <p className="text-gray-600 text-sm mt-4 leading-relaxed whitespace-pre-wrap">{post.content}</p>
+              <p className="text-gray-600 text-sm mt-4 leading-relaxed whitespace-pre-wrap">
+                {post.content}
+              </p>
             </>
           )}
         </div>
@@ -426,7 +472,10 @@ export default function PostDetailPage({
         {/* 댓글 섹션 */}
         <div className="bg-white rounded-2xl shadow-sm p-6">
           <h2 className="font-bold text-gray-800 mb-4">
-            댓글 <span className="text-sm font-normal text-gray-400">({comments.length}개)</span>
+            댓글{" "}
+            <span className="text-sm font-normal text-gray-400">
+              ({comments.length}개)
+            </span>
           </h2>
 
           {comments.length === 0 ? (
@@ -434,14 +483,20 @@ export default function PostDetailPage({
           ) : (
             <ul className="space-y-4 mb-5">
               {comments.map((c) => (
-                <li key={c.commentId} className="border-b border-gray-100 pb-4 last:border-0">
+                <li
+                  key={c.commentId}
+                  className="border-b border-gray-100 pb-4 last:border-0"
+                >
                   <div className="flex items-start justify-between">
                     <div>
                       <p className="text-xs text-gray-400">
                         {c.isMine ? (
                           c.authorName
                         ) : (
-                          <Link href={`/users/${c.authorId}`} className="hover:text-blue-500 hover:underline">
+                          <Link
+                            href={`/users/${c.authorId}`}
+                            className="hover:text-blue-500 hover:underline"
+                          >
                             {c.authorName}
                           </Link>
                         )}{" "}
@@ -472,7 +527,9 @@ export default function PostDetailPage({
                 onChange={(e) => setCommentInput(e.target.value)}
                 className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300 resize-none"
               />
-              {commentError && <p className="text-red-500 text-sm">{commentError}</p>}
+              {commentError && (
+                <p className="text-red-500 text-sm">{commentError}</p>
+              )}
               <button
                 onClick={handleCommentSubmit}
                 disabled={commentSubmitting}
@@ -484,14 +541,16 @@ export default function PostDetailPage({
           ) : (
             <p className="text-sm text-gray-400">
               댓글을 작성하려면{" "}
-              <button onClick={() => router.push("/login")} className="text-blue-500 underline">
+              <button
+                onClick={() => router.push("/login")}
+                className="text-blue-500 underline"
+              >
                 로그인
               </button>
               하세요.
             </p>
           )}
         </div>
-
       </div>
     </div>
   );
