@@ -36,7 +36,8 @@ class ScheduleController(
         @RequestHeader(value = HttpHeaders.IF_NONE_MATCH, required = false) ifNoneMatch: String?
     ): ResponseEntity<RsData<ShowScheduleResponse>> {
         val response = scheduleService.showSchedule(concertId, scheduleId)
-        val eTag = "\"$concertId-$scheduleId-${response.remainingSeats}\""
+        val fingerprint = scheduleService.getSeatStatusFingerprint(scheduleId)
+        val eTag = "\"$concertId-$scheduleId-$fingerprint\""
 
         if (!ifNoneMatch.isNullOrBlank() && ifNoneMatch == eTag) {
             return ResponseEntity.status(HttpStatus.NOT_MODIFIED)

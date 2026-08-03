@@ -249,15 +249,30 @@ function SeatSelectContent({ params }: { params: Promise<{ id: string }> }) {
         `${BASE_URL}/api/v1/concerts/${id}/schedules/${scheduleId}/seats/status${queryParam}`,
       );
 
+      sse.onopen = () => {
+        if (pollingTimerRef.current) {
+          clearInterval(pollingTimerRef.current);
+          pollingTimerRef.current = null;
+        }
+      };
+
       sse.addEventListener("heartbeat", () => {
-        // 서버 15초 heartbeat 수신 확인
+        if (pollingTimerRef.current) {
+          clearInterval(pollingTimerRef.current);
+          pollingTimerRef.current = null;
+        }
       });
 
-      sse.addEventListener("seat_snapshot", (e) => {
+      sse.addEventListener("seat_snapshot", (e: Event) => {
         if (!active) return;
+        if (pollingTimerRef.current) {
+          clearInterval(pollingTimerRef.current);
+          pollingTimerRef.current = null;
+        }
+        const me = e as MessageEvent;
         try {
           const snapshot: { seatNumber: string; status: string }[] = JSON.parse(
-            e.data,
+            me.data,
           );
           const statusMap = new Map(
             snapshot.map((s) => [s.seatNumber, s.status]),
@@ -278,13 +293,18 @@ function SeatSelectContent({ params }: { params: Promise<{ id: string }> }) {
         }
       });
 
-      sse.addEventListener("seat_status_changed", (e) => {
+      sse.addEventListener("seat_status_changed", (e: Event) => {
         if (!active) return;
-        if (e.lastEventId) {
-          lastEventIdRef.current = e.lastEventId;
+        if (pollingTimerRef.current) {
+          clearInterval(pollingTimerRef.current);
+          pollingTimerRef.current = null;
+        }
+        const me = e as MessageEvent;
+        if (me.lastEventId) {
+          lastEventIdRef.current = me.lastEventId;
         }
         try {
-          const { seatNumber, status } = JSON.parse(e.data) as {
+          const { seatNumber, status } = JSON.parse(me.data) as {
             seatNumber: string;
             status: string;
           };

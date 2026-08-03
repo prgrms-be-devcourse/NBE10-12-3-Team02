@@ -69,15 +69,20 @@ class ScheduleControllerTest @Autowired constructor(
     @Test
     @DisplayName("특정 회차 좌석 실시간 현황 조회 성공")
     fun showSchedule() {
-        mockMvc.perform(get("/api/v1/schedules/{scheduleId}/seats/status", schedule.scheduleId)
+        val scheduleId = checkNotNull(schedule.scheduleId)
+        val seats = scheduleSeatRepository.findByScheduleScheduleId(scheduleId)
+        val fingerprint = seats.joinToString(",") { "${it.seatNumber}:${it.seatStatus.name}" }.hashCode().toString()
+        val eTag = "\"${concert.concertId}-$scheduleId-$fingerprint\""
+
+        mockMvc.perform(get("/api/v1/schedules/{scheduleId}/seats/status", scheduleId)
                 .param("concertId", concert.concertId.toString()))
             .andDo(print())
             .andExpect(status().isOk())
-            .andExpect(header().string(HttpHeaders.ETAG, "\"${concert.concertId}-${schedule.scheduleId}-2\""))
+            .andExpect(header().string(HttpHeaders.ETAG, eTag))
             .andExpect(jsonPath("$.resultCode").value("200-1"))
             .andExpect(jsonPath("$.msg").value("특정 회차 좌석 실시간 조회 성공"))
             .andExpect(jsonPath("$.data.concertId").value(concert.concertId))
-            .andExpect(jsonPath("$.data.scheduleId").value(schedule.scheduleId))
+            .andExpect(jsonPath("$.data.scheduleId").value(scheduleId))
             .andExpect(jsonPath("$.data.round").value(1))
             .andExpect(jsonPath("$.data.scheduleDate").value("2026-07-01T19:00:00"))
             .andExpect(jsonPath("$.data.remainingSeats").value(2))
@@ -86,9 +91,12 @@ class ScheduleControllerTest @Autowired constructor(
     @Test
     @DisplayName("30초 주기 폴링 시 If-None-Match ETag가 일치하면 304 Not Modified가 반환된다")
     fun showSchedule_pollingETag_returns304() {
-        val eTag = "\"${concert.concertId}-${schedule.scheduleId}-2\""
+        val scheduleId = checkNotNull(schedule.scheduleId)
+        val seats = scheduleSeatRepository.findByScheduleScheduleId(scheduleId)
+        val fingerprint = seats.joinToString(",") { "${it.seatNumber}:${it.seatStatus.name}" }.hashCode().toString()
+        val eTag = "\"${concert.concertId}-$scheduleId-$fingerprint\""
 
-        mockMvc.perform(get("/api/v1/schedules/{scheduleId}/seats/status", schedule.scheduleId)
+        mockMvc.perform(get("/api/v1/schedules/{scheduleId}/seats/status", scheduleId)
                 .param("concertId", concert.concertId.toString())
                 .header(HttpHeaders.IF_NONE_MATCH, eTag))
             .andDo(print())

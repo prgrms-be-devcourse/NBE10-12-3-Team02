@@ -2,6 +2,8 @@ package com.back.domain.concert.sse
 
 import com.back.domain.concert.sse.repository.SseOutboxEventRepository
 import org.slf4j.LoggerFactory
+import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.core.task.TaskExecutor
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Component
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter
@@ -16,10 +18,11 @@ import java.util.concurrent.locks.ReentrantLock
 @Component
 class SeatStatusSseEmitterRegistry(
     private val eventCache: SeatStatusSseEventCache,
-    private val sseOutboxEventRepository: SseOutboxEventRepository
+    private val sseOutboxEventRepository: SseOutboxEventRepository,
+    @Autowired(required = false) private val taskExecutor: TaskExecutor? = null
 ) {
     private val log = LoggerFactory.getLogger(javaClass)
-    private val executor = Executors.newVirtualThreadPerTaskExecutor()
+    private val defaultVirtualExecutor = Executors.newVirtualThreadPerTaskExecutor()
 
     class SynchronizedEmitter(
         val emitter: SseEmitter,
@@ -90,15 +93,15 @@ class SeatStatusSseEmitterRegistry(
             .map { Triple(it.eventId, it.seatNumber, it.status) }
     }
 
-    fun broadcast(scheduleId: Long, seatNumber: String, status: String) {
+    fun broadcast(scheduleId: Long, seatNumber: String, status: String, customEventId: String? = null) {
         val list = emitters[scheduleId]
         if (list.isNullOrEmpty()) return
 
-        val cachedEvent = eventCache.addEvent(scheduleId, seatNumber, status)
+        val cachedEvent = eventCache.addEvent(scheduleId, seatNumber, status, customEventId)
         val data = "{\"seatNumber\":\"$seatNumber\",\"status\":\"$status\"}"
 
         for (wrapper in list) {
-            executor.submit {
+            executeTask {
                 try {
                     wrapper.send(
                         SseEmitter.event()
@@ -121,7 +124,7 @@ class SeatStatusSseEmitterRegistry(
             if (list.isEmpty()) continue
 
             for (wrapper in list) {
-                executor.submit {
+                executeTask {
                     try {
                         wrapper.send(
                             SseEmitter.event()
@@ -136,6 +139,14 @@ class SeatStatusSseEmitterRegistry(
                     }
                 }
             }
+        }
+    }
+
+    private fun executeTask(task: Runnable) {
+        if (taskExecutor != null) {
+            taskExecutor.execute(task)
+        } else {
+            defaultVirtualExecutor.submit(task)
         }
     }
 }

@@ -1,9 +1,9 @@
 package com.back.domain.schedule.service
 
 import com.back.domain.concert.repository.ConcertRepository
+import com.back.domain.schedule.constant.SeatStatus
 import com.back.domain.schedule.dto.ShowScheduleListResponse
 import com.back.domain.schedule.dto.ShowScheduleResponse
-import com.back.domain.schedule.constant.SeatStatus
 import com.back.domain.schedule.repository.ScheduleRepository
 import com.back.domain.schedule.repository.ScheduleSeatRepository
 import com.back.global.exception.ErrorCode
@@ -27,6 +27,12 @@ class ScheduleService(
             .countBySchedule_ScheduleIdAndSeatStatus(scheduleId, SeatStatus.AVAILABLE)
 
         return ShowScheduleResponse.of(schedule, remainingSeats)
+    }
+
+    fun getSeatStatusFingerprint(scheduleId: Long): String {
+        val seats = scheduleSeatRepository.findByScheduleScheduleId(scheduleId)
+        if (seats.isEmpty()) return "0"
+        return seats.joinToString(",") { "${it.seatNumber}:${it.seatStatus.name}" }.hashCode().toString()
     }
 
     fun showScheduleList(concertId: Long): List<ShowScheduleListResponse> {
