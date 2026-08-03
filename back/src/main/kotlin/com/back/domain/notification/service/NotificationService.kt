@@ -27,9 +27,8 @@ class NotificationService(
 ) {
     private val log = LoggerFactory.getLogger(javaClass)
 
-    // AFTER_COMMIT 시점에는 원본 트랜잭션이 이미 종료되어 있으므로,
-    // 알림 저장을 위해 REQUIRES_NEW로 새 트랜잭션을 시작해야 한다.
-    // (Spring 7부터 @TransactionalEventListener + @Transactional 조합 시 REQUIRES_NEW/NOT_SUPPORTED 명시가 강제됨)
+    // AFTER_COMMIT 시점엔 원본 트랜잭션이 이미 끝나 있어 REQUIRES_NEW/NOT_SUPPORTED 외의 propagation은
+    // Spring의 RestrictedTransactionalEventListenerFactory(spring-tx, @since 6.1)가 컨텍스트 로딩 시점에 거부한다.
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
     fun onPostLiked(event: PostLikedEvent) {
@@ -42,6 +41,8 @@ class NotificationService(
         notificationSseEmitterRegistry.send(receiver.userId!!, NotificationPushPayload.from(notification))
     }
 
+    // AFTER_COMMIT 시점엔 원본 트랜잭션이 이미 끝나 있어 REQUIRES_NEW/NOT_SUPPORTED 외의 propagation은
+    // Spring의 RestrictedTransactionalEventListenerFactory(spring-tx, @since 6.1)가 컨텍스트 로딩 시점에 거부한다.
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
     fun onUserFollowed(event: UserFollowedEvent) {
