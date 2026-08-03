@@ -16,6 +16,6 @@ class FollowCommandService(
     @Transactional
     fun save(follower: User, followee: User) {
         followRepository.saveAndFlush(Follow.create(follower, followee))
-        eventPublisher.publishEvent(UserFollowedEvent(followee.userId!!, follower.userId!!))
+        eventPublisher.publishEvent(UserFollowedEvent(followee.userIdOrThrow, follower.userIdOrThrow))
     }
 }
