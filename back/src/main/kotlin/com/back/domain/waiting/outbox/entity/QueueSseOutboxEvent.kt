@@ -100,6 +100,13 @@ class QueueSseOutboxEvent private constructor(
         claimedAt = null
     }
 
+    fun skip(now: LocalDateTime, reason: String) {
+        status = QueueSseOutboxStatus.SKIPPED
+        processedAt = now
+        claimedAt = null
+        lastError = reason.take(MAX_ERROR_LENGTH)
+    }
+
     fun recordFailure(
         exception: Exception,
         now: LocalDateTime,

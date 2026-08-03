@@ -3,6 +3,7 @@ package com.back.domain.waiting.sse
 import com.back.domain.queue.event.EntryAllowedEvent
 import com.back.domain.queue.event.QueueErrorEvent
 import com.back.domain.queue.event.QueueStatusEvent
+import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import org.mockito.ArgumentMatchers.any
@@ -28,9 +29,11 @@ class QueueSseEmitterRegistryTest {
         registry.register(SCHEDULE_ID, OTHER_USER_ID, otherEmitter)
 
         val event = EntryAllowedEvent(SCHEDULE_ID, TARGET_USER_ID, "entry-token", 1000L)
-        registry.sendEntryAllowed(event)
-        registry.sendEntryAllowed(event)
+        val firstResult = registry.sendEntryAllowed(event)
+        val secondResult = registry.sendEntryAllowed(event)
 
+        assertThat(firstResult).isEqualTo(QueueSseDeliveryResult.DELIVERED)
+        assertThat(secondResult).isEqualTo(QueueSseDeliveryResult.NO_SUBSCRIBER)
         verify(targetEmitter, times(1)).send(any(SseEmitter.SseEventBuilder::class.java))
         verify(targetEmitter).complete()
         verify(otherEmitter, never()).send(any(SseEmitter.SseEventBuilder::class.java))
@@ -87,9 +90,11 @@ class QueueSseEmitterRegistryTest {
         registry.register(OTHER_SCHEDULE_ID, OTHER_USER_ID, otherScheduleEmitter)
 
         val event = QueueErrorEvent(SCHEDULE_ID, null, "대기열 종료")
-        registry.sendError(event)
-        registry.sendError(event)
+        val firstResult = registry.sendError(event)
+        val secondResult = registry.sendError(event)
 
+        assertThat(firstResult).isEqualTo(QueueSseDeliveryResult.DELIVERED)
+        assertThat(secondResult).isEqualTo(QueueSseDeliveryResult.NO_SUBSCRIBER)
         verify(targetScheduleEmitter, times(1)).send(any(SseEmitter.SseEventBuilder::class.java))
         verify(targetScheduleEmitter).complete()
         verify(otherScheduleEmitter, never()).send(any(SseEmitter.SseEventBuilder::class.java))
@@ -188,6 +193,35 @@ class QueueSseEmitterRegistryTest {
         registry.sendHeartbeat()
 
         verify(emitter, never()).send(any(SseEmitter.SseEventBuilder::class.java))
+    }
+
+    @Test
+    @DisplayName("최종 이벤트 전송 대상 연결이 없으면 NO_SUBSCRIBER를 반환한다")
+    fun t11() {
+        val registry = QueueSseEmitterRegistry()
+
+        val result = registry.sendEntryAllowed(
+            EntryAllowedEvent(SCHEDULE_ID, TARGET_USER_ID, "entry-token", 1000L),
+        )
+
+        assertThat(result).isEqualTo(QueueSseDeliveryResult.NO_SUBSCRIBER)
+    }
+
+    @Test
+    @DisplayName("등록된 모든 연결의 최종 이벤트 전송이 실패하면 FAILED를 반환한다")
+    fun t12() {
+        val registry = QueueSseEmitterRegistry()
+        val failedEmitter = mock(SseEmitter::class.java)
+        doThrow(IOException("disconnected"))
+            .`when`(failedEmitter)
+            .send(any(SseEmitter.SseEventBuilder::class.java))
+        registry.register(SCHEDULE_ID, TARGET_USER_ID, failedEmitter)
+
+        val result = registry.sendEntryAllowed(
+            EntryAllowedEvent(SCHEDULE_ID, TARGET_USER_ID, "entry-token", 1000L),
+        )
+
+        assertThat(result).isEqualTo(QueueSseDeliveryResult.FAILED)
     }
 
     companion object {

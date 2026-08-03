@@ -67,6 +67,7 @@ class QueueSseOutboxScheduler(
     companion object {
         private val TERMINAL_STATUSES = listOf(
             QueueSseOutboxStatus.COMPLETED,
+            QueueSseOutboxStatus.SKIPPED,
             QueueSseOutboxStatus.FAILED,
             QueueSseOutboxStatus.EXPIRED,
         )

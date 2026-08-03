@@ -4,6 +4,7 @@ enum class QueueSseOutboxStatus {
     PENDING,
     PROCESSING,
     COMPLETED,
+    SKIPPED,
     FAILED,
     EXPIRED,
 }

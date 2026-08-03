@@ -10,12 +10,14 @@ import com.back.domain.waiting.outbox.repository.QueueSseOutboxRepository
 import com.back.domain.waiting.outbox.service.QueueSseOutboxProcessor
 import com.back.domain.waiting.outbox.service.QueueSseOutboxPublisher
 import com.back.domain.waiting.sse.QueueSseEmitterRegistry
+import com.back.domain.waiting.sse.QueueSseDeliveryResult
 import com.back.global.RedisTestConfig
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito.reset
+import org.mockito.Mockito.doReturn
 import org.mockito.Mockito.verify
 import org.mockito.Mockito.verifyNoInteractions
 import org.springframework.beans.factory.annotation.Autowired
@@ -70,6 +72,7 @@ class QueueSseOutboxIntegrationTest {
     @DisplayName("동일 Outbox 이벤트는 하나의 처리자만 claim하고 처리 후 COMPLETED가 된다")
     fun t2() {
         val event = entryAllowedEvent()
+        doReturn(QueueSseDeliveryResult.DELIVERED).`when`(registry).sendEntryAllowed(event)
         publisher.publishEntryAllowed(event)
         val eventId = readyEventIds().single()
 
@@ -149,6 +152,7 @@ class QueueSseOutboxIntegrationTest {
     @DisplayName("회차 종료 오류 이벤트도 Outbox를 거쳐 SSE 레지스트리로 전달된다")
     fun t6() {
         val event = QueueErrorEvent(SCHEDULE_ID, null, "콘서트가 매진되었습니다.")
+        doReturn(QueueSseDeliveryResult.DELIVERED).`when`(registry).sendError(event)
         publisher.publishQueueError(event)
         val eventId = readyEventIds().single()
         claim(eventId)
@@ -157,6 +161,40 @@ class QueueSseOutboxIntegrationTest {
 
         assertThat(repository.findByEventId(eventId)?.status).isEqualTo(QueueSseOutboxStatus.COMPLETED)
         verify(registry).sendError(event)
+    }
+
+    @Test
+    @DisplayName("SSE 구독자가 없으면 재시도하지 않고 SKIPPED로 기록한다")
+    fun t7() {
+        val event = entryAllowedEvent()
+        doReturn(QueueSseDeliveryResult.NO_SUBSCRIBER).`when`(registry).sendEntryAllowed(event)
+        publisher.publishEntryAllowed(event)
+        val eventId = readyEventIds().single()
+        claim(eventId)
+
+        processor.processClaimedEvent(eventId)
+
+        val skipped = repository.findByEventId(eventId)!!
+        assertThat(skipped.status).isEqualTo(QueueSseOutboxStatus.SKIPPED)
+        assertThat(skipped.lastError).contains("not connected")
+        assertThat(skipped.retryCount).isZero()
+    }
+
+    @Test
+    @DisplayName("끊어진 SSE 연결로 전송하지 못하면 재연결 복구 대상으로 SKIPPED 처리한다")
+    fun t8() {
+        val event = entryAllowedEvent()
+        doReturn(QueueSseDeliveryResult.FAILED).`when`(registry).sendEntryAllowed(event)
+        publisher.publishEntryAllowed(event)
+        val eventId = readyEventIds().single()
+        claim(eventId)
+
+        processor.processClaimedEvent(eventId)
+
+        val skipped = repository.findByEventId(eventId)!!
+        assertThat(skipped.status).isEqualTo(QueueSseOutboxStatus.SKIPPED)
+        assertThat(skipped.lastError).contains("recover on reconnect")
+        assertThat(skipped.retryCount).isZero()
     }
 
     private fun readyEventIds(): List<String> = repository.findReadyEventIds(

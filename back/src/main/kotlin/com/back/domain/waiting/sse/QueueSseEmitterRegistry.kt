@@ -57,8 +57,11 @@ class QueueSseEmitterRegistry {
         }
     }
 
-    fun sendEntryAllowed(event: EntryAllowedEvent) {
-        emitters[event.scheduleId]?.get(event.userId)?.toList()?.forEach { wrapper ->
+    fun sendEntryAllowed(event: EntryAllowedEvent): QueueSseDeliveryResult {
+        val wrappers = emitters[event.scheduleId]?.get(event.userId)?.toList().orEmpty()
+        if (wrappers.isEmpty()) return QueueSseDeliveryResult.NO_SUBSCRIBER
+
+        val deliveredCount = wrappers.count { wrapper ->
             sendAndComplete(
                 event.scheduleId,
                 event.userId,
@@ -68,11 +71,15 @@ class QueueSseEmitterRegistry {
                     .data(event),
             )
         }
+        return deliveryResult(deliveredCount)
     }
 
-    fun sendError(event: QueueErrorEvent) {
+    fun sendError(event: QueueErrorEvent): QueueSseDeliveryResult {
         if (event.userId == null) {
-            subscribers(event.scheduleId).forEach { (userId, wrapper) ->
+            val subscribers = subscribers(event.scheduleId)
+            if (subscribers.isEmpty()) return QueueSseDeliveryResult.NO_SUBSCRIBER
+
+            val deliveredCount = subscribers.count { (userId, wrapper) ->
                 sendAndComplete(
                     event.scheduleId,
                     userId,
@@ -82,10 +89,13 @@ class QueueSseEmitterRegistry {
                         .data(event),
                 )
             }
-            return
+            return deliveryResult(deliveredCount)
         }
 
-        emitters[event.scheduleId]?.get(event.userId)?.toList()?.forEach { wrapper ->
+        val wrappers = emitters[event.scheduleId]?.get(event.userId)?.toList().orEmpty()
+        if (wrappers.isEmpty()) return QueueSseDeliveryResult.NO_SUBSCRIBER
+
+        val deliveredCount = wrappers.count { wrapper ->
             sendOrRemove(
                 event.scheduleId,
                 event.userId,
@@ -95,6 +105,7 @@ class QueueSseEmitterRegistry {
                     .data(event),
             )
         }
+        return deliveryResult(deliveredCount)
     }
 
     fun sendHeartbeat() {
@@ -127,18 +138,18 @@ class QueueSseEmitterRegistry {
         userId: Long,
         wrapper: SynchronizedEmitter,
         event: SseEmitter.SseEventBuilder,
-    ) {
-        try {
-            wrapper.send(event)
-        } catch (e: Exception) {
-            log.debug(
-                "대기열 SSE 전송 실패로 연결 제거: scheduleId={}, userId={}, error={}",
-                scheduleId,
-                userId,
-                e.message,
-            )
-            handleSendFailure(scheduleId, userId, wrapper, e)
-        }
+    ): Boolean = try {
+        wrapper.send(event)
+        true
+    } catch (e: Exception) {
+        log.debug(
+            "대기열 SSE 전송 실패로 연결 제거: scheduleId={}, userId={}, error={}",
+            scheduleId,
+            userId,
+            e.message,
+        )
+        handleSendFailure(scheduleId, userId, wrapper, e)
+        false
     }
 
     private fun sendAndComplete(
@@ -146,21 +157,24 @@ class QueueSseEmitterRegistry {
         userId: Long,
         wrapper: SynchronizedEmitter,
         event: SseEmitter.SseEventBuilder,
-    ) {
-        try {
-            wrapper.send(event)
-            remove(scheduleId, userId, wrapper)
-            wrapper.emitter.complete()
-        } catch (e: Exception) {
-            log.debug(
-                "대기열 SSE 최종 이벤트 전송 실패로 연결 제거: scheduleId={}, userId={}, error={}",
-                scheduleId,
-                userId,
-                e.message,
-            )
-            handleSendFailure(scheduleId, userId, wrapper, e)
-        }
+    ): Boolean = try {
+        wrapper.send(event)
+        remove(scheduleId, userId, wrapper)
+        wrapper.emitter.complete()
+        true
+    } catch (e: Exception) {
+        log.debug(
+            "대기열 SSE 최종 이벤트 전송 실패로 연결 제거: scheduleId={}, userId={}, error={}",
+            scheduleId,
+            userId,
+            e.message,
+        )
+        handleSendFailure(scheduleId, userId, wrapper, e)
+        false
     }
+
+    private fun deliveryResult(deliveredCount: Int): QueueSseDeliveryResult =
+        if (deliveredCount > 0) QueueSseDeliveryResult.DELIVERED else QueueSseDeliveryResult.FAILED
 
     private fun handleSendFailure(
         scheduleId: Long,
