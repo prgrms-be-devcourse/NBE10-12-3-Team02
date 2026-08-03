@@ -119,3 +119,6 @@ queue:
   max-active-users: 2
   entry-token:
     ttl: 10m
+  sse:
+    timeout: ${QUEUE_SSE_TIMEOUT:30m}
+    heartbeat-interval: ${QUEUE_SSE_HEARTBEAT_INTERVAL:20s}

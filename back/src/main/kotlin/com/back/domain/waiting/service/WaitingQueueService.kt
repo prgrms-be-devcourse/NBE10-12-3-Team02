@@ -82,10 +82,7 @@ class WaitingQueueService(
         )
     }
 
-    fun getConnectionState(concertId: Long, scheduleId: Long, userId: Long): QueueConnectionEvent {
-        validateUser(userId)
-        concertService.validateConcertScheduleMatch(concertId, scheduleId)
-
+    fun getConnectionStateAfterValidation(concertId: Long, scheduleId: Long, userId: Long): QueueConnectionEvent {
         return when (val snapshot = waitingQueueManager.getConnectionSnapshot(scheduleId, userId)) {
             is QueueConnectionSnapshot.Active -> QueueConnectionEvent(
                 concertId, scheduleId, userId, QueueConnectionState.ACTIVE,

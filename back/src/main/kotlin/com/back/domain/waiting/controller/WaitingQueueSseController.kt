@@ -9,12 +9,14 @@ import com.back.global.requestcontext.RequestContext
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.servlet.http.HttpServletResponse
+import org.springframework.beans.factory.annotation.Value
 import org.springframework.http.MediaType
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter
+import java.time.Duration
 
 @ApiV1
 @RestController
@@ -24,6 +26,7 @@ class WaitingQueueSseController(
     private val waitingQueueService: WaitingQueueService,
     private val requestContext: RequestContext,
     private val registry: QueueSseEmitterRegistry,
+    @Value("\${queue.sse.timeout}") private val sseTimeout: Duration,
 ) {
     @GetMapping(
         value = ["/concerts/{concertId}/schedules/{scheduleId}/events"],
@@ -42,11 +45,11 @@ class WaitingQueueSseController(
         response.setHeader("Cache-Control", "no-cache")
         response.setHeader("X-Accel-Buffering", "no")
 
-        val emitter = SseEmitter(SSE_TIMEOUT_MS)
+        val emitter = SseEmitter(sseTimeout.toMillis())
         val wrapper = registry.register(scheduleId, actor.id, emitter)
 
         try {
-            val connectionState = waitingQueueService.getConnectionState(concertId, scheduleId, actor.id)
+            val connectionState = waitingQueueService.getConnectionStateAfterValidation(concertId, scheduleId, actor.id)
             wrapper.send(
                 SseEmitter.event()
                     .name(QueueSseEmitterRegistry.CONNECTED_EVENT)
@@ -57,9 +60,5 @@ class WaitingQueueSseController(
         }
 
         return emitter
-    }
-
-    companion object {
-        private const val SSE_TIMEOUT_MS = 30 * 60 * 1000L
     }
 }

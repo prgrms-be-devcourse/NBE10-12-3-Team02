@@ -7,12 +7,8 @@ import org.springframework.stereotype.Component
 class QueueSseHeartbeatScheduler(
     private val registry: QueueSseEmitterRegistry,
 ) {
-    @Scheduled(fixedDelay = HEARTBEAT_INTERVAL_MS)
+    @Scheduled(fixedDelayString = "\${queue.sse.heartbeat-interval}")
     fun sendHeartbeat() {
         registry.sendHeartbeat()
-    }
-
-    companion object {
-        private const val HEARTBEAT_INTERVAL_MS = 20_000L
     }
 }

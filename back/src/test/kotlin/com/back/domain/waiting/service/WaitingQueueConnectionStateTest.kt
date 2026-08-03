@@ -2,7 +2,6 @@ package com.back.domain.waiting.service
 
 import com.back.domain.concert.service.ConcertService
 import com.back.domain.schedule.repository.ScheduleSeatRepository
-import com.back.domain.user.entity.User
 import com.back.domain.user.repository.UserRepository
 import com.back.domain.waiting.dto.QueueConnectionState
 import org.assertj.core.api.Assertions.assertThat
@@ -11,6 +10,7 @@ import org.junit.jupiter.api.Test
 import org.mockito.Mockito.mock
 import org.mockito.Mockito.never
 import org.mockito.Mockito.verify
+import org.mockito.Mockito.verifyNoInteractions
 import org.mockito.Mockito.`when`
 import org.springframework.context.ApplicationEventPublisher
 import java.time.Duration
@@ -35,25 +35,24 @@ class WaitingQueueConnectionStateTest {
     @Test
     @DisplayName("이미 입장한 사용자는 SSE 연결 시 기존 입장 토큰을 복구한다")
     fun t1() {
-        givenExistingUser()
         `when`(waitingQueueManager.getConnectionSnapshot(SCHEDULE_ID, USER_ID))
             .thenReturn(QueueConnectionSnapshot.Active("entry-token"))
 
-        val result = service.getConnectionState(CONCERT_ID, SCHEDULE_ID, USER_ID)
+        val result = service.getConnectionStateAfterValidation(CONCERT_ID, SCHEDULE_ID, USER_ID)
 
         assertThat(result.state).isEqualTo(QueueConnectionState.ACTIVE)
         assertThat(result.entryToken).isEqualTo("entry-token")
         verify(waitingQueueManager, never()).findWaitingRank(SCHEDULE_ID, USER_ID)
+        verifyNoInteractions(userRepository, concertService)
     }
 
     @Test
     @DisplayName("대기 중인 사용자는 SSE 연결 시 현재 순번을 복구한다")
     fun t2() {
-        givenExistingUser()
         `when`(waitingQueueManager.getConnectionSnapshot(SCHEDULE_ID, USER_ID))
             .thenReturn(QueueConnectionSnapshot.Waiting(3L, 7L))
 
-        val result = service.getConnectionState(CONCERT_ID, SCHEDULE_ID, USER_ID)
+        val result = service.getConnectionStateAfterValidation(CONCERT_ID, SCHEDULE_ID, USER_ID)
 
         assertThat(result.state).isEqualTo(QueueConnectionState.WAITING)
         assertThat(result.rank).isEqualTo(3L)
@@ -64,19 +63,14 @@ class WaitingQueueConnectionStateTest {
     @Test
     @DisplayName("대기열에 없는 사용자는 SSE 연결 시 미등록 상태를 받는다")
     fun t3() {
-        givenExistingUser()
         `when`(waitingQueueManager.getConnectionSnapshot(SCHEDULE_ID, USER_ID))
             .thenReturn(QueueConnectionSnapshot.NotRegistered)
 
-        val result = service.getConnectionState(CONCERT_ID, SCHEDULE_ID, USER_ID)
+        val result = service.getConnectionStateAfterValidation(CONCERT_ID, SCHEDULE_ID, USER_ID)
 
         assertThat(result.state).isEqualTo(QueueConnectionState.NOT_REGISTERED)
         assertThat(result.rank).isZero()
         assertThat(result.entryToken).isNull()
-    }
-
-    private fun givenExistingUser() {
-        `when`(userRepository.findByUserIdAndDeletedAtIsNull(USER_ID)).thenReturn(mock(User::class.java))
     }
 
     companion object {
