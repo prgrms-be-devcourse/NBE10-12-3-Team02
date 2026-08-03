@@ -3,6 +3,7 @@ package com.back.domain.concert.sse
 import com.back.domain.concert.sse.repository.SseOutboxEventRepository
 import com.fasterxml.jackson.databind.ObjectMapper
 import org.slf4j.LoggerFactory
+import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.core.task.TaskExecutor
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Component
@@ -18,7 +19,7 @@ import java.util.concurrent.locks.ReentrantLock
 class SeatStatusSseEmitterRegistry(
     private val eventCache: SeatStatusSseEventCache,
     private val sseOutboxEventRepository: SseOutboxEventRepository,
-    private val taskExecutor: TaskExecutor?,
+    @Autowired(required = false) private val taskExecutor: TaskExecutor? = null,
     private val objectMapper: ObjectMapper
 ) {
     private val log = LoggerFactory.getLogger(javaClass)

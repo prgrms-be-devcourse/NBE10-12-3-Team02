@@ -13,6 +13,7 @@ import org.springframework.stereotype.Component
 import org.springframework.transaction.event.TransactionPhase
 import org.springframework.transaction.event.TransactionalEventListener
 import org.springframework.transaction.support.TransactionSynchronizationManager
+import java.util.concurrent.ConcurrentHashMap
 
 @Component
 class SeatStatusSseBroadcaster(
@@ -21,13 +22,6 @@ class SeatStatusSseBroadcaster(
     private val eTagVersionManager: SeatStatusETagVersionManager
 ) {
     private val log = LoggerFactory.getLogger(javaClass)
-
-    /**
-     * TransactionSynchronizationManager 바인딩 키.
-     * ThreadLocal 대신 트랜잭션 컨텍스트에 eventId를 저장하여
-     * Virtual Thread 환경에서의 스레드 전환 시 값 유실을 방지합니다.
-     */
-    private fun txKey(scheduleId: Long, seatNumber: String) = "sseEventId:$scheduleId:$seatNumber"
 
     // ──────────────────────────────────────────────────────────────────────────
     // BEFORE_COMMIT: Outbox 저장 후 eventId를 트랜잭션 컨텍스트에 바인딩
@@ -135,20 +129,36 @@ class SeatStatusSseBroadcaster(
     }
 
     // ──────────────────────────────────────────────────────────────────────────
-    // Helper: TransactionSynchronizationManager 바인딩/해제
+    // Helper: TransactionSynchronizationManager 바인딩/해제 (타입 안전한 Object Key & Holder 사용)
     // ──────────────────────────────────────────────────────────────────────────
 
-    private fun bindEventId(scheduleId: Long, seatNumber: String, eventId: String) {
-        val key = txKey(scheduleId, seatNumber)
-        // 이미 바인딩된 키가 있으면 교체하기 위해 먼저 해제
-        TransactionSynchronizationManager.unbindResourceIfPossible(key)
-        TransactionSynchronizationManager.bindResource(key, eventId)
+    private fun seatKey(scheduleId: Long, seatNumber: String) = "$scheduleId:$seatNumber"
+
+    @Suppress("UNCHECKED_CAST")
+    private fun getOrCreateHolder(): ConcurrentHashMap<String, String> {
+        var holder = TransactionSynchronizationManager.getResource(SseBroadcasterTxKey) as? ConcurrentHashMap<String, String>
+        if (holder == null) {
+            holder = ConcurrentHashMap()
+            TransactionSynchronizationManager.bindResource(SseBroadcasterTxKey, holder)
+        }
+        return holder
     }
 
+    private fun bindEventId(scheduleId: Long, seatNumber: String, eventId: String) {
+        getOrCreateHolder()[seatKey(scheduleId, seatNumber)] = eventId
+    }
+
+    @Suppress("UNCHECKED_CAST")
     private fun unbindEventId(scheduleId: Long, seatNumber: String): String? {
-        val key = txKey(scheduleId, seatNumber)
-        val eventId = TransactionSynchronizationManager.getResource(key) as? String
-        TransactionSynchronizationManager.unbindResourceIfPossible(key)
+        val holder = TransactionSynchronizationManager.getResource(SseBroadcasterTxKey) as? ConcurrentHashMap<String, String>
+        val eventId = holder?.remove(seatKey(scheduleId, seatNumber))
+        if (holder != null && holder.isEmpty()) {
+            TransactionSynchronizationManager.unbindResourceIfPossible(SseBroadcasterTxKey)
+        }
         return eventId
+    }
+
+    companion object {
+        private object SseBroadcasterTxKey
     }
 }
