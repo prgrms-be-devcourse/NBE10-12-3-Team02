@@ -59,7 +59,7 @@ class QueueSseEmitterRegistry {
 
     fun sendEntryAllowed(event: EntryAllowedEvent) {
         emitters[event.scheduleId]?.get(event.userId)?.toList()?.forEach { wrapper ->
-            sendOrRemove(
+            sendAndComplete(
                 event.scheduleId,
                 event.userId,
                 wrapper,
@@ -73,7 +73,7 @@ class QueueSseEmitterRegistry {
     fun sendError(event: QueueErrorEvent) {
         if (event.userId == null) {
             subscribers(event.scheduleId).forEach { (userId, wrapper) ->
-                sendOrRemove(
+                sendAndComplete(
                     event.scheduleId,
                     userId,
                     wrapper,
@@ -137,9 +137,39 @@ class QueueSseEmitterRegistry {
                 userId,
                 e.message,
             )
-            remove(scheduleId, userId, wrapper)
-            runCatching { wrapper.emitter.completeWithError(e) }
+            handleSendFailure(scheduleId, userId, wrapper, e)
         }
+    }
+
+    private fun sendAndComplete(
+        scheduleId: Long,
+        userId: Long,
+        wrapper: SynchronizedEmitter,
+        event: SseEmitter.SseEventBuilder,
+    ) {
+        try {
+            wrapper.send(event)
+            remove(scheduleId, userId, wrapper)
+            wrapper.emitter.complete()
+        } catch (e: Exception) {
+            log.debug(
+                "대기열 SSE 최종 이벤트 전송 실패로 연결 제거: scheduleId={}, userId={}, error={}",
+                scheduleId,
+                userId,
+                e.message,
+            )
+            handleSendFailure(scheduleId, userId, wrapper, e)
+        }
+    }
+
+    private fun handleSendFailure(
+        scheduleId: Long,
+        userId: Long,
+        wrapper: SynchronizedEmitter,
+        exception: Exception,
+    ) {
+        remove(scheduleId, userId, wrapper)
+        runCatching { wrapper.emitter.completeWithError(exception) }
     }
 
     private fun remove(scheduleId: Long, userId: Long, wrapper: SynchronizedEmitter) {

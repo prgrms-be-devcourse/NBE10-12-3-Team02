@@ -25,11 +25,12 @@ class QueueSseEmitterRegistryTest {
         registry.register(SCHEDULE_ID, TARGET_USER_ID, targetEmitter)
         registry.register(SCHEDULE_ID, OTHER_USER_ID, otherEmitter)
 
-        registry.sendEntryAllowed(
-            EntryAllowedEvent(SCHEDULE_ID, TARGET_USER_ID, "entry-token", 1000L),
-        )
+        val event = EntryAllowedEvent(SCHEDULE_ID, TARGET_USER_ID, "entry-token", 1000L)
+        registry.sendEntryAllowed(event)
+        registry.sendEntryAllowed(event)
 
-        verify(targetEmitter).send(any(SseEmitter.SseEventBuilder::class.java))
+        verify(targetEmitter, times(1)).send(any(SseEmitter.SseEventBuilder::class.java))
+        verify(targetEmitter).complete()
         verify(otherEmitter, never()).send(any(SseEmitter.SseEventBuilder::class.java))
     }
 
@@ -83,9 +84,12 @@ class QueueSseEmitterRegistryTest {
         registry.register(SCHEDULE_ID, TARGET_USER_ID, targetScheduleEmitter)
         registry.register(OTHER_SCHEDULE_ID, OTHER_USER_ID, otherScheduleEmitter)
 
-        registry.sendError(QueueErrorEvent(SCHEDULE_ID, null, "대기열 종료"))
+        val event = QueueErrorEvent(SCHEDULE_ID, null, "대기열 종료")
+        registry.sendError(event)
+        registry.sendError(event)
 
-        verify(targetScheduleEmitter).send(any(SseEmitter.SseEventBuilder::class.java))
+        verify(targetScheduleEmitter, times(1)).send(any(SseEmitter.SseEventBuilder::class.java))
+        verify(targetScheduleEmitter).complete()
         verify(otherScheduleEmitter, never()).send(any(SseEmitter.SseEventBuilder::class.java))
     }
 
@@ -102,6 +106,20 @@ class QueueSseEmitterRegistryTest {
 
         verify(firstEmitter).send(any(SseEmitter.SseEventBuilder::class.java))
         verify(secondEmitter).send(any(SseEmitter.SseEventBuilder::class.java))
+    }
+
+    @Test
+    @DisplayName("개인 오류 이벤트는 전송 후에도 SSE 연결을 유지한다")
+    fun t6() {
+        val registry = QueueSseEmitterRegistry()
+        val emitter = mock(SseEmitter::class.java)
+        registry.register(SCHEDULE_ID, TARGET_USER_ID, emitter)
+
+        registry.sendError(QueueErrorEvent(SCHEDULE_ID, TARGET_USER_ID, "일시적 오류"))
+        registry.sendHeartbeat()
+
+        verify(emitter, times(2)).send(any(SseEmitter.SseEventBuilder::class.java))
+        verify(emitter, never()).complete()
     }
 
     companion object {
