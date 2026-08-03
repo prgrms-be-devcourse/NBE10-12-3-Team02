@@ -143,6 +143,13 @@ class SeatStatusSseEmitterRegistry(
     }
 
     private fun executeTask(task: Runnable) {
-        taskExecutor?.execute(task) ?: task.run()
+        val safeTask = Runnable {
+            runCatching {
+                task.run()
+            }.onFailure { e ->
+                log.error("SSE 비동기 전송 비정상 예외 발생: err={}", e.message, e)
+            }
+        }
+        taskExecutor?.execute(safeTask) ?: safeTask.run()
     }
 }

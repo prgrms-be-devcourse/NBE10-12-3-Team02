@@ -1,11 +1,7 @@
 package com.back.domain.concert.sse
 
-import com.back.domain.concert.event.SeatExpiredEvent
-import com.back.domain.concert.event.SeatOccupiedEvent
-import com.back.domain.concert.event.SeatReleasedEvent
-import com.back.domain.concert.event.SeatSoldEvent
+import com.back.domain.concert.event.SeatEvent
 import com.back.domain.concert.sse.service.SseOutboxService
-import com.back.domain.schedule.constant.SeatStatus
 import com.back.domain.ticket.event.PaymentCompletedEvent
 import org.slf4j.LoggerFactory
 import org.springframework.context.event.EventListener
@@ -28,36 +24,9 @@ class SeatStatusSseBroadcaster(
     // ──────────────────────────────────────────────────────────────────────────
 
     @TransactionalEventListener(phase = TransactionPhase.BEFORE_COMMIT, fallbackExecution = true)
-    fun saveOutboxOnSeatOccupied(event: SeatOccupiedEvent) {
+    fun saveOutboxOnSeatEvent(event: SeatEvent) {
         if (!TransactionSynchronizationManager.isActualTransactionActive()) return
-        val outbox = sseOutboxService.saveOutboxEvent(event.scheduleId, event.seatNumber, SeatStatus.HOLD.name)
-        if (outbox != null) {
-            bindEventId(event.scheduleId, event.seatNumber, outbox.eventId)
-        }
-    }
-
-    @TransactionalEventListener(phase = TransactionPhase.BEFORE_COMMIT, fallbackExecution = true)
-    fun saveOutboxOnSeatReleased(event: SeatReleasedEvent) {
-        if (!TransactionSynchronizationManager.isActualTransactionActive()) return
-        val outbox = sseOutboxService.saveOutboxEvent(event.scheduleId, event.seatNumber, SeatStatus.AVAILABLE.name)
-        if (outbox != null) {
-            bindEventId(event.scheduleId, event.seatNumber, outbox.eventId)
-        }
-    }
-
-    @TransactionalEventListener(phase = TransactionPhase.BEFORE_COMMIT, fallbackExecution = true)
-    fun saveOutboxOnSeatExpired(event: SeatExpiredEvent) {
-        if (!TransactionSynchronizationManager.isActualTransactionActive()) return
-        val outbox = sseOutboxService.saveOutboxEvent(event.scheduleId, event.seatNumber, SeatStatus.AVAILABLE.name)
-        if (outbox != null) {
-            bindEventId(event.scheduleId, event.seatNumber, outbox.eventId)
-        }
-    }
-
-    @TransactionalEventListener(phase = TransactionPhase.BEFORE_COMMIT, fallbackExecution = true)
-    fun saveOutboxOnSeatSold(event: SeatSoldEvent) {
-        if (!TransactionSynchronizationManager.isActualTransactionActive()) return
-        val outbox = sseOutboxService.saveOutboxEvent(event.scheduleId, event.seatNumber, SeatStatus.SOLD_OUT.name)
+        val outbox = sseOutboxService.saveOutboxEvent(event.scheduleId, event.seatNumber, event.status.name)
         if (outbox != null) {
             bindEventId(event.scheduleId, event.seatNumber, outbox.eventId)
         }
@@ -68,34 +37,10 @@ class SeatStatusSseBroadcaster(
     // ──────────────────────────────────────────────────────────────────────────
 
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
-    fun onSeatOccupied(event: SeatOccupiedEvent) {
+    fun onSeatEvent(event: SeatEvent) {
         val eventId = unbindEventId(event.scheduleId, event.seatNumber)
-        log.info("SSE 브로드캐스트 (선점): scheduleId={}, seat={}, eventId={}", event.scheduleId, event.seatNumber, eventId)
-        registry.broadcast(event.scheduleId, event.seatNumber, SeatStatus.HOLD.name, eventId)
-        eTagVersionManager.increment(event.scheduleId)
-    }
-
-    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
-    fun onSeatReleased(event: SeatReleasedEvent) {
-        val eventId = unbindEventId(event.scheduleId, event.seatNumber)
-        log.info("SSE 브로드캐스트 (선점 취소): scheduleId={}, seat={}, eventId={}", event.scheduleId, event.seatNumber, eventId)
-        registry.broadcast(event.scheduleId, event.seatNumber, SeatStatus.AVAILABLE.name, eventId)
-        eTagVersionManager.increment(event.scheduleId)
-    }
-
-    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
-    fun onSeatExpired(event: SeatExpiredEvent) {
-        val eventId = unbindEventId(event.scheduleId, event.seatNumber)
-        log.info("SSE 브로드캐스트 (만료 복구): scheduleId={}, seat={}, eventId={}", event.scheduleId, event.seatNumber, eventId)
-        registry.broadcast(event.scheduleId, event.seatNumber, SeatStatus.AVAILABLE.name, eventId)
-        eTagVersionManager.increment(event.scheduleId)
-    }
-
-    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
-    fun onSeatSold(event: SeatSoldEvent) {
-        val eventId = unbindEventId(event.scheduleId, event.seatNumber)
-        log.info("SSE 브로드캐스트 (결제 판매완료): scheduleId={}, seat={}, eventId={}", event.scheduleId, event.seatNumber, eventId)
-        registry.broadcast(event.scheduleId, event.seatNumber, SeatStatus.SOLD_OUT.name, eventId)
+        log.info("SSE 브로드캐스트 (상태={}): scheduleId={}, seat={}, eventId={}", event.status, event.scheduleId, event.seatNumber, eventId)
+        registry.broadcast(event.scheduleId, event.seatNumber, event.status.name, eventId)
         eTagVersionManager.increment(event.scheduleId)
     }
 
@@ -104,22 +49,7 @@ class SeatStatusSseBroadcaster(
     // ──────────────────────────────────────────────────────────────────────────
 
     @TransactionalEventListener(phase = TransactionPhase.AFTER_ROLLBACK)
-    fun cleanupThreadLocalOnOccupiedRollback(event: SeatOccupiedEvent) {
-        unbindEventId(event.scheduleId, event.seatNumber)
-    }
-
-    @TransactionalEventListener(phase = TransactionPhase.AFTER_ROLLBACK)
-    fun cleanupThreadLocalOnReleasedRollback(event: SeatReleasedEvent) {
-        unbindEventId(event.scheduleId, event.seatNumber)
-    }
-
-    @TransactionalEventListener(phase = TransactionPhase.AFTER_ROLLBACK)
-    fun cleanupThreadLocalOnExpiredRollback(event: SeatExpiredEvent) {
-        unbindEventId(event.scheduleId, event.seatNumber)
-    }
-
-    @TransactionalEventListener(phase = TransactionPhase.AFTER_ROLLBACK)
-    fun cleanupThreadLocalOnSoldRollback(event: SeatSoldEvent) {
+    fun cleanupOnRollback(event: SeatEvent) {
         unbindEventId(event.scheduleId, event.seatNumber)
     }
 
