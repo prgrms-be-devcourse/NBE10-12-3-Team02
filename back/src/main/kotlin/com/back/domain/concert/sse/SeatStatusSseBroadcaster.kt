@@ -95,6 +95,26 @@ class SeatStatusSseBroadcaster(
         registry.broadcast(event.scheduleId, event.seatNumber, SeatStatus.SOLD_OUT.name, eventId)
     }
 
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_ROLLBACK)
+    fun cleanupThreadLocalOnOccupiedRollback(event: SeatOccupiedEvent) {
+        lastGeneratedEventIdMapThreadLocal.remove()
+    }
+
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_ROLLBACK)
+    fun cleanupThreadLocalOnReleasedRollback(event: SeatReleasedEvent) {
+        lastGeneratedEventIdMapThreadLocal.remove()
+    }
+
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_ROLLBACK)
+    fun cleanupThreadLocalOnExpiredRollback(event: SeatExpiredEvent) {
+        lastGeneratedEventIdMapThreadLocal.remove()
+    }
+
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_ROLLBACK)
+    fun cleanupThreadLocalOnSoldRollback(event: SeatSoldEvent) {
+        lastGeneratedEventIdMapThreadLocal.remove()
+    }
+
     @EventListener
     fun onPaymentCompleted(event: PaymentCompletedEvent) {
         log.debug("SSE 브로드캐스트 (결제 완료): scheduleId={}", event.scheduleId)

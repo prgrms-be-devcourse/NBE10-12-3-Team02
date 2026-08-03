@@ -1,6 +1,7 @@
 package com.back.domain.concert.sse
 
 import com.back.domain.concert.sse.repository.SseOutboxEventRepository
+import com.fasterxml.jackson.databind.ObjectMapper
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.core.task.TaskExecutor
@@ -19,7 +20,8 @@ import java.util.concurrent.locks.ReentrantLock
 class SeatStatusSseEmitterRegistry(
     private val eventCache: SeatStatusSseEventCache,
     private val sseOutboxEventRepository: SseOutboxEventRepository,
-    @Autowired(required = false) private val taskExecutor: TaskExecutor? = null
+    @Autowired(required = false) private val taskExecutor: TaskExecutor? = null,
+    @Autowired(required = false) private val objectMapper: ObjectMapper = ObjectMapper()
 ) {
     private val log = LoggerFactory.getLogger(javaClass)
     private val defaultVirtualExecutor = Executors.newVirtualThreadPerTaskExecutor()
@@ -63,12 +65,12 @@ class SeatStatusSseEmitterRegistry(
             val missedEvents = getMissedEvents(scheduleId, lastEventId)
             for ((eventId, seatNumber, status) in missedEvents) {
                 try {
-                    val data = "{\"seatNumber\":\"$seatNumber\",\"status\":\"$status\"}"
+                    val dataJson = objectMapper.writeValueAsString(mapOf("seatNumber" to seatNumber, "status" to status))
                     wrapper.send(
                         SseEmitter.event()
                             .id(eventId)
                             .name("seat_status_changed")
-                            .data(data)
+                            .data(dataJson)
                     )
                 } catch (e: Exception) {
                     log.warn("누락 이벤트 Replay 전송 실패: scheduleId={}, eventId={}", scheduleId, eventId)
@@ -98,7 +100,7 @@ class SeatStatusSseEmitterRegistry(
         if (list.isNullOrEmpty()) return
 
         val cachedEvent = eventCache.addEvent(scheduleId, seatNumber, status, customEventId)
-        val data = "{\"seatNumber\":\"$seatNumber\",\"status\":\"$status\"}"
+        val dataJson = objectMapper.writeValueAsString(mapOf("seatNumber" to seatNumber, "status" to status))
 
         for (wrapper in list) {
             executeTask {
@@ -107,7 +109,7 @@ class SeatStatusSseEmitterRegistry(
                         SseEmitter.event()
                             .id(cachedEvent.eventId)
                             .name("seat_status_changed")
-                            .data(data)
+                            .data(dataJson)
                     )
                 } catch (e: Exception) {
                     log.warn("SSE 전송 실패 (자원 정리): scheduleId={}, seat={}, err={}", scheduleId, seatNumber, e.message)
