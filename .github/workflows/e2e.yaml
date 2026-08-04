@@ -89,7 +89,7 @@ jobs:
       - name: Run Playwright E2E Tests
         working-directory: e2e
         env:
-          SPRING_PROFILES_ACTIVE: dev
+          SPRING_PROFILES_ACTIVE: test
           CI: true
         run: |
           pnpm test
