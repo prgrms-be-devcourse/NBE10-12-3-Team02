@@ -291,10 +291,13 @@ function MyPageContent() {
 
   useEffect(() => {
     const t = searchParams.get("tab");
-    if (t === "tickets" || t === "posts" || t === "info") {
+    if ((t === "tickets" || t === "posts" || t === "info") && t !== activeTab) {
+      // URL 쿼리 파라미터(외부 시스템)와 activeTab을 동기화하는 로직이라
+      // effect 안에서 setState를 쓰는 게 맞는 경우다.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setActiveTab(t);
     }
-  }, [searchParams]);
+  }, [searchParams, activeTab]);
 
   const [postsSubTab, setPostsSubTab] = useState<"my" | "bookmarks" | "likes">("my");
 
