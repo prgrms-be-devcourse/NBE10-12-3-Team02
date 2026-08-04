@@ -90,6 +90,13 @@ class TicketControllerTest @Autowired constructor(
         val defaultEntries = mapOf("userId" to userEntity.userId.toString(), "occupyToken" to "test-token")
         doReturn(defaultEntries).`when`(hashOps).entries(anyString())
 
+        val defaultPipelineAnswer = { _: org.mockito.invocation.InvocationOnMock ->
+            listOf(
+                mapOf("userId" to userEntity.userId.toString(), "occupyToken" to "test-token")
+            )
+        }
+        doAnswer(defaultPipelineAnswer).`when`(stringRedisTemplate).executePipelined(org.mockito.ArgumentMatchers.any(org.springframework.data.redis.core.RedisCallback::class.java))
+
         concert = concertRepository.save(
             Concert.create("싸이 콘서트", "설명", LocalDateTime.now(), LocalDateTime.now().plusDays(1), "poster.jpg")
         )
@@ -115,6 +122,14 @@ class TicketControllerTest @Autowired constructor(
             }
         }
         doAnswer(mapAnswer).`when`(hashOps).entries(anyString())
+
+        val pipelineAnswer = { _: org.mockito.invocation.InvocationOnMock ->
+            listOf(
+                mapOf("userId" to userEntity.userId.toString(), "occupyToken" to "token-1"),
+                mapOf("userId" to userEntity.userId.toString(), "occupyToken" to "token-2")
+            )
+        }
+        doAnswer(pipelineAnswer).`when`(stringRedisTemplate).executePipelined(org.mockito.ArgumentMatchers.any(org.springframework.data.redis.core.RedisCallback::class.java))
 
         val requestBody = """
             {

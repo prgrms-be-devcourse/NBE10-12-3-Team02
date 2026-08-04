@@ -119,27 +119,20 @@ class SeatOccupyManager(
         stringRedisTemplate.delete(redisKey)
     }
 
-    @Suppress("UNCHECKED_CAST")
     fun validateSeatHolds(userId: Long, concertId: Long, scheduleId: Long, seatHolds: List<SeatHoldInfo>) {
         val keys = seatHolds.map { generateSeatOccupyKey(concertId, scheduleId, it.seatNumber) }
 
         // Redis Pipeline 적용하여 좌석 수만큼의 HGETALL 요청을 1 왕복으로 최소화
         val results = stringRedisTemplate.executePipelined { conn ->
             keys.forEach { key -> conn.hashCommands().hGetAll(key.toByteArray()) }
-        } as List<Map<ByteArray, ByteArray>?>
-
-        // 파이프라인 결과를 루프 전에 일괄 디코딩한다.
-        // find { String(it.key) == ... } 방식은 매 루프마다 모든 key를 String으로 변환하여
-        // 불필요한 임시 객체가 반복 생성되므로, 미리 Map<String, String>으로 변환 후 get()으로 O(1) 접근한다.
-        val decodedResults = results.map { raw ->
-            raw?.entries?.associate { String(it.key) to String(it.value) }
+            null
         }
 
-        //Pipeline 내부에서는 예외를 던질 수 없으므로, 결과를 모두 받은 뒤 외부에서 순서대로 검증
+        // Pipeline 내부에서는 예외를 던질 수 없으므로, 결과를 모두 받은 뒤 외부에서 순서대로 검증
         for ((index, hold) in seatHolds.withIndex()) {
-            val decoded = decodedResults[index]
-            val holdUserId = decoded?.get("userId")
-            val holdOccupyToken = decoded?.get("occupyToken")
+            val map = results.getOrNull(index) as? Map<*, *>
+            val holdUserId = map?.get("userId")?.toString()
+            val holdOccupyToken = map?.get("occupyToken")?.toString()
 
             if (holdUserId == null || holdOccupyToken == null) {
                 throw ServiceException(ErrorCode.SEAT_HOLD_EXPIRED)
