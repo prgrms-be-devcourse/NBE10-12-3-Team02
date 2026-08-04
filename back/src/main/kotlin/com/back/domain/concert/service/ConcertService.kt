@@ -46,18 +46,14 @@ class ConcertService(
 
         val today = LocalDate.now().atStartOfDay()
 
-        val sortTarget = if (sort == ConcertSortType.closingSoon) {
-            filteredConcerts.filter { it.endDate >= today }
-        } else {
-            filteredConcerts
-        }
-
         val comparator = when (sort) {
-            ConcertSortType.latest -> compareByDescending<Concert> { it.concertId }
-            else -> compareBy<Concert> { it.endDate }
+            ConcertSortType.latest -> compareBy<Concert> { it.endDate < today }
+                .thenByDescending { it.concertId }
+            else -> compareBy<Concert> { it.endDate < today }
+                .thenBy { it.endDate }
         }
 
-        return sortTarget.sortedWith(comparator)
+        return filteredConcerts.sortedWith(comparator)
             .map { concert ->
                 val venueName = venueNameMap[concert.concertId].orEmpty()
                 ConcertListResponse.of(concert, venueName)

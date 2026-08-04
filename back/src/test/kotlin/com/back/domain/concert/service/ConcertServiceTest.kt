@@ -164,14 +164,14 @@ class ConcertServiceTest {
     }
 
     @Test
-    @DisplayName("마감임박순: 이미 종료된 콘서트는 결과에서 제외")
-    fun getConcerts_closingSoon_excludesExpired() {
+    @DisplayName("마감임박순: 이미 종료된 콘서트는 목록 맨 뒤로")
+    fun getConcerts_closingSoon_expiredGoesLast() {
         concertRepository.save(
             Concert.create("종료 콘서트", null, LocalDateTime.now().minusDays(10), LocalDateTime.now().minusDays(1), null)
         )
         val result = concertService.getConcerts(null, ConcertSortType.closingSoon, null)
-        assertThat(result).allMatch { it.concertName != "종료 콘서트" }
-        assertThat(result).hasSize(1)
+        assertThat(result).hasSize(2)
+        assertThat(result.last().concertName).isEqualTo("종료 콘서트")
     }
 
     @Test
