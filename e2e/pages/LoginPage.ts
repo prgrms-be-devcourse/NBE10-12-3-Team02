@@ -18,6 +18,6 @@ export class LoginPage {
   }
 
   async expectErrorMessage() {
-    await expect(this.page.locator('.swal2-popup, [role="alert"]')).toBeVisible();
+    await expect(this.page.locator('.swal2-popup').first()).toBeVisible();
   }
 }
