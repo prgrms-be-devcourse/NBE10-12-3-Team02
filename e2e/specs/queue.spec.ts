@@ -5,7 +5,7 @@ test.describe('E2E Scenario 3: Waiting Queue Flow', () => {
     // 대기열 페이지/좌석진입 시 대기열 팝업 노출 검증
     await page.goto('/concerts/1/seats?scheduleId=1');
 
-    // 대기 중입니다 또는 좌석 화면 요소 렌더링 검증
-    await expect(page.locator('text=대기 중입니다, h1, h2, canvas, svg, [data-seat]').first()).toBeVisible({ timeout: 10000 });
+    // 대기 중입니다 또는 좌석 화면 요소 렌더링 검증 (유효한 CSS 셀렉터 사용)
+    await expect(page.locator('h1, h2, canvas, svg, [data-seat]').first()).toBeVisible({ timeout: 10000 });
   });
 });
