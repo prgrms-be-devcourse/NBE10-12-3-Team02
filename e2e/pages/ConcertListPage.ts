@@ -16,7 +16,7 @@ export class ConcertListPage {
     if (tabName === 'closed') {
       await this.page.click('button:has-text("마감된 공연")');
     } else {
-      await this.page.click('button:has-text("예매 가능")');
+      await this.page.click('button:has-text("공연중")');
     }
   }
 
