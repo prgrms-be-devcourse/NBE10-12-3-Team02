@@ -43,7 +43,7 @@ class WaitingQueueScheduler(
         // 확인 직후 사용자가 등록되더라도 등록 API가 allowEntry()를 호출하므로 입장은 다시 조정된다.
         if (!waitingQueueManager.hasWaitingUsers(scheduleId)) {
             waitingQueueManager.removeExpiredActiveUsers(scheduleId)
-            removeInactiveScheduleIfEmpty(scheduleId, scheduleIdValue)
+            removeInactiveScheduleIfEmpty(scheduleId)
             return
         }
 
@@ -66,12 +66,12 @@ class WaitingQueueScheduler(
         // expired 반환값과 무관하게 매 주기 재조정하여 다음 실행에서 복구한다.
         waitingQueueService.allowEntry(concertId, scheduleId)
 
-        removeInactiveScheduleIfEmpty(scheduleId, scheduleIdValue)
+        removeInactiveScheduleIfEmpty(scheduleId)
     }
 
-    private fun removeInactiveScheduleIfEmpty(scheduleId: Long, scheduleIdValue: String) {
+    private fun removeInactiveScheduleIfEmpty(scheduleId: Long) {
         if (waitingQueueManager.isQueueEmpty(scheduleId)) {
-            waitingQueueManager.removeFromActiveSchedules(scheduleIdValue)
+            waitingQueueManager.clearInactiveSchedule(scheduleId)
         }
     }
 

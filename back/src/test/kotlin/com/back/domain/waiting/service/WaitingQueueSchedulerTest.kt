@@ -7,6 +7,7 @@ import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito.inOrder
 import org.mockito.Mockito.mock
+import org.mockito.Mockito.never
 import org.mockito.Mockito.verify
 import org.mockito.Mockito.verifyNoInteractions
 import org.mockito.Mockito.`when`
@@ -83,6 +84,30 @@ class WaitingQueueSchedulerTest {
         verify(waitingQueueManager).removeExpiredActiveUsers(SCHEDULE_ID)
         verify(waitingQueueManager).isQueueEmpty(SCHEDULE_ID)
         verifyNoInteractions(scheduleRepository, waitingQueueService)
+    }
+
+    @Test
+    @DisplayName("대기열과 ACTIVE 사용자가 모두 없으면 sequence 키와 활성 회차 정보를 정리한다")
+    fun t5() {
+        `when`(waitingQueueManager.getActiveScheduleIds()).thenReturn(setOf(SCHEDULE_ID.toString()))
+        `when`(waitingQueueManager.hasWaitingUsers(SCHEDULE_ID)).thenReturn(false)
+        `when`(waitingQueueManager.isQueueEmpty(SCHEDULE_ID)).thenReturn(true)
+
+        scheduler.processExpiredActiveUsers()
+
+        verify(waitingQueueManager).clearInactiveSchedule(SCHEDULE_ID)
+    }
+
+    @Test
+    @DisplayName("ACTIVE 사용자가 남아 있으면 sequence 키와 활성 회차 정보를 유지한다")
+    fun t6() {
+        `when`(waitingQueueManager.getActiveScheduleIds()).thenReturn(setOf(SCHEDULE_ID.toString()))
+        `when`(waitingQueueManager.hasWaitingUsers(SCHEDULE_ID)).thenReturn(false)
+        `when`(waitingQueueManager.isQueueEmpty(SCHEDULE_ID)).thenReturn(false)
+
+        scheduler.processExpiredActiveUsers()
+
+        verify(waitingQueueManager, never()).clearInactiveSchedule(SCHEDULE_ID)
     }
 
     private fun schedule(concertId: Long): Schedule {
