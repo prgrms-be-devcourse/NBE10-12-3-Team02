@@ -119,13 +119,21 @@ class SeatOccupyManager(
         stringRedisTemplate.delete(redisKey)
     }
 
+    @Suppress("UNCHECKED_CAST")
     fun validateSeatHolds(userId: Long, concertId: Long, scheduleId: Long, seatHolds: List<SeatHoldInfo>) {
-        for (hold in seatHolds) {
-            val redisKey = generateSeatOccupyKey(concertId, scheduleId, hold.seatNumber)
-            val entries = stringRedisTemplate.opsForHash<String, String>().entries(redisKey)
+        val keys = seatHolds.map { generateSeatOccupyKey(concertId, scheduleId, it.seatNumber) }
 
-            val holdUserId = entries["userId"]
-            val holdOccupyToken = entries["occupyToken"]
+        // Redis Pipeline: 좌석 수만큼의 HGETALL 요청을 1 왕복으로 최소화한다.
+        // executePipelined 내부에서는 예외를 던질 수 없으므로,
+        // 결과를 모두 받은 뒤 외부에서 순서대로 검증한다.
+        val results = stringRedisTemplate.executePipelined { conn ->
+            keys.forEach { key -> conn.hashCommands().hGetAll(key.toByteArray()) }
+        } as List<Map<ByteArray, ByteArray>?>
+
+        for ((index, hold) in seatHolds.withIndex()) {
+            val raw = results[index]
+            val holdUserId = raw?.entries?.find { String(it.key) == "userId" }?.let { String(it.value) }
+            val holdOccupyToken = raw?.entries?.find { String(it.key) == "occupyToken" }?.let { String(it.value) }
 
             if (holdUserId == null || holdOccupyToken == null) {
                 throw ServiceException(ErrorCode.SEAT_HOLD_EXPIRED)

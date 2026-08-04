@@ -13,7 +13,7 @@ class TicketCancelledEventHandler(
     private val waitingQueueManager: WaitingQueueManager
 ) {
 
-    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
     fun handleTicketCancelled(event: TicketCancelledEvent) {
         waitingQueueManager.removeActiveUser(event.scheduleId, event.userId)
         waitingQueueService.allowEntry(event.concertId, event.scheduleId)

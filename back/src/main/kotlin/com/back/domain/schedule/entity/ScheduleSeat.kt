@@ -67,8 +67,18 @@ class ScheduleSeat protected constructor() : BaseEntity() {
         }
     }
 
+    // 티켓 취소 시 호출: HOLD 또는 SOLD_OUT 상태의 좌석을 AVAILABLE로 복구한다.
     fun releaseToAvailable() {
         if (seatStatus == SeatStatus.HOLD || seatStatus == SeatStatus.SOLD_OUT) {
+            this.seatStatus = SeatStatus.AVAILABLE
+        }
+    }
+
+    // 만료 스케줄러 전용: HOLD → AVAILABLE 전환만 허용한다.
+    // releaseToAvailable()과 달리 SOLD_OUT 좌석은 건드리지 않아,
+    // 스케줄러가 결제 완료된 좌석을 실수로 해제하는 경로를 원천 차단한다.
+    fun releaseHoldToAvailable() {
+        if (seatStatus == SeatStatus.HOLD) {
             this.seatStatus = SeatStatus.AVAILABLE
         }
     }

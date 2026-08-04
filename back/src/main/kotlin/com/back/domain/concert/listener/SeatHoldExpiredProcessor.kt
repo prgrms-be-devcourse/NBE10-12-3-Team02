@@ -42,7 +42,7 @@ class SeatHoldExpiredProcessor(
             return
         }
 
-        seat.releaseToAvailable()
+        seat.releaseHoldToAvailable()
         log.info("좌석 복구 완료 (HOLD → AVAILABLE): scheduleId={}, seat={}", scheduleId, seatNumber)
         eventPublisher.publishEvent(SeatExpiredEvent(concertId, scheduleId, seatNumber))
     }
