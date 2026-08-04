@@ -40,7 +40,7 @@
 
 ## 소개
 
-**티케팅고(Ticketing Go)**는 초고속 수천 명의 동시 접속자가 몰리는 대형 콘서트/페스티벌 티켓팅 환경을 완벽하게 처리하는 **대용량 트래픽 예매 플랫폼**입니다.
+<b>티케팅고(Ticketing Go)</b>는 초고속 수천 명의 동시 접속자가 몰리는 대형 콘서트/페스티벌 티켓팅 환경을 완벽하게 처리하는 <b>대용량 트래픽 예매 플랫폼</b>입니다.
 
 - **대기열 붕괴 방지**: Redis ZSet 기반 순번 처리와 **Server-Sent Events (SSE)** 스트리밍을 결합하여, DB 과부하 없이 동시 접속자를 안정적으로 제어합니다.
 - **실시간 좌석 선점 동기화**: SSE 상태 스트림(`/seats/status`)을 통해 선점(HOLD, 10분 TTL), 판매완료(SOLD_OUT) 상태를 실시간으로 모든 유저에게 동기화합니다.
@@ -59,7 +59,7 @@ graph TD
 
     Client -- "1. 대기열 진입 요청 (POST)" --> Backend
     Client -- "2. SSE 대기 순번 스트리밍" --> Backend
-    Client -- "3. 좌석 선점 (HOLD 10분 TTL)" --> Backend
+    Client -- "3. 좌석 선점 (10분 TTL)" --> Backend
 
     Backend -- "대기열 ZSet / Active Tokens" --> Redis
     Backend -- "좌석 선점 & Pipelining" --> Redis
