@@ -33,11 +33,13 @@ export default defineConfig({
   ],
   webServer: [
     {
-      command: process.platform === 'win32' ? '.\\gradlew.bat bootRun' : './gradlew bootRun',
+      command: process.platform === 'win32' ? '.\\gradlew.bat bootRun --no-daemon' : './gradlew bootRun --no-daemon',
       cwd: '../back',
       url: 'http://localhost:8080/api/v1/concerts',
       reuseExistingServer: !process.env.CI,
       timeout: 180 * 1000,
+      stdout: 'pipe',
+      stderr: 'pipe',
     },
     {
       command: 'pnpm dev',
@@ -45,6 +47,8 @@ export default defineConfig({
       url: 'http://localhost:3000',
       reuseExistingServer: !process.env.CI,
       timeout: 120 * 1000,
+      stdout: 'pipe',
+      stderr: 'pipe',
     },
   ],
 });
