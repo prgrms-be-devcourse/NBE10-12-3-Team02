@@ -12,6 +12,7 @@ import java.io.IOException
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicLong
 import java.util.concurrent.locks.ReentrantLock
 
@@ -27,6 +28,8 @@ class SeatStatusSseEmitterRegistry(
 
     class SynchronizedEmitter(
         val emitter: SseEmitter,
+        // ReentrantLock을 사용하여 Java 25 가상 스레드(Virtual Threads) 환경에서
+        // synchronized 블록으로 인한 Carrier Thread 피닝(Pinning) 현상을 방지한다.
         val lock: ReentrantLock = ReentrantLock(),
         val createdAt: Long = System.currentTimeMillis(),
         val lastSentAt: AtomicLong = AtomicLong(System.currentTimeMillis())
@@ -47,13 +50,26 @@ class SeatStatusSseEmitterRegistry(
 
     private val emitters = ConcurrentHashMap<Long, MutableList<SynchronizedEmitter>>()
 
-    fun register(scheduleId: Long, emitter: SseEmitter, lastEventId: String? = null): SynchronizedEmitter {
+    // scheduleId별 현재 연결 수를 원자적으로 관리하는 카운터
+    private val connectionCounts = ConcurrentHashMap<Long, AtomicInteger>()
+
+    fun register(scheduleId: Long, emitter: SseEmitter, lastEventId: String? = null): SynchronizedEmitter? {
+        val counter = connectionCounts.computeIfAbsent(scheduleId) { AtomicInteger(0) }
+        val newCount = counter.incrementAndGet()
+        if (newCount > MAX_CONNECTIONS_PER_SCHEDULE) {
+            counter.decrementAndGet()
+            log.warn("SSE 연결 수 상한 초과: scheduleId={}, count={}", scheduleId, newCount - 1)
+            emitter.complete()
+            return null
+        }
+
         val wrapper = SynchronizedEmitter(emitter)
         emitters.computeIfAbsent(scheduleId) { CopyOnWriteArrayList() }.add(wrapper)
 
         val cleanup = Runnable {
             val list = emitters[scheduleId]
             list?.remove(wrapper)
+            counter.decrementAndGet()
         }
         emitter.onCompletion(cleanup)
         emitter.onTimeout(cleanup)
@@ -152,5 +168,10 @@ class SeatStatusSseEmitterRegistry(
             }
         }
         taskExecutor.execute(safeTask)
+    }
+
+    companion object {
+        // 회차(scheduleId)당 최대 SSE 동시 연결 수
+        private const val MAX_CONNECTIONS_PER_SCHEDULE = 10_000
     }
 }

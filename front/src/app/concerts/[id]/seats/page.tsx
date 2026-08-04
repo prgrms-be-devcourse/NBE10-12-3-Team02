@@ -101,6 +101,7 @@ function SeatSelectContent({ params }: { params: Promise<{ id: string }> }) {
   const lastEventIdRef = useRef<string>("");
   const eTagRef = useRef<string>("");
   const pollingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const reconnectDelayRef = useRef(3000); // 지수 백오프 재연결 딜레이 초기값 (ms)
 
   const [adultCount, setAdultCount] = useState(1);
   const [teenCount, setTeenCount] = useState(0);
@@ -305,6 +306,8 @@ function SeatSelectContent({ params }: { params: Promise<{ id: string }> }) {
       );
 
       sse.onopen = () => {
+        // SSE 연결 성공 시 지수 백오프 딜레이를 초기값(3s)으로 리셋
+        reconnectDelayRef.current = 3000;
         if (pollingTimerRef.current) {
           clearInterval(pollingTimerRef.current);
           pollingTimerRef.current = null;
@@ -383,7 +386,11 @@ function SeatSelectContent({ params }: { params: Promise<{ id: string }> }) {
         sse?.close();
         sse = null;
         if (active) {
-          reconnectTimer = setTimeout(connectSse, 3000);
+          // 지수 백오프: 3s → 6s → 12s → 24s → 30s(최대) 로 재연결 딜레이 점진 증가
+          // 서버 장애 시 수천 명이 동시에 재연결하는 Thundering Herd 현상을 방지합니다.
+          const delay = reconnectDelayRef.current;
+          reconnectDelayRef.current = Math.min(delay * 2, 30000);
+          reconnectTimer = setTimeout(connectSse, delay);
 
           if (!pollingTimerRef.current) {
             pollingTimerRef.current = setInterval(async () => {

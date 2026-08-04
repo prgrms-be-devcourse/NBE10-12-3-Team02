@@ -120,9 +120,24 @@ const SOCIAL_LINK_ERROR_MESSAGES: Record<string, string> = {
 };
 
 const SOCIAL_LINK_PROVIDERS = [
-  { key: "KAKAO", label: "카카오 계정 연동", icon: "/icons/kakao.png", className: "bg-[#FEE500] hover:bg-[#fada0a] text-[#191919]" },
-  { key: "NAVER", label: "네이버 계정 연동", icon: "/icons/naver.png", className: "bg-[#03C75A] hover:bg-[#02b350] text-white" },
-  { key: "GOOGLE", label: "Google 계정 연동", icon: "/icons/google.png", className: "bg-white hover:bg-gray-50 text-gray-700 border border-gray-200" },
+  {
+    key: "KAKAO",
+    label: "카카오 계정 연동",
+    icon: "/icons/kakao.png",
+    className: "bg-[#FEE500] hover:bg-[#fada0a] text-[#191919]",
+  },
+  {
+    key: "NAVER",
+    label: "네이버 계정 연동",
+    icon: "/icons/naver.png",
+    className: "bg-[#03C75A] hover:bg-[#02b350] text-white",
+  },
+  {
+    key: "GOOGLE",
+    label: "Google 계정 연동",
+    icon: "/icons/google.png",
+    className: "bg-white hover:bg-gray-50 text-gray-700 border border-gray-200",
+  },
 ] as const;
 
 const PROVIDER_LABELS: Record<string, string> = {
@@ -152,7 +167,13 @@ const MY_POSTS_PAGE_SIZE = 5;
 const MY_BOOKMARKS_PAGE_SIZE = 5;
 const MY_LIKES_PAGE_SIZE = 5;
 
-function SocialBadge({ provider, size = 18 }: { provider: string; size?: number }) {
+function SocialBadge({
+  provider,
+  size = 18,
+}: {
+  provider: string;
+  size?: number;
+}) {
   const iconMap: Record<string, string> = {
     KAKAO: "/icons/kakao.png",
     NAVER: "/icons/naver.png",
@@ -161,13 +182,7 @@ function SocialBadge({ provider, size = 18 }: { provider: string; size?: number 
   const src = iconMap[provider];
   if (!src) return null;
   return (
-    <Image
-      src={src}
-      alt={provider}
-      width={size}
-      height={size}
-      unoptimized
-    />
+    <Image src={src} alt={provider} width={size} height={size} unoptimized />
   );
 }
 
@@ -279,15 +294,23 @@ function MyPageContent() {
     }
   };
 
-  interface SocialLinkStatus { linked: boolean; provider: string | null }
-  const [socialLinkStatus, setSocialLinkStatus] = useState<SocialLinkStatus | null>(null);
+  interface SocialLinkStatus {
+    linked: boolean;
+    provider: string | null;
+  }
+  const [socialLinkStatus, setSocialLinkStatus] =
+    useState<SocialLinkStatus | null>(null);
   const [socialLinkLoading, setSocialLinkLoading] = useState(true);
-  const [socialLinkStarting, setSocialLinkStarting] = useState<string | null>(null);
+  const [socialLinkStarting, setSocialLinkStarting] = useState<string | null>(
+    null,
+  );
 
-  const [activeTab, setActiveTab] = useState<"info" | "tickets" | "posts">(() => {
-    const t = searchParams.get("tab");
-    return t === "tickets" || t === "posts" ? t : "info";
-  });
+  const [activeTab, setActiveTab] = useState<"info" | "tickets" | "posts">(
+    () => {
+      const t = searchParams.get("tab");
+      return t === "tickets" || t === "posts" ? t : "info";
+    },
+  );
 
   useEffect(() => {
     const t = searchParams.get("tab");
@@ -299,7 +322,9 @@ function MyPageContent() {
     }
   }, [searchParams, activeTab]);
 
-  const [postsSubTab, setPostsSubTab] = useState<"my" | "bookmarks" | "likes">("my");
+  const [postsSubTab, setPostsSubTab] = useState<"my" | "bookmarks" | "likes">(
+    "my",
+  );
 
   const fetchSocialLinkStatus = async () => {
     setSocialLinkLoading(true);
@@ -359,7 +384,8 @@ function MyPageContent() {
       });
     } else if (linkError) {
       showError(
-        SOCIAL_LINK_ERROR_MESSAGES[linkError] ?? "소셜 계정 연동 중 오류가 발생했습니다.",
+        SOCIAL_LINK_ERROR_MESSAGES[linkError] ??
+          "소셜 계정 연동 중 오류가 발생했습니다.",
       );
     }
     router.replace("/mypage");
@@ -418,7 +444,9 @@ function MyPageContent() {
       // eslint-disable-next-line react-hooks/immutability
       window.location.href = `${BASE_URL}${res.data.authorizationUrl}`;
     } catch (e) {
-      showError(e instanceof Error ? e.message : "소셜 계정 연동을 시작할 수 없습니다.");
+      showError(
+        e instanceof Error ? e.message : "소셜 계정 연동을 시작할 수 없습니다.",
+      );
       setSocialLinkStarting(null);
     }
   };
@@ -671,7 +699,6 @@ function MyPageContent() {
   return (
     <div className="min-h-screen bg-gray-50 p-10">
       <div className="max-w-4xl mx-auto">
-
         <div className="flex justify-between items-center mb-8">
           <div>
             <p className="text-gray-400 text-sm">안녕하세요</p>
@@ -721,7 +748,6 @@ function MyPageContent() {
           </nav>
 
           <div className="flex-1 min-w-0">
-
             {activeTab === "info" && (
               <>
                 <div className="bg-white rounded-2xl shadow-sm p-8 mb-6">
@@ -800,7 +826,9 @@ function MyPageContent() {
                   {isEditing ? (
                     <div className="space-y-3">
                       <div>
-                        <label className="block text-xs text-gray-400 mb-1">이름</label>
+                        <label className="block text-xs text-gray-400 mb-1">
+                          이름
+                        </label>
                         <input
                           type="text"
                           value={editName}
@@ -809,7 +837,9 @@ function MyPageContent() {
                         />
                       </div>
                       <div>
-                        <label className="block text-xs text-gray-400 mb-1">이메일</label>
+                        <label className="block text-xs text-gray-400 mb-1">
+                          이메일
+                        </label>
                         <input
                           type="email"
                           value={editEmail}
@@ -840,7 +870,9 @@ function MyPageContent() {
                               <input
                                 type="password"
                                 value={editPasswordCheck}
-                                onChange={(e) => setEditPasswordCheck(e.target.value)}
+                                onChange={(e) =>
+                                  setEditPasswordCheck(e.target.value)
+                                }
                                 className="w-full p-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
                               />
                             </div>
@@ -867,22 +899,30 @@ function MyPageContent() {
                   ) : (
                     <div className="space-y-2 text-gray-600">
                       <p>
-                        <span className="inline-block w-20 text-gray-400">이름</span>
+                        <span className="inline-block w-20 text-gray-400">
+                          이름
+                        </span>
                         {data.name}
                       </p>
                       {isSocialLogin ? (
                         <p className="flex items-center gap-1.5">
-                          <span className="inline-block w-20 shrink-0 text-gray-400">로그인 방식</span>
+                          <span className="inline-block w-20 shrink-0 text-gray-400">
+                            로그인 방식
+                          </span>
                           <SocialBadge provider={data.loginType} />
                         </p>
                       ) : (
                         <p>
-                          <span className="inline-block w-20 text-gray-400">아이디</span>
+                          <span className="inline-block w-20 text-gray-400">
+                            아이디
+                          </span>
                           {data.id}
                         </p>
                       )}
                       <p>
-                        <span className="inline-block w-20 text-gray-400">이메일</span>
+                        <span className="inline-block w-20 text-gray-400">
+                          이메일
+                        </span>
                         {data.email}
                       </p>
                     </div>
@@ -890,23 +930,33 @@ function MyPageContent() {
                 </div>
 
                 <div className="bg-white rounded-2xl shadow-sm p-8">
-                  <h2 className="text-lg font-bold text-gray-700 mb-4">소셜 계정 연동</h2>
+                  <h2 className="text-lg font-bold text-gray-700 mb-4">
+                    소셜 계정 연동
+                  </h2>
                   {socialLinkLoading ? (
                     <p className="text-sm text-gray-400">불러오는 중...</p>
                   ) : socialLinkStatus?.linked ? (
                     <div className="flex items-center gap-3 p-4 bg-gray-50 rounded-xl border border-gray-100">
-                      <SocialBadge provider={socialLinkStatus.provider!} size={24} />
+                      <SocialBadge
+                        provider={socialLinkStatus.provider!}
+                        size={24}
+                      />
                       <div>
                         <p className="text-sm font-semibold text-gray-700">
-                          {PROVIDER_LABELS[socialLinkStatus.provider!] ?? socialLinkStatus.provider} 계정 연동됨
+                          {PROVIDER_LABELS[socialLinkStatus.provider!] ??
+                            socialLinkStatus.provider}{" "}
+                          계정 연동됨
                         </p>
-                        <p className="text-xs text-gray-400 mt-0.5">해당 소셜 계정으로 로그인할 수 있습니다.</p>
+                        <p className="text-xs text-gray-400 mt-0.5">
+                          해당 소셜 계정으로 로그인할 수 있습니다.
+                        </p>
                       </div>
                     </div>
                   ) : (
                     <div>
                       <p className="text-sm text-gray-500 mb-4">
-                        소셜 계정을 연동하면 해당 소셜 계정으로도 로그인할 수 있습니다.
+                        소셜 계정을 연동하면 해당 소셜 계정으로도 로그인할 수
+                        있습니다.
                       </p>
                       <div className="flex flex-col gap-2">
                         {SOCIAL_LINK_PROVIDERS.map((p) => (
@@ -916,8 +966,16 @@ function MyPageContent() {
                             disabled={!!socialLinkStarting}
                             className={`flex items-center gap-3 px-4 py-3 rounded-lg font-semibold text-sm transition disabled:opacity-50 ${p.className}`}
                           >
-                            <Image src={p.icon} alt={p.label} width={20} height={20} unoptimized />
-                            {socialLinkStarting === p.key ? "연결 중..." : p.label}
+                            <Image
+                              src={p.icon}
+                              alt={p.label}
+                              width={20}
+                              height={20}
+                              unoptimized
+                            />
+                            {socialLinkStarting === p.key
+                              ? "연결 중..."
+                              : p.label}
                           </button>
                         ))}
                       </div>
@@ -932,7 +990,8 @@ function MyPageContent() {
                 <div className="flex items-center justify-between mb-4">
                   <h2 className="text-lg font-bold text-gray-700">내 티켓</h2>
                   <span className="text-sm text-gray-400">
-                    {ticketGroups.reduce((sum, g) => sum + g.tickets.length, 0)}개의 티켓
+                    {ticketGroups.reduce((sum, g) => sum + g.tickets.length, 0)}
+                    개의 티켓
                   </span>
                 </div>
 
@@ -959,13 +1018,19 @@ function MyPageContent() {
                 </div>
 
                 {ticketGroups.length === 0 ? (
-                  <p className="text-sm text-gray-400 text-center py-10">해당 조건의 티켓이 없습니다.</p>
+                  <p className="text-sm text-gray-400 text-center py-10">
+                    해당 조건의 티켓이 없습니다.
+                  </p>
                 ) : (
                   <div className="space-y-6">
                     {pagedGroups.map((group) => {
-                      const allInvalid = group.tickets.every((t) => !isTicketValid(t));
+                      const allInvalid = group.tickets.every(
+                        (t) => !isTicketValid(t),
+                      );
                       const statusLabel = allInvalid ? "취소됨" : "예매완료";
-                      const statusClass = allInvalid ? "bg-gray-100 text-gray-400" : "bg-green-100 text-green-700";
+                      const statusClass = allInvalid
+                        ? "bg-gray-100 text-gray-400"
+                        : "bg-green-100 text-green-700";
                       return (
                         <div
                           key={group.tickets[0].ticketId}
@@ -976,30 +1041,73 @@ function MyPageContent() {
                         >
                           <div className="flex-shrink-0 w-36 relative aspect-[3/4] bg-gradient-to-br from-blue-200 to-indigo-300 flex items-center justify-center text-white font-bold text-sm overflow-hidden">
                             {group.urlPoster ? (
-                              <Image fill unoptimized src={getLocalConcertPoster(group.urlPoster)} alt={group.concertName} sizes="144px" className="object-cover" />
-                            ) : "포스터"}
+                              <Image
+                                fill
+                                unoptimized
+                                src={getLocalConcertPoster(group.urlPoster)}
+                                alt={group.concertName}
+                                sizes="144px"
+                                className="object-cover"
+                              />
+                            ) : (
+                              "포스터"
+                            )}
                           </div>
                           <div className="border-l-2 border-dashed border-gray-200 my-4" />
                           <div className="flex-1 bg-white p-6">
                             <div className="flex justify-between items-start mb-3">
-                              <h3 className="font-bold text-gray-800 text-lg">{group.concertName}</h3>
+                              <h3 className="font-bold text-gray-800 text-lg">
+                                {group.concertName}
+                              </h3>
                               <div className="flex items-center gap-2">
                                 {!allInvalid && (
                                   <button
-                                    onClick={(e) => { e.stopPropagation(); handleCancelGroup(group); }}
-                                    disabled={cancelingKey === group.tickets[0].ticketId}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleCancelGroup(group);
+                                    }}
+                                    disabled={
+                                      cancelingKey === group.tickets[0].ticketId
+                                    }
                                     className="text-xs text-gray-400 hover:text-red-500 border border-gray-200 hover:border-red-300 px-3 py-1 rounded-lg transition disabled:opacity-50"
                                   >
-                                    {cancelingKey === group.tickets[0].ticketId ? "취소 중..." : "예매 취소"}
+                                    {cancelingKey === group.tickets[0].ticketId
+                                      ? "취소 중..."
+                                      : "예매 취소"}
                                   </button>
                                 )}
-                                <span className={`px-2 py-1 text-xs rounded-full font-semibold ${statusClass}`}>{statusLabel}</span>
+                                <span
+                                  className={`px-2 py-1 text-xs rounded-full font-semibold ${statusClass}`}
+                                >
+                                  {statusLabel}
+                                </span>
                               </div>
                             </div>
                             <div className="space-y-1 text-sm text-gray-500">
-                              <p><span className="inline-block w-20 text-gray-400">좌석</span>{group.tickets.length}매 ({group.tickets.map((t) => t.seatNumber).join(", ")})</p>
-                              <p><span className="inline-block w-20 text-gray-400">공연기간</span>{group.startDate} ~ {group.endDate}</p>
-                              <p><span className="inline-block w-20 text-gray-400">결제금액</span><span className="text-blue-600 font-bold">{group.totalPrice.toLocaleString()}원</span></p>
+                              <p>
+                                <span className="inline-block w-20 text-gray-400">
+                                  좌석
+                                </span>
+                                {group.tickets.length}매 (
+                                {group.tickets
+                                  .map((t) => t.seatNumber)
+                                  .join(", ")}
+                                )
+                              </p>
+                              <p>
+                                <span className="inline-block w-20 text-gray-400">
+                                  공연기간
+                                </span>
+                                {group.startDate} ~ {group.endDate}
+                              </p>
+                              <p>
+                                <span className="inline-block w-20 text-gray-400">
+                                  결제금액
+                                </span>
+                                <span className="text-blue-600 font-bold">
+                                  {group.totalPrice.toLocaleString()}원
+                                </span>
+                              </p>
                             </div>
                           </div>
                         </div>
@@ -1010,11 +1118,33 @@ function MyPageContent() {
 
                 {totalPages > 1 && (
                   <div className="flex items-center justify-center gap-2 mt-8">
-                    <button onClick={() => setCurrentPage((p) => Math.max(1, p - 1))} disabled={currentPage === 1} className="px-3 py-2 rounded-lg border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-default">이전</button>
-                    {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-                      <button key={page} onClick={() => setCurrentPage(page)} className={`w-10 h-10 rounded-lg border text-sm font-semibold ${currentPage === page ? "bg-blue-600 border-blue-600 text-white" : "bg-white border-gray-200 text-gray-600 hover:bg-gray-50"}`}>{page}</button>
-                    ))}
-                    <button onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages} className="px-3 py-2 rounded-lg border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-default">다음</button>
+                    <button
+                      onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                      disabled={currentPage === 1}
+                      className="px-3 py-2 rounded-lg border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-default"
+                    >
+                      이전
+                    </button>
+                    {Array.from({ length: totalPages }, (_, i) => i + 1).map(
+                      (page) => (
+                        <button
+                          key={page}
+                          onClick={() => setCurrentPage(page)}
+                          className={`w-10 h-10 rounded-lg border text-sm font-semibold ${currentPage === page ? "bg-blue-600 border-blue-600 text-white" : "bg-white border-gray-200 text-gray-600 hover:bg-gray-50"}`}
+                        >
+                          {page}
+                        </button>
+                      ),
+                    )}
+                    <button
+                      onClick={() =>
+                        setCurrentPage((p) => Math.min(totalPages, p + 1))
+                      }
+                      disabled={currentPage === totalPages}
+                      className="px-3 py-2 rounded-lg border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-default"
+                    >
+                      다음
+                    </button>
                   </div>
                 )}
               </div>
@@ -1047,33 +1177,86 @@ function MyPageContent() {
                 {postsSubTab === "my" && (
                   <>
                     <div className="flex items-center justify-between mb-4">
-                      <h2 className="text-lg font-bold text-gray-700">내 게시글</h2>
-                      <span className="text-sm text-gray-400">{myPostsTotalElements}개</span>
+                      <h2 className="text-lg font-bold text-gray-700">
+                        내 게시글
+                      </h2>
+                      <span className="text-sm text-gray-400">
+                        {myPostsTotalElements}개
+                      </span>
                     </div>
                     {myPostsLoading ? (
-                      <p className="text-sm text-gray-400 text-center py-10">불러오는 중...</p>
+                      <p className="text-sm text-gray-400 text-center py-10">
+                        불러오는 중...
+                      </p>
                     ) : myPosts.length === 0 ? (
-                      <p className="text-sm text-gray-400 text-center py-10">작성한 게시글이 없습니다.</p>
+                      <p className="text-sm text-gray-400 text-center py-10">
+                        작성한 게시글이 없습니다.
+                      </p>
                     ) : (
                       <div className="space-y-3">
                         {myPosts.map((post) => (
-                          <div key={post.postId} onClick={() => router.push(`/board/${post.postId}`)} role="button" tabIndex={0} className="p-4 border border-gray-100 rounded-xl hover:shadow-md hover:border-blue-200 transition cursor-pointer">
+                          <div
+                            key={post.postId}
+                            onClick={() => router.push(`/board/${post.postId}`)}
+                            role="button"
+                            tabIndex={0}
+                            className="p-4 border border-gray-100 rounded-xl hover:shadow-md hover:border-blue-200 transition cursor-pointer"
+                          >
                             <div className="flex items-center gap-2 mb-1">
-                              <h3 className="font-semibold text-gray-800 truncate">{post.title}</h3>
-                              <span className={`shrink-0 text-[10px] font-semibold rounded px-1.5 py-0.5 ${REVIEW_TYPE_BADGE[post.reviewType].className}`}>{REVIEW_TYPE_BADGE[post.reviewType].label}</span>
+                              <h3 className="font-semibold text-gray-800 truncate">
+                                {post.title}
+                              </h3>
+                              <span
+                                className={`shrink-0 text-[10px] font-semibold rounded px-1.5 py-0.5 ${REVIEW_TYPE_BADGE[post.reviewType].className}`}
+                              >
+                                {REVIEW_TYPE_BADGE[post.reviewType].label}
+                              </span>
                             </div>
-                            {post.reviewType === "REVIEW" && post.rating !== null && <div className="mb-1"><RatingStars rating={post.rating} /></div>}
-                            <p className="text-xs text-blue-600 font-semibold">{post.concertName}</p>
-                            <p className="text-xs text-gray-400 mt-1">{formatDateTime(post.createdAt)} · 좋아요 {post.likeCount}</p>
+                            {post.reviewType === "REVIEW" &&
+                              post.rating !== null && (
+                                <div className="mb-1">
+                                  <RatingStars rating={post.rating} />
+                                </div>
+                              )}
+                            <p className="text-xs text-blue-600 font-semibold">
+                              {post.concertName}
+                            </p>
+                            <p className="text-xs text-gray-400 mt-1">
+                              {formatDateTime(post.createdAt)} · 좋아요{" "}
+                              {post.likeCount}
+                            </p>
                           </div>
                         ))}
                       </div>
                     )}
                     {myPostsTotalPages > 1 && (
                       <div className="flex items-center justify-center gap-2 mt-8">
-                        <button onClick={() => fetchMyPosts(myPostsPage - 1)} disabled={myPostsPage === 0} className="px-3 py-2 rounded-lg border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-default">이전</button>
-                        {Array.from({ length: myPostsTotalPages }, (_, i) => i).map((page) => (<button key={page} onClick={() => fetchMyPosts(page)} className={`w-10 h-10 rounded-lg border text-sm font-semibold ${myPostsPage === page ? "bg-blue-600 border-blue-600 text-white" : "bg-white border-gray-200 text-gray-600 hover:bg-gray-50"}`}>{page + 1}</button>))}
-                        <button onClick={() => fetchMyPosts(myPostsPage + 1)} disabled={myPostsPage >= myPostsTotalPages - 1} className="px-3 py-2 rounded-lg border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-default">다음</button>
+                        <button
+                          onClick={() => fetchMyPosts(myPostsPage - 1)}
+                          disabled={myPostsPage === 0}
+                          className="px-3 py-2 rounded-lg border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-default"
+                        >
+                          이전
+                        </button>
+                        {Array.from(
+                          { length: myPostsTotalPages },
+                          (_, i) => i,
+                        ).map((page) => (
+                          <button
+                            key={page}
+                            onClick={() => fetchMyPosts(page)}
+                            className={`w-10 h-10 rounded-lg border text-sm font-semibold ${myPostsPage === page ? "bg-blue-600 border-blue-600 text-white" : "bg-white border-gray-200 text-gray-600 hover:bg-gray-50"}`}
+                          >
+                            {page + 1}
+                          </button>
+                        ))}
+                        <button
+                          onClick={() => fetchMyPosts(myPostsPage + 1)}
+                          disabled={myPostsPage >= myPostsTotalPages - 1}
+                          className="px-3 py-2 rounded-lg border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-default"
+                        >
+                          다음
+                        </button>
                       </div>
                     )}
                   </>
@@ -1082,24 +1265,58 @@ function MyPageContent() {
                 {postsSubTab === "bookmarks" && (
                   <>
                     <div className="flex items-center justify-between mb-4">
-                      <h2 className="text-lg font-bold text-gray-700">북마크한 게시글</h2>
-                      <span className="text-sm text-gray-400">{bookmarksTotalElements}개</span>
+                      <h2 className="text-lg font-bold text-gray-700">
+                        북마크한 게시글
+                      </h2>
+                      <span className="text-sm text-gray-400">
+                        {bookmarksTotalElements}개
+                      </span>
                     </div>
                     {bookmarksLoading ? (
-                      <p className="text-sm text-gray-400 text-center py-10">불러오는 중...</p>
+                      <p className="text-sm text-gray-400 text-center py-10">
+                        불러오는 중...
+                      </p>
                     ) : bookmarks.length === 0 ? (
-                      <p className="text-sm text-gray-400 text-center py-10">북마크한 게시글이 없습니다.</p>
+                      <p className="text-sm text-gray-400 text-center py-10">
+                        북마크한 게시글이 없습니다.
+                      </p>
                     ) : (
                       <div className="space-y-3">
                         {bookmarks.map((b) => (
-                          <div key={b.postId} onClick={() => router.push(`/board/${b.postId}`)} role="button" tabIndex={0} className="flex gap-3 p-4 border border-gray-100 rounded-xl hover:shadow-md hover:border-blue-200 transition cursor-pointer">
+                          <div
+                            key={b.postId}
+                            onClick={() => router.push(`/board/${b.postId}`)}
+                            role="button"
+                            tabIndex={0}
+                            className="flex gap-3 p-4 border border-gray-100 rounded-xl hover:shadow-md hover:border-blue-200 transition cursor-pointer"
+                          >
                             <div className="relative shrink-0 w-12 h-16 rounded-lg overflow-hidden bg-gradient-to-br from-blue-100 to-indigo-200 flex items-center justify-center">
-                              {b.posterUrl ? <Image fill unoptimized src={getLocalConcertPoster(b.posterUrl)} alt={b.concertName} sizes="48px" className="object-cover" /> : <span className="text-[10px] text-gray-400">포스터</span>}
+                              {b.posterUrl ? (
+                                <Image
+                                  fill
+                                  unoptimized
+                                  src={getLocalConcertPoster(b.posterUrl)}
+                                  alt={b.concertName}
+                                  sizes="48px"
+                                  className="object-cover"
+                                />
+                              ) : (
+                                <span className="text-[10px] text-gray-400">
+                                  포스터
+                                </span>
+                              )}
                             </div>
                             <div className="min-w-0 flex-1">
-                              <h3 className="font-semibold text-gray-800 truncate">{b.title}</h3>
-                              <p className="text-xs text-blue-600 font-semibold mt-0.5">{b.concertName}</p>
-                              <p className="text-xs text-gray-400 mt-1">{b.userName} · {formatDateTime(b.bookmarkedAt)} 북마크</p>
+                              <h3 className="font-semibold text-gray-800 truncate">
+                                {b.title}
+                              </h3>
+                              <p className="text-xs text-blue-600 font-semibold mt-0.5">
+                                {b.concertName}
+                              </p>
+                              <p className="text-xs text-gray-400 mt-1">
+                                {b.userName} · {formatDateTime(b.bookmarkedAt)}{" "}
+                                북마크
+                              </p>
                             </div>
                           </div>
                         ))}
@@ -1107,9 +1324,32 @@ function MyPageContent() {
                     )}
                     {bookmarksTotalPages > 1 && (
                       <div className="flex items-center justify-center gap-2 mt-8">
-                        <button onClick={() => fetchBookmarks(bookmarksPage - 1)} disabled={bookmarksPage === 0} className="px-3 py-2 rounded-lg border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-default">이전</button>
-                        {Array.from({ length: bookmarksTotalPages }, (_, i) => i).map((page) => (<button key={page} onClick={() => fetchBookmarks(page)} className={`w-10 h-10 rounded-lg border text-sm font-semibold ${bookmarksPage === page ? "bg-blue-600 border-blue-600 text-white" : "bg-white border-gray-200 text-gray-600 hover:bg-gray-50"}`}>{page + 1}</button>))}
-                        <button onClick={() => fetchBookmarks(bookmarksPage + 1)} disabled={bookmarksPage >= bookmarksTotalPages - 1} className="px-3 py-2 rounded-lg border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-default">다음</button>
+                        <button
+                          onClick={() => fetchBookmarks(bookmarksPage - 1)}
+                          disabled={bookmarksPage === 0}
+                          className="px-3 py-2 rounded-lg border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-default"
+                        >
+                          이전
+                        </button>
+                        {Array.from(
+                          { length: bookmarksTotalPages },
+                          (_, i) => i,
+                        ).map((page) => (
+                          <button
+                            key={page}
+                            onClick={() => fetchBookmarks(page)}
+                            className={`w-10 h-10 rounded-lg border text-sm font-semibold ${bookmarksPage === page ? "bg-blue-600 border-blue-600 text-white" : "bg-white border-gray-200 text-gray-600 hover:bg-gray-50"}`}
+                          >
+                            {page + 1}
+                          </button>
+                        ))}
+                        <button
+                          onClick={() => fetchBookmarks(bookmarksPage + 1)}
+                          disabled={bookmarksPage >= bookmarksTotalPages - 1}
+                          className="px-3 py-2 rounded-lg border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-default"
+                        >
+                          다음
+                        </button>
                       </div>
                     )}
                   </>
@@ -1118,24 +1358,58 @@ function MyPageContent() {
                 {postsSubTab === "likes" && (
                   <>
                     <div className="flex items-center justify-between mb-4">
-                      <h2 className="text-lg font-bold text-gray-700">좋아요한 게시글</h2>
-                      <span className="text-sm text-gray-400">{likesTotalElements}개</span>
+                      <h2 className="text-lg font-bold text-gray-700">
+                        좋아요한 게시글
+                      </h2>
+                      <span className="text-sm text-gray-400">
+                        {likesTotalElements}개
+                      </span>
                     </div>
                     {likesLoading ? (
-                      <p className="text-sm text-gray-400 text-center py-10">불러오는 중...</p>
+                      <p className="text-sm text-gray-400 text-center py-10">
+                        불러오는 중...
+                      </p>
                     ) : likes.length === 0 ? (
-                      <p className="text-sm text-gray-400 text-center py-10">좋아요한 게시글이 없습니다.</p>
+                      <p className="text-sm text-gray-400 text-center py-10">
+                        좋아요한 게시글이 없습니다.
+                      </p>
                     ) : (
                       <div className="space-y-3">
                         {likes.map((l) => (
-                          <div key={l.postId} onClick={() => router.push(`/board/${l.postId}`)} role="button" tabIndex={0} className="flex gap-3 p-4 border border-gray-100 rounded-xl hover:shadow-md hover:border-blue-200 transition cursor-pointer">
+                          <div
+                            key={l.postId}
+                            onClick={() => router.push(`/board/${l.postId}`)}
+                            role="button"
+                            tabIndex={0}
+                            className="flex gap-3 p-4 border border-gray-100 rounded-xl hover:shadow-md hover:border-blue-200 transition cursor-pointer"
+                          >
                             <div className="relative shrink-0 w-12 h-16 rounded-lg overflow-hidden bg-gradient-to-br from-blue-100 to-indigo-200 flex items-center justify-center">
-                              {l.posterUrl ? <Image fill unoptimized src={getLocalConcertPoster(l.posterUrl)} alt={l.concertName} sizes="48px" className="object-cover" /> : <span className="text-[10px] text-gray-400">포스터</span>}
+                              {l.posterUrl ? (
+                                <Image
+                                  fill
+                                  unoptimized
+                                  src={getLocalConcertPoster(l.posterUrl)}
+                                  alt={l.concertName}
+                                  sizes="48px"
+                                  className="object-cover"
+                                />
+                              ) : (
+                                <span className="text-[10px] text-gray-400">
+                                  포스터
+                                </span>
+                              )}
                             </div>
                             <div className="min-w-0 flex-1">
-                              <h3 className="font-semibold text-gray-800 truncate">{l.title}</h3>
-                              <p className="text-xs text-blue-600 font-semibold mt-0.5">{l.concertName}</p>
-                              <p className="text-xs text-gray-400 mt-1">{l.userName} · {formatDateTime(l.likedAt)} 좋아요</p>
+                              <h3 className="font-semibold text-gray-800 truncate">
+                                {l.title}
+                              </h3>
+                              <p className="text-xs text-blue-600 font-semibold mt-0.5">
+                                {l.concertName}
+                              </p>
+                              <p className="text-xs text-gray-400 mt-1">
+                                {l.userName} · {formatDateTime(l.likedAt)}{" "}
+                                좋아요
+                              </p>
                             </div>
                           </div>
                         ))}
@@ -1143,16 +1417,38 @@ function MyPageContent() {
                     )}
                     {likesTotalPages > 1 && (
                       <div className="flex items-center justify-center gap-2 mt-8">
-                        <button onClick={() => fetchLikes(likesPage - 1)} disabled={likesPage === 0} className="px-3 py-2 rounded-lg border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-default">이전</button>
-                        {Array.from({ length: likesTotalPages }, (_, i) => i).map((page) => (<button key={page} onClick={() => fetchLikes(page)} className={`w-10 h-10 rounded-lg border text-sm font-semibold ${likesPage === page ? "bg-blue-600 border-blue-600 text-white" : "bg-white border-gray-200 text-gray-600 hover:bg-gray-50"}`}>{page + 1}</button>))}
-                        <button onClick={() => fetchLikes(likesPage + 1)} disabled={likesPage >= likesTotalPages - 1} className="px-3 py-2 rounded-lg border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-default">다음</button>
+                        <button
+                          onClick={() => fetchLikes(likesPage - 1)}
+                          disabled={likesPage === 0}
+                          className="px-3 py-2 rounded-lg border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-default"
+                        >
+                          이전
+                        </button>
+                        {Array.from(
+                          { length: likesTotalPages },
+                          (_, i) => i,
+                        ).map((page) => (
+                          <button
+                            key={page}
+                            onClick={() => fetchLikes(page)}
+                            className={`w-10 h-10 rounded-lg border text-sm font-semibold ${likesPage === page ? "bg-blue-600 border-blue-600 text-white" : "bg-white border-gray-200 text-gray-600 hover:bg-gray-50"}`}
+                          >
+                            {page + 1}
+                          </button>
+                        ))}
+                        <button
+                          onClick={() => fetchLikes(likesPage + 1)}
+                          disabled={likesPage >= likesTotalPages - 1}
+                          className="px-3 py-2 rounded-lg border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-default"
+                        >
+                          다음
+                        </button>
                       </div>
                     )}
                   </>
                 )}
               </div>
             )}
-
           </div>
         </div>
       </div>

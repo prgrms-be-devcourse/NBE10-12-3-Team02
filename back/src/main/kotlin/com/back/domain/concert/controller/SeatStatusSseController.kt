@@ -7,13 +7,11 @@ import com.back.global.annotation.ApiV1
 import com.fasterxml.jackson.databind.ObjectMapper
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.tags.Tag
+import jakarta.servlet.http.HttpServletResponse
 import org.slf4j.LoggerFactory
-import org.springframework.web.bind.annotation.GetMapping
-import org.springframework.web.bind.annotation.PathVariable
-import org.springframework.web.bind.annotation.RequestHeader
-import org.springframework.web.bind.annotation.RequestMapping
-import org.springframework.web.bind.annotation.RequestParam
-import org.springframework.web.bind.annotation.RestController
+import org.springframework.http.HttpStatus
+import org.springframework.http.ResponseEntity
+import org.springframework.web.bind.annotation.*
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter
 
 @ApiV1
@@ -39,11 +37,19 @@ class SeatStatusSseController(
         @PathVariable concertId: Long,
         @PathVariable scheduleId: Long,
         @RequestHeader(value = "Last-Event-ID", required = false) lastEventHeader: String?,
-        @RequestParam(value = "lastEventId", required = false) lastEventParam: String?
-    ): SseEmitter {
+        @RequestParam(value = "lastEventId", required = false) lastEventParam: String?,
+        response: HttpServletResponse
+    ): ResponseEntity<SseEmitter> {
+        response.setHeader("Cache-Control", "no-cache")     // 중간 캐시 서버 캐싱 차단
+        response.setHeader("X-Accel-Buffering", "no")       // Nginx proxy_buffering 차단
+        response.setHeader("Keep-Alive", "timeout=1800")    // 클라이언트 연결 유지 힌트
+
         val lastEventId = lastEventHeader?.takeIf { it.isNotBlank() } ?: lastEventParam?.takeIf { it.isNotBlank() }
         val emitter = SseEmitter(SSE_TIMEOUT_MS)
+
+        // register()가 null을 반환하면 연결 수 상한 초과 → 503 Service Unavailable 응답
         val wrapper = registry.register(scheduleId, emitter, lastEventId)
+            ?: return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).build()
 
         runCatching {
             val seats = scheduleSeatRepository.findByScheduleScheduleId(scheduleId)
@@ -65,7 +71,7 @@ class SeatStatusSseController(
         }
 
         log.debug("SSE 스트림 연결: concertId={}, scheduleId={}, lastEventId={}", concertId, scheduleId, lastEventId)
-        return emitter
+        return ResponseEntity.ok(emitter)
     }
 
     companion object {

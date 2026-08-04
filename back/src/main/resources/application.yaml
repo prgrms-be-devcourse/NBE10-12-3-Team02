@@ -124,11 +124,11 @@ queue:
     heartbeat-interval: ${QUEUE_SSE_HEARTBEAT_INTERVAL:20s}
     outbox:
       enabled: ${QUEUE_SSE_OUTBOX_ENABLED:true}
-      polling-interval: ${QUEUE_SSE_OUTBOX_POLLING_INTERVAL:500ms}
+      polling-interval: ${QUEUE_SSE_OUTBOX_POLLING_INTERVAL:1000ms}
       cleanup-interval: ${QUEUE_SSE_OUTBOX_CLEANUP_INTERVAL:1h}
       batch-size: ${QUEUE_SSE_OUTBOX_BATCH_SIZE:100}
       max-retries: ${QUEUE_SSE_OUTBOX_MAX_RETRIES:3}
       retry-delay: ${QUEUE_SSE_OUTBOX_RETRY_DELAY:5s}
       processing-timeout: ${QUEUE_SSE_OUTBOX_PROCESSING_TIMEOUT:30s}
       terminal-event-ttl: ${QUEUE_SSE_OUTBOX_TERMINAL_EVENT_TTL:10m}
-      retention: ${QUEUE_SSE_OUTBOX_RETENTION:7d}
+      retention: ${QUEUE_SSE_OUTBOX_RETENTION:1d}
