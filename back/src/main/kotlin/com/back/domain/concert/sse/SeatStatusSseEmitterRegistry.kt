@@ -163,7 +163,7 @@ class SeatStatusSseEmitterRegistry(
     }
 
     companion object {
-        // 회차(scheduleId)당 최대 SSE 동시 연결 수 (서버 스펙에 따라 조정)
+        // 회차(scheduleId)당 최대 SSE 동시 연결 수
         private const val MAX_CONNECTIONS_PER_SCHEDULE = 10_000
     }
 }

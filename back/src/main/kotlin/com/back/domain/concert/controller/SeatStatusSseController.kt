@@ -9,12 +9,7 @@ import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.servlet.http.HttpServletResponse
 import org.slf4j.LoggerFactory
-import org.springframework.web.bind.annotation.GetMapping
-import org.springframework.web.bind.annotation.PathVariable
-import org.springframework.web.bind.annotation.RequestHeader
-import org.springframework.web.bind.annotation.RequestMapping
-import org.springframework.web.bind.annotation.RequestParam
-import org.springframework.web.bind.annotation.RestController
+import org.springframework.web.bind.annotation.*
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter
 
 @ApiV1
@@ -43,10 +38,9 @@ class SeatStatusSseController(
         @RequestParam(value = "lastEventId", required = false) lastEventParam: String?,
         response: HttpServletResponse
     ): SseEmitter {
-        // 리버스 프록시(Nginx/ALB) SSE 버퍼링 차단 및 실시간 패킷 전달 보장
-        response.setHeader("Cache-Control", "no-cache")
-        response.setHeader("X-Accel-Buffering", "no")
-        response.setHeader("Keep-Alive", "timeout=1800")
+        response.setHeader("Cache-Control", "no-cache")     // 중간 캐시 서버 캐싱 차단
+        response.setHeader("X-Accel-Buffering", "no")       // Nginx proxy_buffering 차단
+        response.setHeader("Keep-Alive", "timeout=1800")    // 클라이언트 연결 유지 힌트
 
         val lastEventId = lastEventHeader?.takeIf { it.isNotBlank() } ?: lastEventParam?.takeIf { it.isNotBlank() }
         val emitter = SseEmitter(SSE_TIMEOUT_MS)
