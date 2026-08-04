@@ -53,6 +53,7 @@ export default function Navbar() {
   const [authChecked, setAuthChecked] = useState(false);
   const [profileImgUrl, setProfileImgUrl] = useState<string | null>(null);
   const [profileImgError, setProfileImgError] = useState(false);
+  const [profileCacheKey, setProfileCacheKey] = useState(() => Date.now());
 
   // 알림 드롭다운
   const [unreadCount, setUnreadCount] = useState(0);
@@ -79,6 +80,26 @@ export default function Navbar() {
     return () => window.removeEventListener("auth-changed", syncAuth);
   }, []);
 
+  const fetchProfileImage = () => {
+    apiFetch<UserProfile>("/users/me")
+      .then((res) => {
+        setProfileImgUrl(res.data.profileImageUrl || null);
+        setProfileImgError(false);
+        setProfileCacheKey(Date.now());
+      })
+      .catch(() => {});
+  };
+
+  // 마이페이지에서 프로필 사진을 변경하면 발행되는 이벤트를 받아 새로고침 없이 갱신한다.
+  // redirectToProfileImg URL은 유저ID 기준 고정 URL이라 캐시버스팅(profileCacheKey)이 없으면
+  // 브라우저가 20분간 캐싱된 이전 이미지를 계속 보여준다.
+  useEffect(() => {
+    if (!userName) return;
+    window.addEventListener("profile-image-changed", fetchProfileImage);
+    return () =>
+      window.removeEventListener("profile-image-changed", fetchProfileImage);
+  }, [userName]);
+
   useEffect(() => {
     if (!userName) {
       sseAbortRef.current?.abort();
@@ -96,12 +117,7 @@ export default function Navbar() {
       .then((res) => setUnreadCount(res.data))
       .catch(() => {});
 
-    apiFetch<UserProfile>("/users/me")
-      .then((res) => {
-        setProfileImgUrl(res.data.profileImageUrl || null);
-        setProfileImgError(false);
-      })
-      .catch(() => {});
+    fetchProfileImage();
 
     const controller = new AbortController();
     sseAbortRef.current = controller;
@@ -272,7 +288,7 @@ export default function Navbar() {
                     src={
                       !profileImgUrl || profileImgError
                         ? "/default-avatar.svg"
-                        : profileImgUrl
+                        : `${profileImgUrl}?t=${profileCacheKey}`
                     }
                     alt={userName}
                     width={32}
