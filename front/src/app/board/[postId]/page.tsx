@@ -93,6 +93,13 @@ export default function PostDetailPage({
   const [commentSubmitting, setCommentSubmitting] = useState(false);
   const [commentRefreshKey, setCommentRefreshKey] = useState(0);
 
+  const [editingCommentId, setEditingCommentId] = useState<number | null>(
+    null,
+  );
+  const [editCommentContent, setEditCommentContent] = useState("");
+  const [editCommentError, setEditCommentError] = useState("");
+  const [editCommentSubmitting, setEditCommentSubmitting] = useState(false);
+
   const [me, setMe] = useState<{ id: number; name: string } | null>(null);
 
   const [bookmarked, setBookmarked] = useState(false);
@@ -239,6 +246,41 @@ export default function PostDetailPage({
       );
     } finally {
       setCommentSubmitting(false);
+    }
+  };
+
+  const startEditComment = (comment: Comment) => {
+    setEditingCommentId(comment.commentId);
+    setEditCommentContent(comment.content);
+    setEditCommentError("");
+  };
+
+  const cancelEditComment = () => {
+    setEditingCommentId(null);
+    setEditCommentContent("");
+    setEditCommentError("");
+  };
+
+  const handleCommentUpdate = async (commentId: number) => {
+    if (!editCommentContent.trim()) {
+      setEditCommentError("댓글 내용을 입력해주세요.");
+      return;
+    }
+    setEditCommentSubmitting(true);
+    setEditCommentError("");
+    try {
+      await apiFetch(`/posts/${postId}/comments/${commentId}`, {
+        method: "PUT",
+        body: JSON.stringify({ content: editCommentContent }),
+      });
+      setEditingCommentId(null);
+      setCommentRefreshKey((k) => k + 1);
+    } catch (e) {
+      setEditCommentError(
+        e instanceof ApiError ? e.message : "댓글 수정 중 오류가 발생했습니다.",
+      );
+    } finally {
+      setEditCommentSubmitting(false);
     }
   };
 
@@ -487,32 +529,74 @@ export default function PostDetailPage({
                   key={c.commentId}
                   className="border-b border-gray-100 pb-4 last:border-0"
                 >
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <p className="text-xs text-gray-400">
-                        {c.isMine ? (
-                          c.authorName
-                        ) : (
-                          <Link
-                            href={`/users/${c.authorId}`}
-                            className="hover:text-blue-500 hover:underline"
-                          >
-                            {c.authorName}
-                          </Link>
-                        )}{" "}
-                        · {formatDateTime(c.createdAt)}
-                      </p>
-                      <p className="text-sm text-gray-700 mt-1">{c.content}</p>
+                  {editingCommentId === c.commentId ? (
+                    <div className="space-y-2">
+                      <textarea
+                        rows={3}
+                        maxLength={1000}
+                        value={editCommentContent}
+                        onChange={(e) => setEditCommentContent(e.target.value)}
+                        className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300 resize-none"
+                      />
+                      {editCommentError && (
+                        <p className="text-red-500 text-sm">
+                          {editCommentError}
+                        </p>
+                      )}
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => handleCommentUpdate(c.commentId)}
+                          disabled={editCommentSubmitting}
+                          className="text-xs px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition"
+                        >
+                          {editCommentSubmitting ? "저장 중..." : "저장"}
+                        </button>
+                        <button
+                          onClick={cancelEditComment}
+                          className="text-xs px-3 py-1.5 bg-gray-100 text-gray-600 rounded-lg hover:bg-gray-200 transition"
+                        >
+                          취소
+                        </button>
+                      </div>
                     </div>
-                    {c.isMine && me && (
-                      <button
-                        onClick={() => handleCommentDelete(c.commentId)}
-                        className="text-xs text-red-400 hover:text-red-600 shrink-0 ml-3"
-                      >
-                        삭제
-                      </button>
-                    )}
-                  </div>
+                  ) : (
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <p className="text-xs text-gray-400">
+                          {c.isMine ? (
+                            c.authorName
+                          ) : (
+                            <Link
+                              href={`/users/${c.authorId}`}
+                              className="hover:text-blue-500 hover:underline"
+                            >
+                              {c.authorName}
+                            </Link>
+                          )}{" "}
+                          · {formatDateTime(c.createdAt)}
+                        </p>
+                        <p className="text-sm text-gray-700 mt-1">
+                          {c.content}
+                        </p>
+                      </div>
+                      {c.isMine && me && (
+                        <div className="flex gap-2 shrink-0 ml-3">
+                          <button
+                            onClick={() => startEditComment(c)}
+                            className="text-xs text-blue-500 hover:text-blue-700"
+                          >
+                            수정
+                          </button>
+                          <button
+                            onClick={() => handleCommentDelete(c.commentId)}
+                            className="text-xs text-red-400 hover:text-red-600"
+                          >
+                            삭제
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </li>
               ))}
             </ul>

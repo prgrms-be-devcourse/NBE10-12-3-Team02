@@ -2,6 +2,7 @@ package com.back.domain.post.controller
 
 import com.back.domain.post.dto.PostCommentCreateRequest
 import com.back.domain.post.dto.PostCommentResponse
+import com.back.domain.post.dto.PostCommentUpdateRequest
 import com.back.domain.post.service.PostCommentService
 import com.back.global.annotation.ApiV1
 import com.back.global.requestcontext.RequestContext
@@ -39,6 +40,18 @@ class PostCommentController(
         val currentUserId = requestContext.actor?.id
         val data = postCommentService.getList(postId, currentUserId)
         return RsData("200-1", "댓글 목록 조회 성공", data)
+    }
+
+    @PutMapping("/{commentId}")
+    @Operation(summary = "댓글 수정", description = "본인 댓글만 수정 가능")
+    fun updateComment(
+        @PathVariable postId: Long,
+        @PathVariable commentId: Long,
+        @RequestBody @Valid request: PostCommentUpdateRequest
+    ): RsData<PostCommentResponse> {
+        val actor = requestContext.actor ?: throw IllegalStateException("Actor must not be null")
+        val data = postCommentService.update(postId, commentId, actor.id, request)
+        return RsData("200-1", "댓글이 수정되었습니다.", data)
     }
 
     @DeleteMapping("/{commentId}")

@@ -87,10 +87,9 @@ class User(
     }
 
     companion object {
-        // TODO: 배포 도메인 확정되면 application.yaml 설정값으로 옮기기
-        private const val BASE_URL = "http://localhost:8080"
-        private const val UPLOAD_BASE_URL = "$BASE_URL/uploads"
-        private const val DEFAULT_PROFILE_IMG_URL = "$BASE_URL/static/default-profile.png"
+        private val BASE_URL: String = System.getenv("APP_BASE_URL") ?: "http://localhost:8080"
+        private val UPLOAD_BASE_URL: String = "$BASE_URL/uploads"
+        private val DEFAULT_PROFILE_IMG_URL: String = "$BASE_URL/static/default-profile.png"
 
         fun create(
             loginId: String, email: String, password: String, name: String, loginType: LoginType
