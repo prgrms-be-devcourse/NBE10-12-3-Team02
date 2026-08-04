@@ -120,12 +120,19 @@ class SeatOccupyManager(
     }
 
     fun validateSeatHolds(userId: Long, concertId: Long, scheduleId: Long, seatHolds: List<SeatHoldInfo>) {
-        for (hold in seatHolds) {
-            val redisKey = generateSeatOccupyKey(concertId, scheduleId, hold.seatNumber)
-            val entries = stringRedisTemplate.opsForHash<String, String>().entries(redisKey)
+        val keys = seatHolds.map { generateSeatOccupyKey(concertId, scheduleId, it.seatNumber) }
 
-            val holdUserId = entries["userId"]
-            val holdOccupyToken = entries["occupyToken"]
+        // Redis Pipeline 적용하여 좌석 수만큼의 HGETALL 요청을 1 왕복으로 최소화
+        val results = stringRedisTemplate.executePipelined { conn ->
+            keys.forEach { key -> conn.hashCommands().hGetAll(key.toByteArray()) }
+            null
+        }
+
+        // Pipeline 내부에서는 예외를 던질 수 없으므로, 결과를 모두 받은 뒤 외부에서 순서대로 검증
+        for ((index, hold) in seatHolds.withIndex()) {
+            val map = results.getOrNull(index) as? Map<*, *>
+            val holdUserId = map?.get("userId")?.toString()
+            val holdOccupyToken = map?.get("occupyToken")?.toString()
 
             if (holdUserId == null || holdOccupyToken == null) {
                 throw ServiceException(ErrorCode.SEAT_HOLD_EXPIRED)
@@ -139,7 +146,7 @@ class SeatOccupyManager(
         }
     }
 
-     // 좌석 선점 시 만료 ZSET에 등록함
+     // 좌석 선점 시 만료 ZSET에 등록
      // Score = 만료 예정 Unix 타임스탬프, Member = concertId:scheduleId:seatNumber
     fun addToExpireQueue(concertId: Long, scheduleId: Long, seatNumber: String, ttlSeconds: Long) {
         val expireAt = System.currentTimeMillis() + ttlSeconds * 1000

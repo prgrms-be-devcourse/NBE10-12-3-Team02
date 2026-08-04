@@ -13,7 +13,7 @@ class PaymentCompletedEventHandler(
     private val waitingQueueService: WaitingQueueService
 ) {
 
-    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
     fun handlePaymentCompleted(event: PaymentCompletedEvent) {
         waitingQueueManager.removeActiveUser(event.scheduleId, event.userId)
         waitingQueueService.allowEntry(event.concertId, event.scheduleId)
