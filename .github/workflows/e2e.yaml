@@ -1,0 +1,86 @@
+name: E2E Integration Test
+
+# 실행 조건:
+# 1. 수동 실행 (workflow_dispatch)
+# 2. 매일 밤 정기검증 (cron 0 18 * * * -> KST 03:00)
+# 3. PR에 'run-e2e' 라벨이 부착된 경우
+on:
+  workflow_dispatch:
+  schedule:
+    # 매일 한국 시간 새벽 03:00 (UTC 18:00) 정기 검증
+    - cron: '0 18 * * *'
+  pull_request:
+    types: [labeled, synchronize]
+    branches:
+      - main
+
+concurrency:
+  group: e2e-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  e2e:
+    name: E2E Playwright Suite
+    runs-on: ubuntu-latest
+    # 수동 클릭, 매일 밤 정기실행, 또는 'run-e2e' 라벨이 포함된 PR일 때만 실행
+    if: |
+      github.event_name == 'workflow_dispatch' ||
+      github.event_name == 'schedule' ||
+      (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'run-e2e'))
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # 1. 백엔드 구동용 JDK 25 설정
+      - name: Set up JDK 25
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+
+      # 2. GitHub Secrets 기반 application-secret.yaml 생성
+      - name: Create application-secret.yaml from Secret
+        working-directory: back
+        run: |
+          mkdir -p src/main/resources
+          echo "${{ secrets.APPLICATION_SECRET_YAML }}" > src/main/resources/application-secret.yaml
+
+      # 3. Gradle 설정
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      # 4. Node.js 22 & pnpm v9 설정
+      - name: Set up Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      # 5. 최상위 e2e 패키지 디펜던시 및 Playwright Chromium 브라우저 설치
+      - name: Install E2E Dependencies & Playwright Browsers
+        working-directory: e2e
+        run: |
+          pnpm install --frozen-lockfile
+          npx playwright install --with-deps chromium
+
+      # 6. E2E 테스트 실행 (playwright.config.ts의 다중 webServer로 백엔드/프론트엔드 자동 시동)
+      - name: Run Playwright E2E Tests
+        working-directory: e2e
+        env:
+          SPRING_PROFILES_ACTIVE: dev
+          CI: true
+        run: |
+          pnpm test
+
+      # 7. 실패 시 Playwright HTML 결과 및 트레이스 업로드
+      - name: Upload Playwright Report on Failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-e2e-report
+          path: e2e/playwright-report/
+          retention-days: 7
