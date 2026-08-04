@@ -7,6 +7,7 @@ import com.back.global.annotation.ApiV1
 import com.fasterxml.jackson.databind.ObjectMapper
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.tags.Tag
+import jakarta.servlet.http.HttpServletResponse
 import org.slf4j.LoggerFactory
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
@@ -39,8 +40,14 @@ class SeatStatusSseController(
         @PathVariable concertId: Long,
         @PathVariable scheduleId: Long,
         @RequestHeader(value = "Last-Event-ID", required = false) lastEventHeader: String?,
-        @RequestParam(value = "lastEventId", required = false) lastEventParam: String?
+        @RequestParam(value = "lastEventId", required = false) lastEventParam: String?,
+        response: HttpServletResponse
     ): SseEmitter {
+        // 리버스 프록시(Nginx/ALB) SSE 버퍼링 차단 및 실시간 패킷 전달 보장
+        response.setHeader("Cache-Control", "no-cache")
+        response.setHeader("X-Accel-Buffering", "no")
+        response.setHeader("Keep-Alive", "timeout=1800")
+
         val lastEventId = lastEventHeader?.takeIf { it.isNotBlank() } ?: lastEventParam?.takeIf { it.isNotBlank() }
         val emitter = SseEmitter(SSE_TIMEOUT_MS)
         val wrapper = registry.register(scheduleId, emitter, lastEventId)

@@ -48,6 +48,14 @@ class SeatStatusSseEmitterRegistry(
     private val emitters = ConcurrentHashMap<Long, MutableList<SynchronizedEmitter>>()
 
     fun register(scheduleId: Long, emitter: SseEmitter, lastEventId: String? = null): SynchronizedEmitter {
+        // scheduleId당 최대 연결 수 초과 시 즉시 거부하여 메모리 폭발 방지
+        val currentCount = emitters[scheduleId]?.size ?: 0
+        if (currentCount >= MAX_CONNECTIONS_PER_SCHEDULE) {
+            log.warn("SSE 연결 수 상한 초과: scheduleId={}, count={}", scheduleId, currentCount)
+            emitter.complete()
+            return SynchronizedEmitter(emitter)
+        }
+
         val wrapper = SynchronizedEmitter(emitter)
         emitters.computeIfAbsent(scheduleId) { CopyOnWriteArrayList() }.add(wrapper)
 
@@ -152,5 +160,10 @@ class SeatStatusSseEmitterRegistry(
             }
         }
         taskExecutor.execute(safeTask)
+    }
+
+    companion object {
+        // 회차(scheduleId)당 최대 SSE 동시 연결 수 (서버 스펙에 따라 조정)
+        private const val MAX_CONNECTIONS_PER_SCHEDULE = 10_000
     }
 }
