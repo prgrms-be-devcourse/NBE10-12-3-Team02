@@ -44,9 +44,13 @@ class ConcertService(
             .mapNotNull { s -> s.concert.concertId?.let { cid -> cid to s.venue.venueName } }
             .toMap()
 
+        val today = LocalDate.now().atStartOfDay()
+
         val comparator = when (sort) {
-            ConcertSortType.latest -> compareByDescending<Concert> { it.startDate }
-            else -> compareBy<Concert> { it.endDate }
+            ConcertSortType.latest -> compareBy<Concert> { it.endDate < today }
+                .thenByDescending { it.concertId }
+            else -> compareBy<Concert> { it.endDate < today }
+                .thenBy { it.endDate }
         }
 
         return filteredConcerts.sortedWith(comparator)

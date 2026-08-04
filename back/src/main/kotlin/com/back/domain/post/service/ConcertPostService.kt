@@ -164,7 +164,7 @@ class ConcertPostService(
         post: ConcertPost,
         currentUserId: Long?,
     ): ConcertPostResponse {
-        val postId = post.postId!!
+        val postId = post.postIdOrThrow
         val isLiked = currentUserId != null &&
             postLikeRepository.existsByPostPostIdAndUserUserId(postId, currentUserId)
         val isBookmarked = currentUserId != null &&
@@ -186,7 +186,7 @@ class ConcertPostService(
             return emptyList()
         }
 
-        val postIds = posts.map { it.postId!! }
+        val postIds = posts.map { it.postIdOrThrow }
         val likeCounts = postLikeRepository.countByPostIds(postIds)
             .associate { it.postId to it.likeCount }
         val likedPostIds = currentUserId
@@ -197,7 +197,7 @@ class ConcertPostService(
             ?: emptySet()
 
         return posts.map { post ->
-            val postId = post.postId!!
+            val postId = post.postIdOrThrow
             ConcertPostResponse.of(
                 post = post,
                 currentUserId = currentUserId,

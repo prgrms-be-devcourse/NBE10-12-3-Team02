@@ -13,7 +13,7 @@ data class FollowUserResponse(
         fun ofFollowee(follow: Follow): FollowUserResponse {
             val user = follow.followee
             return FollowUserResponse(
-                userId = user.userId!!,
+                userId = user.userIdOrThrow,
                 name = user.name,
                 profileImgUrl = user.profileImgUrlOrDefault,
                 followedAt = follow.createDate,
@@ -23,7 +23,7 @@ data class FollowUserResponse(
         fun ofFollower(follow: Follow): FollowUserResponse {
             val user = follow.follower
             return FollowUserResponse(
-                userId = user.userId!!,
+                userId = user.userIdOrThrow,
                 name = user.name,
                 profileImgUrl = user.profileImgUrlOrDefault,
                 followedAt = follow.createDate,

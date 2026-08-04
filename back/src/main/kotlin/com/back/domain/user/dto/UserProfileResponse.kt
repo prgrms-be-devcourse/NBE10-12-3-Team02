@@ -10,7 +10,7 @@ data class UserProfileResponse(
 ) {
     companion object {
         fun from(user: User, isFollowing: Boolean?): UserProfileResponse = UserProfileResponse(
-            userId = user.userId!!,
+            userId = user.userIdOrThrow,
             name = user.name,
             profileImgUrl = user.profileImgUrlOrDefault,
             isFollowing = isFollowing,

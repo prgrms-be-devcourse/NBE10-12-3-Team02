@@ -75,6 +75,10 @@ enum class ErrorCode(
     FOLLOW_ALREADY_EXISTS("409-9", "이미 팔로우한 사용자입니다."),
     FOLLOW_NOT_FOUND("404-11", "팔로우 관계가 존재하지 않습니다."),
 
+    // Notification
+    NOTIFICATION_NOT_FOUND("404-12", "존재하지 않는 알림입니다."),
+    NOTIFICATION_FORBIDDEN("403-7", "알림에 접근할 권한이 없습니다."),
+
     // bucket4j
     TOO_MANY_REQUESTS("429-1", "요청이 너무 많습니다."),
 

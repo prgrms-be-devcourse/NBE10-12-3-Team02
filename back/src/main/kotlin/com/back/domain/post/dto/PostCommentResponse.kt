@@ -15,8 +15,8 @@ data class PostCommentResponse(
     companion object {
         fun of(comment: PostComment, currentUserId: Long?): PostCommentResponse =
             PostCommentResponse(
-                commentId = comment.commentId!!,
-                authorId = comment.user.userId!!,
+                commentId = comment.commentIdOrThrow,
+                authorId = comment.user.userIdOrThrow,
                 authorName = comment.user.name,
                 content = comment.content,
                 createdAt = comment.createDate,

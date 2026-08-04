@@ -17,8 +17,8 @@ data class PostLikeResponse(
         fun from(like: PostLike): PostLikeResponse {
             val post = like.post
             return PostLikeResponse(
-                postId = post.postId!!,
-                concertId = post.concert.concertId!!,
+                postId = post.postIdOrThrow,
+                concertId = post.concert.concertIdOrThrow,
                 concertName = post.concert.concertName,
                 userName = post.user.name,
                 title = post.title,

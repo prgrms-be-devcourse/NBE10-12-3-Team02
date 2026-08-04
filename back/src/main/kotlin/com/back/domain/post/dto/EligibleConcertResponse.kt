@@ -10,7 +10,7 @@ data class EligibleConcertResponse(
     companion object {
         fun of(concert: Concert): EligibleConcertResponse =
             EligibleConcertResponse(
-                concertId = concert.concertId!!,
+                concertId = concert.concertIdOrThrow,
                 concertTitle = concert.concertName,
                 posterUrl = concert.urlPoster
             )
