@@ -23,7 +23,7 @@ test.describe('E2E Scenario 3: Waiting Queue Flow', () => {
 
       // User 3 진입 (정원 초과 검증)
       await user3Page.goto('/concerts/1/seats?scheduleId=1');
-      await expect(user3Page.locator('h1, h2, button, div').first()).toBeVisible({ timeout: 10000 });
+      await expect(user3Page.locator('h1, h2, h3, canvas, svg, button').first()).toBeVisible({ timeout: 10000 });
     } finally {
       await user1Context.close();
       await user2Context.close();
