@@ -14,7 +14,7 @@ export class PaymentPage {
   }
 
   async expectPaymentSummaryVisible() {
-    await expect(this.page.locator('h1:has-text("예매 정보 입력"), text=예매 정보').first()).toBeVisible({
+    await expect(this.page.locator('h1:has-text("예매 정보 입력")').first()).toBeVisible({
       timeout: 10000,
     });
   }
