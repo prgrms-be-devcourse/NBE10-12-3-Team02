@@ -31,10 +31,19 @@ export default defineConfig({
       use: { ...devices['Desktop Chrome'] },
     },
   ],
-  webServer: {
-    command: 'pnpm --prefix ../front dev',
-    url: 'http://localhost:3000',
-    reuseExistingServer: !process.env.CI,
-    timeout: 120 * 1000,
-  },
+  webServer: [
+    {
+      command: process.platform === 'win32' ? '.\\gradlew.bat bootRun' : './gradlew bootRun',
+      cwd: '../back',
+      url: 'http://localhost:8080/api/v1/concerts',
+      reuseExistingServer: !process.env.CI,
+      timeout: 180 * 1000,
+    },
+    {
+      command: 'pnpm --prefix ../front dev',
+      url: 'http://localhost:3000',
+      reuseExistingServer: !process.env.CI,
+      timeout: 120 * 1000,
+    },
+  ],
 });
