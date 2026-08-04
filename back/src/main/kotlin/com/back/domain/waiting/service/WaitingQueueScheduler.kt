@@ -39,6 +39,14 @@ class WaitingQueueScheduler(
             return
         }
 
+        // 대기자가 없다면 회차 및 좌석 DB 조회를 생략하고 Redis 만료 상태만 정리한다.
+        // 확인 직후 사용자가 등록되더라도 등록 API가 allowEntry()를 호출하므로 입장은 다시 조정된다.
+        if (!waitingQueueManager.hasWaitingUsers(scheduleId)) {
+            waitingQueueManager.removeExpiredActiveUsers(scheduleId)
+            removeInactiveScheduleIfEmpty(scheduleId, scheduleIdValue)
+            return
+        }
+
         // Redis ACTIVE 상태를 변경하기 전에 회차 정보를 확보한다. DB 조회가 실패하면
         // Redis 상태를 그대로 두어 다음 스케줄러 실행에서 다시 처리할 수 있게 한다.
         val schedule = scheduleRepository.findByScheduleId(scheduleId)
@@ -58,6 +66,10 @@ class WaitingQueueScheduler(
         // expired 반환값과 무관하게 매 주기 재조정하여 다음 실행에서 복구한다.
         waitingQueueService.allowEntry(concertId, scheduleId)
 
+        removeInactiveScheduleIfEmpty(scheduleId, scheduleIdValue)
+    }
+
+    private fun removeInactiveScheduleIfEmpty(scheduleId: Long, scheduleIdValue: String) {
         if (waitingQueueManager.isQueueEmpty(scheduleId)) {
             waitingQueueManager.removeFromActiveSchedules(scheduleIdValue)
         }

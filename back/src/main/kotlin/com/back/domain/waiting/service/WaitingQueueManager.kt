@@ -164,6 +164,9 @@ class WaitingQueueManager(
         return waitSize == 0L && activeSize == 0L
     }
 
+    fun hasWaitingUsers(scheduleId: Long): Boolean =
+        (stringRedisTemplate.opsForZSet().size(generateWaitKey(scheduleId)) ?: 0L) > 0L
+
     fun clearWaitingQueue(scheduleId: Long) {
         stringRedisTemplate.delete(generateWaitKey(scheduleId))
     }

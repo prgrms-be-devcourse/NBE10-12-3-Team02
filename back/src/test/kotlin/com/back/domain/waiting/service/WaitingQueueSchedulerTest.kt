@@ -8,6 +8,7 @@ import org.junit.jupiter.api.Test
 import org.mockito.Mockito.inOrder
 import org.mockito.Mockito.mock
 import org.mockito.Mockito.verify
+import org.mockito.Mockito.verifyNoInteractions
 import org.mockito.Mockito.`when`
 
 class WaitingQueueSchedulerTest {
@@ -25,6 +26,7 @@ class WaitingQueueSchedulerTest {
     fun t1() {
         val schedule = schedule(CONCERT_ID)
         `when`(waitingQueueManager.getActiveScheduleIds()).thenReturn(setOf(SCHEDULE_ID.toString()))
+        `when`(waitingQueueManager.hasWaitingUsers(SCHEDULE_ID)).thenReturn(true)
         `when`(scheduleRepository.findByScheduleId(SCHEDULE_ID)).thenReturn(schedule)
         `when`(waitingQueueManager.removeExpiredActiveUsers(SCHEDULE_ID)).thenReturn(0L)
 
@@ -41,6 +43,8 @@ class WaitingQueueSchedulerTest {
         val secondSchedule = schedule(secondConcertId)
         `when`(waitingQueueManager.getActiveScheduleIds())
             .thenReturn(linkedSetOf(SCHEDULE_ID.toString(), secondScheduleId.toString()))
+        `when`(waitingQueueManager.hasWaitingUsers(SCHEDULE_ID)).thenReturn(true)
+        `when`(waitingQueueManager.hasWaitingUsers(secondScheduleId)).thenReturn(true)
         `when`(scheduleRepository.findByScheduleId(SCHEDULE_ID))
             .thenThrow(IllegalStateException("database unavailable"))
         `when`(scheduleRepository.findByScheduleId(secondScheduleId))
@@ -56,6 +60,7 @@ class WaitingQueueSchedulerTest {
     fun t3() {
         val schedule = schedule(CONCERT_ID)
         `when`(waitingQueueManager.getActiveScheduleIds()).thenReturn(setOf(SCHEDULE_ID.toString()))
+        `when`(waitingQueueManager.hasWaitingUsers(SCHEDULE_ID)).thenReturn(true)
         `when`(scheduleRepository.findByScheduleId(SCHEDULE_ID)).thenReturn(schedule)
 
         scheduler.processExpiredActiveUsers()
@@ -65,6 +70,19 @@ class WaitingQueueSchedulerTest {
             verify(waitingQueueManager).removeExpiredActiveUsers(SCHEDULE_ID)
             verify(waitingQueueService).allowEntry(CONCERT_ID, SCHEDULE_ID)
         }
+    }
+
+    @Test
+    @DisplayName("대기자가 없으면 DB 조회와 입장 재조정을 생략하고 Redis 만료 상태만 정리한다")
+    fun t4() {
+        `when`(waitingQueueManager.getActiveScheduleIds()).thenReturn(setOf(SCHEDULE_ID.toString()))
+        `when`(waitingQueueManager.hasWaitingUsers(SCHEDULE_ID)).thenReturn(false)
+
+        scheduler.processExpiredActiveUsers()
+
+        verify(waitingQueueManager).removeExpiredActiveUsers(SCHEDULE_ID)
+        verify(waitingQueueManager).isQueueEmpty(SCHEDULE_ID)
+        verifyNoInteractions(scheduleRepository, waitingQueueService)
     }
 
     private fun schedule(concertId: Long): Schedule {
