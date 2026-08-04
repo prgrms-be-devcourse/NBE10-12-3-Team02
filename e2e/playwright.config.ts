@@ -38,7 +38,7 @@ export default defineConfig({
       url: 'http://localhost:8080/api/v1/concerts',
       reuseExistingServer: !process.env.CI,
       timeout: 180 * 1000,
-      stdout: 'pipe',
+      stdout: 'ignore',
       stderr: 'pipe',
     },
     {
@@ -47,7 +47,7 @@ export default defineConfig({
       url: 'http://localhost:3000',
       reuseExistingServer: !process.env.CI,
       timeout: 120 * 1000,
-      stdout: 'pipe',
+      stdout: 'ignore',
       stderr: 'pipe',
     },
   ],
