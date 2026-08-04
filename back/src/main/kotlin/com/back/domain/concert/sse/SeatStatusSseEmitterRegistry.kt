@@ -69,14 +69,7 @@ class SeatStatusSseEmitterRegistry(
         val cleanup = Runnable {
             val list = emitters[scheduleId]
             list?.remove(wrapper)
-            // computeIfPresent 블록 내에서 감소와 조건부 제거를 단일 원자적 연산으로 처리한다.
-            // remove(key, value) 방식은 decrementAndGet() 직후 다른 스레드가 동일 counter 객체를
-            // incrementAndGet()한 경우에도 참조 동일성으로 인해 유효한 엔트리가 삭제될 수 있다.
-            // computeIfPresent는 ConcurrentHashMap 내부에서 해당 버킷을 잠근 채 람다를 실행하므로
-            // 감소 → 0 확인 → 제거(null 반환)가 원자적으로 보장된다.
-            connectionCounts.computeIfPresent(scheduleId) { _, c ->
-                if (c.decrementAndGet() == 0) null else c
-            }
+            counter.decrementAndGet()
         }
         emitter.onCompletion(cleanup)
         emitter.onTimeout(cleanup)
