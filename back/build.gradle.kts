@@ -50,9 +50,6 @@ dependencies {
     // Redis
     implementation("org.springframework.boot:spring-boot-starter-data-redis")
 
-    // WebSocket
-    implementation("org.springframework.boot:spring-boot-starter-websocket")
-
     // OpenAPI
     implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:3.0.2")
 
@@ -70,7 +67,6 @@ dependencies {
     testImplementation("org.springframework.boot:spring-boot-starter-validation-test")
     testImplementation("org.springframework.boot:spring-boot-starter-webmvc-test")
     testImplementation("org.springframework.boot:spring-boot-starter-security-test")
-    testImplementation("org.springframework.boot:spring-boot-starter-websocket-test")
     testImplementation("com.github.codemonstur:embedded-redis:1.4.3")
     testImplementation("org.testcontainers:testcontainers")
     testImplementation("org.testcontainers:testcontainers-junit-jupiter")

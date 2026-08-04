@@ -6,10 +6,10 @@ import {
   apiFetch,
   BASE_URL,
   decodeToken,
+  getAccessToken,
   restoreSession,
 } from "@/lib/api";
-import { connectQueueSocket } from "@/lib/queueSocket";
-import type { Client } from "@stomp/stompjs";
+import { fetchEventSource } from "@microsoft/fetch-event-source";
 import { Minus, Plus } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, use, useEffect, useRef, useState } from "react";
@@ -25,6 +25,26 @@ interface SeatSelectionData {
   scheduleId: number;
   prices: Record<string, number>;
   seats: SeatDetail[];
+}
+
+interface QueueConnectionEvent {
+  state: "ACTIVE" | "WAITING" | "NOT_REGISTERED";
+  rank: number;
+  myQueueNumber: number;
+  entryToken: string | null;
+}
+
+interface QueueStatusEvent {
+  currentRank: number;
+  totalWaitingCount: number;
+}
+
+interface EntryAllowedEvent {
+  entryToken: string;
+}
+
+interface QueueErrorEvent {
+  errorMessage: string;
 }
 
 const GRADE_STYLES: Record<string, { seat: string; dot: string }> = {
@@ -72,7 +92,7 @@ function SeatSelectContent({ params }: { params: Promise<{ id: string }> }) {
   const [entryToken, setEntryToken] = useState<string | null>(null);
   const [queueError, setQueueError] = useState("");
   const [isCancelingQueue, setIsCancelingQueue] = useState(false);
-  const queueClientRef = useRef<Client | null>(null);
+  const queueSseAbortRef = useRef<AbortController | null>(null);
   // 대기열 취소 API를 중복으로 부르지 않기 위한 표시.
   const leftQueueRef = useRef(false);
   const proceedingToPaymentRef = useRef(false);
@@ -123,70 +143,104 @@ function SeatSelectContent({ params }: { params: Promise<{ id: string }> }) {
       }
       if (active) setUserName(decoded.name);
 
-      // WebSocket을 먼저 연결하고, 구독까지 끝난 뒤(onConnected)에 대기열 등록 API를 부른다.
-      // 순서가 바뀌면, 등록하자마자 서버가 바로 입장을 허가해도 그 알림을 놓칠 수 있다.
-      const client = connectQueueSocket({
-        scheduleId,
-        onConnected: async () => {
-          try {
-            const res = await apiFetch<{
-              rank: number;
-              myQueueNumber: number;
-              entryToken?: string;
-            }>(
-              `/waiting/concerts/${id}/schedules/${scheduleId}/waiting-queue`,
-              { method: "POST" },
-            );
-            if (active) {
-              if (res.data.entryToken) {
-                setEntryToken(res.data.entryToken);
-                isWaitingRef.current = false;
-              } else {
-                setMyQueueNumber(res.data.myQueueNumber);
-                // 상대 랭크를 이용해 초기 입장 허용 기준 번호를 역산하여 세팅
-                setQueueRank(res.data.myQueueNumber - res.data.rank);
-                isWaitingRef.current = true;
+      try {
+        const res = await apiFetch<{
+          rank: number;
+          myQueueNumber: number;
+          entryToken?: string;
+        }>(`/waiting/concerts/${id}/schedules/${scheduleId}/waiting-queue`, {
+          method: "POST",
+        });
+        if (!active) return;
+
+        if (res.data.entryToken) {
+          setEntryToken(res.data.entryToken);
+          isWaitingRef.current = false;
+          return;
+        }
+
+        setMyQueueNumber(res.data.myQueueNumber);
+        setQueueRank(res.data.myQueueNumber - res.data.rank);
+        isWaitingRef.current = true;
+
+        const controller = new AbortController();
+        queueSseAbortRef.current = controller;
+
+        await fetchEventSource(
+          `${BASE_URL}/api/v1/waiting/concerts/${id}/schedules/${scheduleId}/events`,
+          {
+            signal: controller.signal,
+            credentials: "include",
+            openWhenHidden: true,
+            headers: {
+              Authorization: `Bearer ${getAccessToken() ?? ""}`,
+            },
+            async onopen(response) {
+              if (!response.ok) {
+                throw new Error("대기열 SSE 연결에 실패했습니다.");
               }
-            }
-          } catch (e) {
-            if (active) {
-              setQueueError(
-                e instanceof Error ? e.message : "대기열 등록에 실패했습니다.",
-              );
-            }
-          }
-        },
-        onStatusUpdated: (event) => {
-          if (!active) return;
-          setQueueRank(event.currentRank); // 최신 입장 허용 기준 번호 (Serving Offset) 업데이트
-          setQueueTotal(event.totalWaitingCount);
-        },
-        onEntryAllowed: (event) => {
-          if (active) {
-            setEntryToken(event.entryToken);
-            isWaitingRef.current = false;
-          }
-        },
-        onQueueError: (event) => {
-          if (active) {
-            setQueueError(event.message);
-            queueClientRef.current?.deactivate();
-            queueClientRef.current = null;
-          }
-        },
-        onError: () => {
-          if (active) setQueueError("대기열 연결 중 문제가 발생했습니다.");
-        },
-      });
-      queueClientRef.current = client;
+              if (active) setQueueError("");
+            },
+            onmessage(message) {
+              if (!active || !message.data) return;
+
+              if (message.event === "connected") {
+                const event = JSON.parse(message.data) as QueueConnectionEvent;
+                if (event.state === "ACTIVE" && event.entryToken) {
+                  setEntryToken(event.entryToken);
+                  isWaitingRef.current = false;
+                  controller.abort();
+                } else if (event.state === "WAITING") {
+                  setQueueRank(event.myQueueNumber - event.rank);
+                  setMyQueueNumber(event.myQueueNumber);
+                } else if (event.state === "NOT_REGISTERED") {
+                  setQueueError("대기열 등록 정보를 찾을 수 없습니다.");
+                }
+                return;
+              }
+
+              if (message.event === "queue-status") {
+                const event = JSON.parse(message.data) as QueueStatusEvent;
+                setQueueRank(event.currentRank);
+                setQueueTotal(event.totalWaitingCount);
+                return;
+              }
+
+              if (message.event === "entry-allowed") {
+                const event = JSON.parse(message.data) as EntryAllowedEvent;
+                setEntryToken(event.entryToken);
+                isWaitingRef.current = false;
+                controller.abort();
+                return;
+              }
+
+              if (message.event === "queue-error") {
+                const event = JSON.parse(message.data) as QueueErrorEvent;
+                setQueueError(event.errorMessage);
+                controller.abort();
+              }
+            },
+            onerror() {
+              if (active) setQueueError("대기열에 다시 연결하고 있습니다.");
+              return 3000;
+            },
+          },
+        );
+      } catch (e) {
+        if (active && !(e instanceof DOMException && e.name === "AbortError")) {
+          setQueueError(
+            e instanceof Error ? e.message : "대기열 연결에 실패했습니다.",
+          );
+        }
+      }
     };
 
     initQueue();
 
     return () => {
       active = false;
-      queueClientRef.current?.deactivate();
-      queueClientRef.current = null;
+      queueSseAbortRef.current?.abort();
+      queueSseAbortRef.current = null;
 
       // 컴포넌트 언마운트 시점에 실제로 페이지를 벗어나는 경우(뒤로가기, 홈 이동 등)에만 대기열을 취소합니다.
       // 새로고침(F5), 개발 모드 핫 리로드(HMR), React Strict Mode로 인한 순간적인 언마운트 시에는
@@ -228,7 +282,7 @@ function SeatSelectContent({ params }: { params: Promise<{ id: string }> }) {
     } catch {
       // 이미 만료됐거나 없는 대기열이어도, 어차피 나가려던 참이니 조용히 넘어간다.
     } finally {
-      queueClientRef.current?.deactivate();
+      queueSseAbortRef.current?.abort();
       router.replace(`/concerts/${id}`);
     }
   };
