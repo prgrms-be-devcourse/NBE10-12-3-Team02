@@ -20,7 +20,7 @@ import java.util.concurrent.locks.ReentrantLock
 class SeatStatusSseEmitterRegistry(
     private val eventCache: SeatStatusSseEventCache,
     private val sseOutboxEventRepository: SseOutboxEventRepository,
-    // TaskExecutor 타입인 taskScheduler와 혼동되지 않도록 일반 비동기 작업용 실행기를 명시한다.
+
     @Qualifier("applicationTaskExecutor") private val taskExecutor: TaskExecutor,
     private val objectMapper: ObjectMapper
 ) {
@@ -28,8 +28,7 @@ class SeatStatusSseEmitterRegistry(
 
     class SynchronizedEmitter(
         val emitter: SseEmitter,
-        // ReentrantLock을 사용하여 Java 25 가상 스레드(Virtual Threads) 환경에서
-        // synchronized 블록으로 인한 Carrier Thread 피닝(Pinning) 현상을 방지한다.
+        // ReentrantLock을 사용하여 Virtual Threads 환경에서 synchronized 블록으로 인한 Pinning 현상을 방지
         val lock: ReentrantLock = ReentrantLock(),
         val createdAt: Long = System.currentTimeMillis(),
         val lastSentAt: AtomicLong = AtomicLong(System.currentTimeMillis())
@@ -75,7 +74,7 @@ class SeatStatusSseEmitterRegistry(
         emitter.onTimeout(cleanup)
         emitter.onError { cleanup.run() }
 
-        // Last-Event-ID 재연결 시 DB/캐시 기반 누락 이벤트 Replay 전송
+        // LastEventId 재연결 시 DB/캐시 기반 누락 이벤트 Replay 전송
         if (!lastEventId.isNullOrBlank()) {
             val missedEvents = getMissedEvents(scheduleId, lastEventId)
             for ((eventId, seatNumber, status) in missedEvents) {
