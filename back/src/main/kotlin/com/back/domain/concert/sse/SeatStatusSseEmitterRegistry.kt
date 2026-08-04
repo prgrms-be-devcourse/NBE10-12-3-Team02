@@ -12,6 +12,7 @@ import java.io.IOException
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicLong
 import java.util.concurrent.locks.ReentrantLock
 
@@ -27,6 +28,8 @@ class SeatStatusSseEmitterRegistry(
 
     class SynchronizedEmitter(
         val emitter: SseEmitter,
+        // ReentrantLock을 사용하여 Java 25 가상 스레드(Virtual Threads) 환경에서
+        // synchronized 블록으로 인한 Carrier Thread 피닝(Pinning) 현상을 방지한다.
         val lock: ReentrantLock = ReentrantLock(),
         val createdAt: Long = System.currentTimeMillis(),
         val lastSentAt: AtomicLong = AtomicLong(System.currentTimeMillis())
@@ -47,13 +50,25 @@ class SeatStatusSseEmitterRegistry(
 
     private val emitters = ConcurrentHashMap<Long, MutableList<SynchronizedEmitter>>()
 
-    fun register(scheduleId: Long, emitter: SseEmitter, lastEventId: String? = null): SynchronizedEmitter {
-        // scheduleId당 최대 연결 수 초과 시 즉시 거부하여 메모리 폭발 방지
-        val currentCount = emitters[scheduleId]?.size ?: 0
-        if (currentCount >= MAX_CONNECTIONS_PER_SCHEDULE) {
-            log.warn("SSE 연결 수 상한 초과: scheduleId={}, count={}", scheduleId, currentCount)
+    // scheduleId별 현재 연결 수를 원자적으로 관리하는 카운터.
+    // ConcurrentHashMap + size() 조회 방식은 조회(Check)와 등록(Act) 사이에 다른 스레드가
+    // 끼어드는 Check-Then-Act Race Condition이 발생할 수 있으므로,
+    // AtomicInteger를 별도로 두어 incrementAndGet()/decrementAndGet()으로 원자적으로 처리한다.
+    private val connectionCounts = ConcurrentHashMap<Long, AtomicInteger>()
+
+    // 반환 타입을 Nullable(SynchronizedEmitter?)로 선언하여,
+    // 연결 수 상한 초과 시 null을 반환함으로써 호출부가 미등록 emitter를
+    // 정상 등록된 것으로 오인하지 않도록 의도를 명확히 한다.
+    fun register(scheduleId: Long, emitter: SseEmitter, lastEventId: String? = null): SynchronizedEmitter? {
+        // scheduleId당 최대 연결 수를 AtomicInteger로 원자적으로 증가시켜
+        // Check-Then-Act Race Condition 없이 상한을 초과하지 않도록 보장한다.
+        val counter = connectionCounts.computeIfAbsent(scheduleId) { AtomicInteger(0) }
+        val newCount = counter.incrementAndGet()
+        if (newCount > MAX_CONNECTIONS_PER_SCHEDULE) {
+            counter.decrementAndGet()
+            log.warn("SSE 연결 수 상한 초과: scheduleId={}, count={}", scheduleId, newCount - 1)
             emitter.complete()
-            return SynchronizedEmitter(emitter)
+            return null
         }
 
         val wrapper = SynchronizedEmitter(emitter)
@@ -62,6 +77,7 @@ class SeatStatusSseEmitterRegistry(
         val cleanup = Runnable {
             val list = emitters[scheduleId]
             list?.remove(wrapper)
+            counter.decrementAndGet()
         }
         emitter.onCompletion(cleanup)
         emitter.onTimeout(cleanup)
