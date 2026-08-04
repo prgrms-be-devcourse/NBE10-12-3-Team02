@@ -404,6 +404,15 @@ function MyPageContent() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  useEffect(() => {
+    if (showWithdrawModal) {
+      document.body.style.overflow = "hidden";
+      return () => {
+        document.body.style.overflow = "";
+      };
+    }
+  }, [showWithdrawModal]);
+
   const handleWithdraw = async () => {
     try {
       await apiFetch(`/users/withdraw`, { method: "PATCH" });
@@ -706,20 +715,6 @@ function MyPageContent() {
               {data.name}님 👋
             </h1>
           </div>
-          <div className="flex items-center gap-2">
-            <Link
-              href="/mypage/follows"
-              className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-semibold rounded-lg transition"
-            >
-              팔로우 목록 보기
-            </Link>
-            <button
-              onClick={() => setShowWithdrawModal(true)}
-              className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white text-sm font-semibold rounded-lg transition"
-            >
-              회원탈퇴
-            </button>
-          </div>
         </div>
 
         <div className="flex gap-6 items-start">
@@ -734,7 +729,10 @@ function MyPageContent() {
               ).map((tab) => (
                 <button
                   key={tab.key}
-                  onClick={() => setActiveTab(tab.key)}
+                  onClick={() => {
+                    setActiveTab(tab.key);
+                    router.replace(`/mypage?tab=${tab.key}`, { scroll: false });
+                  }}
                   className={`w-full text-left px-4 py-3.5 text-sm font-semibold border-l-4 transition ${
                     activeTab === tab.key
                       ? "border-blue-600 bg-blue-50 text-blue-700"
@@ -982,6 +980,15 @@ function MyPageContent() {
                     </div>
                   )}
                 </div>
+
+                <div className="mt-4 text-right">
+                  <button
+                    onClick={() => setShowWithdrawModal(true)}
+                    className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white text-sm font-semibold rounded-lg transition"
+                  >
+                    회원탈퇴
+                  </button>
+                </div>
               </>
             )}
 
@@ -1069,7 +1076,7 @@ function MyPageContent() {
                                     disabled={
                                       cancelingKey === group.tickets[0].ticketId
                                     }
-                                    className="text-xs text-gray-400 hover:text-red-500 border border-gray-200 hover:border-red-300 px-3 py-1 rounded-lg transition disabled:opacity-50"
+                                    className="whitespace-nowrap text-xs text-gray-400 hover:text-red-500 border border-gray-200 hover:border-red-300 px-3 py-1 rounded-lg transition disabled:opacity-50"
                                   >
                                     {cancelingKey === group.tickets[0].ticketId
                                       ? "취소 중..."
@@ -1077,7 +1084,7 @@ function MyPageContent() {
                                   </button>
                                 )}
                                 <span
-                                  className={`px-2 py-1 text-xs rounded-full font-semibold ${statusClass}`}
+                                  className={`whitespace-nowrap px-2 py-1 text-xs rounded-full font-semibold ${statusClass}`}
                                 >
                                   {statusLabel}
                                 </span>
@@ -1152,26 +1159,34 @@ function MyPageContent() {
 
             {activeTab === "posts" && (
               <div className="bg-white rounded-2xl shadow-sm p-8">
-                <div className="flex gap-2 mb-6">
-                  {(
-                    [
-                      { key: "my", label: "내 게시글" },
-                      { key: "bookmarks", label: "북마크" },
-                      { key: "likes", label: "좋아요" },
-                    ] as const
-                  ).map((st) => (
-                    <button
-                      key={st.key}
-                      onClick={() => setPostsSubTab(st.key)}
-                      className={`px-4 py-2 rounded-lg text-sm font-semibold border transition ${
-                        postsSubTab === st.key
-                          ? "bg-blue-600 text-white border-blue-600"
-                          : "bg-white text-gray-600 border-gray-200 hover:border-blue-400"
-                      }`}
-                    >
-                      {st.label}
-                    </button>
-                  ))}
+                <div className="flex items-center justify-between mb-6">
+                  <div className="flex gap-2">
+                    {(
+                      [
+                        { key: "my", label: "내 게시글" },
+                        { key: "bookmarks", label: "북마크" },
+                        { key: "likes", label: "좋아요" },
+                      ] as const
+                    ).map((st) => (
+                      <button
+                        key={st.key}
+                        onClick={() => setPostsSubTab(st.key)}
+                        className={`px-4 py-2 rounded-lg text-sm font-semibold border transition ${
+                          postsSubTab === st.key
+                            ? "bg-blue-600 text-white border-blue-600"
+                            : "bg-white text-gray-600 border-gray-200 hover:border-blue-400"
+                        }`}
+                      >
+                        {st.label}
+                      </button>
+                    ))}
+                  </div>
+                  <Link
+                    href="/mypage/follows"
+                    className="px-3 py-1.5 bg-white border border-gray-200 hover:border-blue-300 text-gray-600 hover:text-blue-600 text-sm font-semibold rounded-lg transition"
+                  >
+                    팔로우 목록 보기
+                  </Link>
                 </div>
 
                 {postsSubTab === "my" && (
@@ -1454,7 +1469,7 @@ function MyPageContent() {
       </div>
 
       {showWithdrawModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-[100] bg-black/50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl p-8 max-w-sm w-full">
             <h2 className="text-xl font-bold text-center text-gray-800 mb-3">
               정말 탈퇴하시겠어요?

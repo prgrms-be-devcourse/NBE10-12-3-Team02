@@ -127,6 +127,24 @@ function PaymentContent() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [concertId, scheduleId]);
 
+  useEffect(() => {
+    if (showModal) {
+      document.body.style.overflow = "hidden";
+      return () => {
+        document.body.style.overflow = "";
+      };
+    }
+  }, [showModal]);
+
+  useEffect(() => {
+    if (isProcessing) {
+      document.body.style.overflow = "hidden";
+      return () => {
+        document.body.style.overflow = "";
+      };
+    }
+  }, [isProcessing]);
+
   const formatTime = (seconds: number) => {
     const min = Math.floor(seconds / 60);
     const sec = seconds % 60;
@@ -248,7 +266,7 @@ function PaymentContent() {
       </div>
 
       {isProcessing && (
-        <div className="fixed inset-0 z-50 bg-black/30 backdrop-blur-[2px] flex items-center justify-center">
+        <div className="fixed inset-0 z-[100] bg-black/30 backdrop-blur-[2px] flex items-center justify-center">
           <div className="bg-white rounded-2xl p-8 shadow-2xl flex flex-col items-center gap-4 max-w-xs w-full border border-gray-100">
             <Loader2 className="h-10 w-10 text-blue-600 animate-spin" />
             <div className="text-center">
@@ -262,7 +280,7 @@ function PaymentContent() {
       )}
 
       {showModal && ticketResults.length > 0 && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-[100] bg-black/50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl p-8 max-w-md w-full max-h-[85vh] overflow-y-auto">
             <h2 className="text-xl font-bold text-center text-gray-800 mb-6">
               🎉 결제가 완료되었습니다! ({ticketResults.length}매)
@@ -306,12 +324,20 @@ function PaymentContent() {
                 </div>
               ))}
             </div>
-            <button
-              onClick={() => router.replace("/mypage")}
-              className="w-full p-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold transition"
-            >
-              마이페이지로 이동
-            </button>
+            <div className="flex gap-3 mt-2">
+              <button
+                onClick={() => router.replace(`/concerts/${concertId}`)}
+                className="flex-1 p-3 border border-gray-300 hover:border-blue-400 text-gray-700 hover:text-blue-600 rounded-lg font-bold transition"
+              >
+                확인
+              </button>
+              <button
+                onClick={() => router.replace("/mypage?tab=tickets")}
+                className="flex-1 p-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold transition"
+              >
+                내 티켓 바로가기
+              </button>
+            </div>
           </div>
         </div>
       )}

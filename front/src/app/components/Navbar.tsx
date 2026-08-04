@@ -380,6 +380,10 @@ export default function Navbar() {
                                 width={36}
                                 height={36}
                                 className="object-cover w-full h-full"
+                                onError={(e) => {
+                                  (e.currentTarget as HTMLImageElement).src =
+                                    "/default-avatar.svg";
+                                }}
                               />
                             </div>
                             <div className="flex-1 min-w-0">
