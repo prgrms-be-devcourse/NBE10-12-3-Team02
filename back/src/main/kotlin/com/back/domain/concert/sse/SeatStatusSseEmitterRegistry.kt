@@ -69,7 +69,12 @@ class SeatStatusSseEmitterRegistry(
         val cleanup = Runnable {
             val list = emitters[scheduleId]
             list?.remove(wrapper)
-            counter.decrementAndGet()
+            // 연결 수가 0으로 떨어지면 connectionCounts Map 엔트리를 원자적으로 제거한다.
+            // remove(key, value) 오버로드는 현재 값이 counter와 동일할 때만 제거하므로,
+            // 동시에 새 연결이 들어와 counter가 재사용되는 경우를 안전하게 처리한다.
+            if (counter.decrementAndGet() == 0) {
+                connectionCounts.remove(scheduleId, counter)
+            }
         }
         emitter.onCompletion(cleanup)
         emitter.onTimeout(cleanup)
