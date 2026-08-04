@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, Suspense } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   apiFetch,
   decodeToken,
@@ -171,7 +171,8 @@ function SocialBadge({ provider, size = 18 }: { provider: string; size?: number 
   );
 }
 
-export default function MyPage() {
+function MyPageContent() {
+  const searchParams = useSearchParams();
   const router = useRouter();
   const hasCheckedAuth = useRef(false);
   const hasSocialLinkHandledRef = useRef(false);
@@ -283,7 +284,18 @@ export default function MyPage() {
   const [socialLinkLoading, setSocialLinkLoading] = useState(true);
   const [socialLinkStarting, setSocialLinkStarting] = useState<string | null>(null);
 
-  const [activeTab, setActiveTab] = useState<"info" | "tickets" | "posts">("info");
+  const [activeTab, setActiveTab] = useState<"info" | "tickets" | "posts">(() => {
+    const t = searchParams.get("tab");
+    return t === "tickets" || t === "posts" ? t : "info";
+  });
+
+  useEffect(() => {
+    const t = searchParams.get("tab");
+    if (t === "tickets" || t === "posts" || t === "info") {
+      setActiveTab(t);
+    }
+  }, [searchParams]);
+
   const [postsSubTab, setPostsSubTab] = useState<"my" | "bookmarks" | "likes">("my");
 
   const fetchSocialLinkStatus = async () => {
@@ -1171,5 +1183,13 @@ export default function MyPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function MyPage() {
+  return (
+    <Suspense fallback={<div />}>
+      <MyPageContent />
+    </Suspense>
   );
 }
