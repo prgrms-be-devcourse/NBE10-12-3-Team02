@@ -1,5 +1,6 @@
 package com.back.domain.concert.service
 
+import com.back.domain.concert.constant.ConcertSortType
 import com.back.domain.concert.entity.Concert
 import com.back.domain.concert.repository.ConcertDeatilRepository
 import com.back.domain.concert.repository.ConcertRepository
@@ -30,6 +31,9 @@ import java.util.concurrent.atomic.AtomicInteger
 @SpringBootTest
 @Import(RedisTestConfig::class)
 class ConcertServiceTest {
+    @Autowired
+    private lateinit var concertService: ConcertService
+
     @Autowired
     private lateinit var seatOccupyManager: SeatOccupyManager
 
@@ -157,5 +161,26 @@ class ConcertServiceTest {
 
         assertThat(successCount.get()).isEqualTo(threadCount)
         assertThat(failCount.get()).isEqualTo(0)
+    }
+
+    @Test
+    @DisplayName("마감임박순: 이미 종료된 콘서트는 목록 맨 뒤로")
+    fun getConcerts_closingSoon_expiredGoesLast() {
+        concertRepository.save(
+            Concert.create("종료 콘서트", null, LocalDateTime.now().minusDays(10), LocalDateTime.now().minusDays(1), null)
+        )
+        val result = concertService.getConcerts(null, ConcertSortType.closingSoon, null)
+        assertThat(result).hasSize(2)
+        assertThat(result.last().concertName).isEqualTo("종료 콘서트")
+    }
+
+    @Test
+    @DisplayName("최신순: concertId 내림차순(등록순)으로 정렬")
+    fun getConcerts_latest_sortedByConcertIdDesc() {
+        val concert2 = concertRepository.save(
+            Concert.create("나중 등록 콘서트", null, LocalDateTime.now().minusDays(5), LocalDateTime.now().plusDays(10), null)
+        )
+        val result = concertService.getConcerts(null, ConcertSortType.latest, null)
+        assertThat(result.first().concertName).isEqualTo(concert2.concertName)
     }
 }
