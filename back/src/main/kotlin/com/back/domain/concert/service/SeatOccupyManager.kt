@@ -128,11 +128,18 @@ class SeatOccupyManager(
             keys.forEach { key -> conn.hashCommands().hGetAll(key.toByteArray()) }
         } as List<Map<ByteArray, ByteArray>?>
 
+        // 파이프라인 결과를 루프 전에 일괄 디코딩한다.
+        // find { String(it.key) == ... } 방식은 매 루프마다 모든 key를 String으로 변환하여
+        // 불필요한 임시 객체가 반복 생성되므로, 미리 Map<String, String>으로 변환 후 get()으로 O(1) 접근한다.
+        val decodedResults = results.map { raw ->
+            raw?.entries?.associate { String(it.key) to String(it.value) }
+        }
+
         //Pipeline 내부에서는 예외를 던질 수 없으므로, 결과를 모두 받은 뒤 외부에서 순서대로 검증
         for ((index, hold) in seatHolds.withIndex()) {
-            val raw = results[index]
-            val holdUserId = raw?.entries?.find { String(it.key) == "userId" }?.let { String(it.value) }
-            val holdOccupyToken = raw?.entries?.find { String(it.key) == "occupyToken" }?.let { String(it.value) }
+            val decoded = decodedResults[index]
+            val holdUserId = decoded?.get("userId")
+            val holdOccupyToken = decoded?.get("occupyToken")
 
             if (holdUserId == null || holdOccupyToken == null) {
                 throw ServiceException(ErrorCode.SEAT_HOLD_EXPIRED)
