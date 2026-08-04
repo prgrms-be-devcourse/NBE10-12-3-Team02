@@ -235,13 +235,13 @@ NBE10-12-2-Team02/
 ## Git 컨벤션
 
 - **브랜치 규칙**: `feat/{이슈번호}`, `fix/{이슈번호}`, `refactor/{이슈번호}`, `test/{이슈번호}`
-- **커밋 메시지**: `feat: 내용 (#이슈번호)`, `fix: 내용 (#이슈번호)`, `docs: 내용 (#이슈번호)`, `test: 내용 (#이슈번호)`
+- **커밋 메시지**: `feat: 내용`, `fix: 내용`, `test: 내용`, `docs: 내용`
 - **Pull Request**: 1인 이상 리뷰 승인 후 Squash Merge, 본문에 `Closes #이슈번호` 명시
 
 ---
 
 <div align="center">
 
-Made by **Team 02**
+Made by **Team 02 | Double Click**
 
 </div>
