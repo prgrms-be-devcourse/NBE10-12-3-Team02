@@ -256,6 +256,7 @@ export default function Navbar() {
             width={160}
             height={48}
             className="h-12 w-auto object-contain block"
+            style={{ width: "auto" }}
           />
         </Link>
 

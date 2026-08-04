@@ -23,6 +23,7 @@ export default function Footer() {
                 width={160}
                 height={32}
                 className="h-8 w-auto object-contain block"
+                style={{ width: "auto" }}
               />
             </Link>
             <p className="text-sm text-gray-400 leading-relaxed">
