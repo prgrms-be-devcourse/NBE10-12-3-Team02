@@ -5,6 +5,6 @@ test.describe('E2E Scenario 8: Ticket Group QR Verification Flow', () => {
     await page.goto('/verify/group/test-group-token');
 
     await expect(page).toHaveURL(/\/verify\/group\/test-group-token/);
-    await expect(page.locator('h1, h2, div').first()).toBeVisible({ timeout: 10000 });
+    await expect(page.locator('h1, h2, h3, p').first()).toBeVisible({ timeout: 10000 });
   });
 });
