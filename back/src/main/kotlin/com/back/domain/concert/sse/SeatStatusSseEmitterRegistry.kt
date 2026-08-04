@@ -50,18 +50,10 @@ class SeatStatusSseEmitterRegistry(
 
     private val emitters = ConcurrentHashMap<Long, MutableList<SynchronizedEmitter>>()
 
-    // scheduleId별 현재 연결 수를 원자적으로 관리하는 카운터.
-    // ConcurrentHashMap + size() 조회 방식은 조회(Check)와 등록(Act) 사이에 다른 스레드가
-    // 끼어드는 Check-Then-Act Race Condition이 발생할 수 있으므로,
-    // AtomicInteger를 별도로 두어 incrementAndGet()/decrementAndGet()으로 원자적으로 처리한다.
+    // scheduleId별 현재 연결 수를 원자적으로 관리하는 카운터
     private val connectionCounts = ConcurrentHashMap<Long, AtomicInteger>()
 
-    // 반환 타입을 Nullable(SynchronizedEmitter?)로 선언하여,
-    // 연결 수 상한 초과 시 null을 반환함으로써 호출부가 미등록 emitter를
-    // 정상 등록된 것으로 오인하지 않도록 의도를 명확히 한다.
     fun register(scheduleId: Long, emitter: SseEmitter, lastEventId: String? = null): SynchronizedEmitter? {
-        // scheduleId당 최대 연결 수를 AtomicInteger로 원자적으로 증가시켜
-        // Check-Then-Act Race Condition 없이 상한을 초과하지 않도록 보장한다.
         val counter = connectionCounts.computeIfAbsent(scheduleId) { AtomicInteger(0) }
         val newCount = counter.incrementAndGet()
         if (newCount > MAX_CONNECTIONS_PER_SCHEDULE) {
