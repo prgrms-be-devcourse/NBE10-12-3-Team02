@@ -28,11 +28,11 @@
 
 <div align="center">
 
-| | | |
-| :---: | :---: | :---: |
-| [**소개**](#소개) | [**시스템 아키텍처**](#시스템-아키텍처) | [**주요 기능**](#주요-기능) |
-| [**기술 스택**](#기술-스택) | [**시작하기**](#시작하기) | [**E2E 테스트**](#e2e-시스템-통합-테스트) |
-| [**프로젝트 구조**](#프로젝트-구조) | [**트러블슈팅**](#트러블슈팅--faq) | [**Git 컨벤션**](#git-컨벤션) |
+[**소개**](#소개) &nbsp;•&nbsp; [**시스템 아키텍처**](#시스템-아키텍처) &nbsp;•&nbsp; [**주요 기능**](#주요-기능)
+
+[**기술 스택**](#기술-스택) &nbsp;•&nbsp; [**시작하기**](#시작하기) &nbsp;•&nbsp; [**E2E 테스트**](#e2e-시스템-통합-테스트)
+
+[**프로젝트 구조**](#프로젝트-구조) &nbsp;•&nbsp; [**트러블슈팅**](#트러블슈팅--faq) &nbsp;•&nbsp; [**Git 컨벤션**](#git-컨벤션)
 
 </div>
 
@@ -50,17 +50,20 @@
 
 ## 시스템 아키텍처
 
-```text
-[ Client (Next.js 16) ]
-      │
-      ├── 1. 대기열 진입 요청 ─────────────────────────┐
-      ├── 2. SSE 순번 스트리밍 ─────────────────────┐  │
-      ├── 3. 좌석 선점 (10분 TTL) ──────────────┐  │  │
-      ▼                                         ▼  ▼  ▼
-[ Spring Boot 4.0 (Virtual Threads) ] ──▶ [ Redis 7.2 Sentinel ]
-      │                                         │ (Waiting Queue ZSet / Active Tokens)
-      ├── MySQL 8.0 (JPA Persistent)           │ (Seat Occupy Holds & Pipelining)
-      └── SSE Emitter Registry                  └───────────────────────────────
+```mermaid
+graph TD
+    Client["Client (Next.js 16)"]
+    Backend["Spring Boot 4.0 (Virtual Threads)"]
+    Redis[("Redis 7.2 Sentinel Cluster")]
+    DB[("MySQL 8.0 Database")]
+
+    Client -- "1. 대기열 진입 요청 (POST)" --> Backend
+    Client -- "2. SSE 대기 순번 스트리밍" --> Backend
+    Client -- "3. 좌석 선점 (HOLD 10분 TTL)" --> Backend
+
+    Backend -- "대기열 ZSet / Active Tokens" --> Redis
+    Backend -- "좌석 선점 & Pipelining" --> Redis
+    Backend -- "영속성 데이터 관리 (JPA)" --> DB
 ```
 
 ---
