@@ -40,7 +40,8 @@ export default defineConfig({
       timeout: 180 * 1000,
     },
     {
-      command: 'pnpm --prefix ../front dev',
+      command: 'pnpm dev',
+      cwd: '../front',
       url: 'http://localhost:3000',
       reuseExistingServer: !process.env.CI,
       timeout: 120 * 1000,
