@@ -11,7 +11,7 @@ test.describe('E2E Concert Discovery & Detail Flow', () => {
 
     // 마감된 공연 탭 클릭 검증
     await listPage.filterTab('closed');
-    
+
     // 마감 탭 카드 요소 렌더링 확인 (마감 뱃지 또는 공연 카드)
     await expect(page.locator('span:has-text("마감"), h3').first()).toBeVisible({ timeout: 10000 });
 
@@ -25,5 +25,12 @@ test.describe('E2E Concert Discovery & Detail Flow', () => {
 
     await listPage.searchKeyword('난타');
     await expect(page.locator('h3:has-text("난타")').first()).toBeVisible({ timeout: 10000 });
+  });
+
+  test('공연 상세 페이지 진입 및 회차/장소 정보 렌더링 검증', async ({ page }) => {
+    await page.goto('/concerts/1');
+
+    await expect(page).toHaveURL(/\/concerts\/1/);
+    await expect(page.locator('h1, h2, button:has-text("예매하기")').first()).toBeVisible({ timeout: 10000 });
   });
 });
