@@ -2,27 +2,23 @@
 
 # 🎫 티케팅고 (Ticketing Go)
 
-### 대용량 트래픽 대기열 & 실시간 좌석선점 콘서트 예매 플랫폼
+**콘서트부터 페스티벌까지, 원하는 공연을 가장 빠르게 예매하세요.**
 
-*대기열 순번 제어 · 실시간 SSE 좌석 동동화 · 인접 좌석 자동 배정 · 오리지널 3D 티켓 발급*
-
-<br/>
-
-[![Next.js](https://img.shields.io/badge/Next.js-16_App_Router-black?style=for-the-badge&logo=next.js)](https://nextjs.org/)
-[![React](https://img.shields.io/badge/React-19-61DAFB?style=for-the-badge&logo=react&logoColor=black)](https://react.dev/)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
-[![TailwindCSS](https://img.shields.io/badge/Tailwind_CSS-v4-38BDF8?style=for-the-badge&logo=tailwindcss&logoColor=white)](https://tailwindcss.com/)
-
-[![Kotlin](https://img.shields.io/badge/Kotlin-2.4.10-7F52FF?style=for-the-badge&logo=kotlin&logoColor=white)](https://kotlinlang.org/)
-[![Spring Boot](https://img.shields.io/badge/Spring_Boot-4.0.7-6DB33F?style=for-the-badge&logo=springboot&logoColor=white)](https://spring.io/projects/spring-boot)
-[![Java](https://img.shields.io/badge/Java-25-007396?style=for-the-badge&logo=openjdk&logoColor=white)](https://openjdk.org/)
-[![Redis](https://img.shields.io/badge/Redis-Sentinel_Cluster-DC382D?style=for-the-badge&logo=redis&logoColor=white)](https://redis.io/)
-[![MySQL](https://img.shields.io/badge/MySQL-8.0-4479A1?style=for-the-badge&logo=mysql&logoColor=white)](https://www.mysql.com/)
-
-[![Playwright](https://img.shields.io/badge/Playwright-E2E_100%25-45BA4B?style=for-the-badge&logo=playwright&logoColor=white)](https://playwright.dev/)
-[![Terraform](https://img.shields.io/badge/Terraform-AWS_IaC-844FBA?style=for-the-badge&logo=terraform&logoColor=white)](https://www.terraform.io/)
+*대기열 순번 제어 · 실시간 SSE 좌석 동기화 · 인접 좌석 자동 배정 · 오리지널 3D 티켓 발급*
 
 <br/>
+
+![Next.js](https://img.shields.io/badge/Next.js-16-black?logo=next.js)
+![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=black)
+![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?logo=typescript&logoColor=white)
+![TailwindCSS](https://img.shields.io/badge/Tailwind_CSS-v4-38BDF8?logo=tailwindcss&logoColor=white)
+![Kotlin](https://img.shields.io/badge/Kotlin-2.4-7F52FF?logo=kotlin&logoColor=white)
+![Spring Boot](https://img.shields.io/badge/Spring_Boot-4.0-6DB33F?logo=springboot&logoColor=white)
+![Java](https://img.shields.io/badge/Java-25-007396?logo=openjdk&logoColor=white)
+![Redis](https://img.shields.io/badge/Redis-Sentinel-DC382D?logo=redis&logoColor=white)
+![MySQL](https://img.shields.io/badge/MySQL-4479A1?logo=mysql&logoColor=white)
+![Playwright](https://img.shields.io/badge/Playwright-E2E-45BA4B?logo=playwright&logoColor=white)
+![Terraform](https://img.shields.io/badge/Terraform-AWS-844FBA?logo=terraform&logoColor=white)
 
 </div>
 
@@ -30,29 +26,29 @@
 
 ## 📌 목차
 
-- [소개 (Overview)](#-소개-overview)
-- [시스템 아키텍처 (Architecture)](#-시스템-아키텍처-architecture)
-- [핵심 기능 (Key Features)](#-핵심-기능-key-features)
-- [기술 스택 (Tech Stack)](#-기술-스택-tech-stack)
-- [프로젝트 시작하기 (Quick Start)](#-프로젝트-시작하기-quick-start)
-- [E2E 시스템 통합 테스트 (E2E Testing)](#-e2e-시스템-통합-테스트-e2e-testing)
-- [프로젝트 구조 (Project Structure)](#-프로젝트-구조-project-structure)
-- [트러블슈팅 & F.A.Q](#-트러블슈팅--faq)
-- [Git & 커밋 컨벤션](#-git--커밋-컨벤션)
+<div align="center">
+
+| | | |
+| :---: | :---: | :---: |
+| 📖 [**소개**](#-소개) | 🏗️ [**시스템 아키텍처**](#-시스템-아키텍처) | ✨ [**주요 기능**](#-주요-기능) |
+| 🛠️ [**기술 스택**](#-기술-스택) | 🚀 [**시작하기**](#-시작하기) | 🧪 [**E2E 테스트**](#-e2e-시스템-통합-테스트) |
+| 📂 [**프로젝트 구조**](#-프로젝트-구조) | 🩹 [**트러블슈팅**](#-트러블슈팅--faq) | 📐 [**Git 컨벤션**](#-git-컨벤션) |
+
+</div>
 
 ---
 
-## 📖 소개 (Overview)
+## 📖 소개
 
 **티케팅고(Ticketing Go)**는 초고속 수천 명의 동시 접속자가 몰리는 대형 콘서트/페스티벌 티켓팅 환경을 완벽하게 처리하는 **대용량 트래픽 예매 플랫폼**입니다.
 
-- **대기열 붕괴 방지**: Redis ZSet 기반의 $O(\log N)$ 순번 처리와 **Server-Sent Events (SSE)** 스트리밍을 결합하여, DB 과부하 없이 동시 접속자를 안정적으로 제어합니다.
+- **대기열 붕괴 방지**: Redis ZSet 기반 순번 처리와 **Server-Sent Events (SSE)** 스트리밍을 결합하여, DB 과부하 없이 동시 접속자를 안정적으로 제어합니다.
 - **실시간 좌석 선점 동기화**: SSE 상태 스트림(`/seats/status`)을 통해 선점(HOLD, 10분 TTL), 판매완료(SOLD_OUT) 상태를 실시간으로 모든 유저에게 동기화합니다.
 - **오리지널 티켓 3D 경험**: 결제 완료 시 한 번의 예매 단위로 묶인 티켓 카드에 앞면(포스터)·뒷면(상세정보) 3D 뒤집기 애니메이션 및 모바일 QR 코드 검증 기능을 제공합니다.
 
 ---
 
-## 🏗️ 시스템 아키텍처 (Architecture)
+## 🏗️ 시스템 아키텍처
 
 ```text
 [ Client (Next.js 16) ]
@@ -69,32 +65,32 @@
 
 ---
 
-## ✨ 핵심 기능 (Key Features)
+## ✨ 주요 기능
 
-### 1. 🔍 공연 탐색 및 조건별 검색
-- **정열 및 필터**: 최신순, 마감임박순, 공연중 / 마감된 공연 필터링 지원
+### 1. 공연 탐색 및 조건별 검색
+- **정렬 및 필터**: 최신순, 마감임박순, 공연중 / 마감된 공연 필터링 지원
 - **실시간 키워드 검색**: 공연 제목 및 키워드 기반 결과 카드 실시간 필터링
 
-### 2. ⏳ Redis ZSet + SSE 기반 실시간 대기열
+### 2. Redis ZSet + SSE 기반 실시간 대기열
 - **순번 실시간 내비게이션**: 동시 접속자 수 초과 시 대기열 팝업이 발동되며, 나의 실시간 대기 순번이 SSE로 지속 갱신됩니다.
 - **자동 승격 및 Active 토큰 발급**: 선두 인원이 퇴장하거나 결제 완료 시, 대기 중인 다음 유저가 자동으로 Active 상태로 승격되며 좌석 선택 화면으로 이동합니다.
 
-### 3. 💺 실시간 좌석선점 & 인접 좌석 자동 배정
+### 3. 실시간 좌석선점 & 인접 좌석 자동 배정
 - **인접 좌석 페어링**: 2인 이상 예매 선택 시 자동으로 옆자리를 감지하여 최적의 인접 좌석을 단번에 선택합니다.
 - **실시간 SSE 동기화**: 다른 유저가 좌석을 클릭해 선점(`HOLD`)하면, 접속해 있는 모든 유저의 화면에서 해당 좌석이 실시간으로 비활성화됩니다.
 - **Redis Pipelining 최적화**: 100+개 이상의 좌석 상태를 Redis 파이프라이닝으로 단 1회 RTT에 일괄 조회/선점합니다.
 
-### 4. 💳 예매 / 결제 및 안전한 좌석 해제
+### 4. 예매 / 결제 및 안전한 좌석 해제
 - **10분 TTL 선점 보장**: 결제 진행 중 유저 이탈이나 시간 초과 시 1초 주기 스케줄러가 선점된 좌석을 `AVAILABLE`로 자동 복구합니다.
 - **중복 결제 방지**: 낙관적/비관적 락과 Redis 원자적 스크립트를 조합하여 한 좌석이 중복 결제되는 현상을 원천 방지합니다.
 
-### 5. 🎟️ 오리지널 3D 티켓 & 모바일 QR 입장 검증
+### 5. 오리지널 3D 티켓 & 모바일 QR 입장 검증
 - **3D 인터랙션 티켓**: 카드 앞면(공연 포스터)과 뒷면(공연일시, 좌석번호, 예매자정보)을 클릭 시 3D 롤링 인터랙션으로 감상할 수 있습니다.
 - **모바일 QR 검증 시스템**: `/verify/group/[groupToken]` 페이지를 통해 현장 스태프가 모바일로 QR 코드를 스캔해 티켓 세트를 즉시 검증할 수 있습니다.
 
 ---
 
-## 🛠 기술 스택 (Tech Stack)
+## 🛠 기술 스택
 
 | 구분 | 주요 기술 / 라이브러리 |
 |---|---|
@@ -107,7 +103,7 @@
 
 ---
 
-## 🚀 프로젝트 시작하기 (Quick Start)
+## 🚀 시작하기
 
 ### 1️⃣ 저장소 클론
 ```bash
@@ -115,19 +111,20 @@ git clone https://github.com/prgrms-be-devcourse/NBE10-12-2-Team02.git
 cd NBE10-12-2-Team02
 ```
 
-### 2️⃣ 프론트엔드 실행 (`front/`)
+### 2️⃣ 프론트엔드 환경 설정
+`front/.env.local` 파일을 새로 만들고 아래 내용을 입력합니다.
+```env
+NEXT_PUBLIC_API_BASE_URL=http://localhost:8080
+```
+
 ```bash
 cd front
 pnpm install
-
-# .env.local 생성
-echo "NEXT_PUBLIC_API_BASE_URL=http://localhost:8080" > .env.local
-
 pnpm dev
 ```
 
-### 3️⃣ 백엔드 실행 (`back/`)
-`back/src/main/resources/application-secret.yaml` 생성 후 OAuth2 클라이언트 키 입력:
+### 3️⃣ 백엔드 환경 설정
+`back/src/main/resources/application-secret.yaml`을 만들고 보안 키 항목을 채웁니다.
 ```yaml
 spring:
   security:
@@ -156,7 +153,7 @@ cd back
 
 ---
 
-## 🧪 E2E 시스템 통합 테스트 (E2E Testing)
+## 🧪 E2E 시스템 통합 테스트
 
 최상위 `e2e/` 패키지에서 백엔드(`localhost:8080`)와 프론트엔드(`localhost:3000`)를 **자동으로 시동하여 8대 주요 시나리오 11개 핵심 케이스를 전수 검증**합니다.
 
@@ -187,7 +184,7 @@ pnpm test:ui
 
 ---
 
-## 📂 프로젝트 구조 (Project Structure)
+## 📂 프로젝트 구조
 
 ```text
 NBE10-12-2-Team02/
@@ -232,7 +229,7 @@ NBE10-12-2-Team02/
 
 ---
 
-## 📐 Git & 커밋 컨벤션
+## 📐 Git 컨벤션
 
 - **브랜치 규칙**: `feat/{이슈번호}`, `fix/{이슈번호}`, `refactor/{이슈번호}`
 - **커밋 메시지**: `feat: 내용 (#이슈번호)`, `fix: 내용 (#이슈번호)`, `docs: 내용 (#이슈번호)`
