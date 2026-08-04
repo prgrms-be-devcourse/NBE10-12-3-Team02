@@ -1,8 +1,8 @@
 package com.back.domain.waiting.service
 
 import com.back.domain.concert.service.ConcertService
-import com.back.domain.queue.event.EntryAllowedEvent
-import com.back.domain.queue.event.QueueErrorEvent
+import com.back.domain.waiting.event.EntryAllowedEvent
+import com.back.domain.waiting.event.QueueErrorEvent
 import com.back.domain.schedule.constant.SeatStatus
 import com.back.domain.schedule.repository.ScheduleSeatRepository
 import com.back.domain.user.repository.UserRepository

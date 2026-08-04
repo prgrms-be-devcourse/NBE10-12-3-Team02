@@ -1,8 +1,8 @@
 package com.back.domain.waiting.sse
 
-import com.back.domain.queue.event.EntryAllowedEvent
-import com.back.domain.queue.event.QueueErrorEvent
-import com.back.domain.queue.event.QueueStatusEvent
+import com.back.domain.waiting.event.EntryAllowedEvent
+import com.back.domain.waiting.event.QueueErrorEvent
+import com.back.domain.waiting.event.QueueStatusEvent
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test

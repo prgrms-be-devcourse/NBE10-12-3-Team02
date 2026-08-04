@@ -1,7 +1,7 @@
 package com.back.domain.waiting.outbox
 
-import com.back.domain.queue.event.EntryAllowedEvent
-import com.back.domain.queue.event.QueueErrorEvent
+import com.back.domain.waiting.event.EntryAllowedEvent
+import com.back.domain.waiting.event.QueueErrorEvent
 import com.back.domain.waiting.outbox.codec.QueueSseOutboxPayloadCodec
 import com.back.domain.waiting.outbox.constant.QueueSseOutboxEventType
 import com.back.domain.waiting.outbox.constant.QueueSseOutboxStatus
