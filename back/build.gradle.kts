@@ -20,6 +20,12 @@ repositories {
     mavenCentral()
 }
 
+dependencyManagement {
+    imports {
+        mavenBom("org.springframework.ai:spring-ai-bom:2.0.0")
+    }
+}
+
 dependencies {
     // Spring Boot
     implementation("org.springframework.boot:spring-boot-starter-webmvc")
@@ -57,6 +63,11 @@ dependencies {
     // Rate Limiting
     implementation("com.bucket4j:bucket4j_jdk17-core:8.14.0")
     implementation("com.github.ben-manes.caffeine:caffeine")
+
+    // Spring AI
+    // NOTE: spring-ai-bom 2.0.0부터 아티팩트명이 spring-ai-openai-spring-boot-starter(1.0.x)에서
+    // spring-ai-starter-model-openai로 변경됨.
+    implementation("org.springframework.ai:spring-ai-starter-model-openai")
 
     // Database
     runtimeOnly("com.h2database:h2")
