@@ -1,6 +1,6 @@
 <div align="center">
 
-# 티케팅고 (Ticketing Go)
+# 🎫 티케팅고 (Ticketing Go)
 
 **콘서트부터 페스티벌까지, 원하는 공연을 가장 빠르게 예매하세요.**
 
