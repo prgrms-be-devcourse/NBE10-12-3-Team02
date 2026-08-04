@@ -35,6 +35,10 @@ open class PostComment protected constructor() : BaseEntity() {
         this.content = content
     }
 
+    fun update(content: String) {
+        this.content = content
+    }
+
     companion object {
         @JvmStatic
         fun create(post: ConcertPost, user: User, content: String): PostComment =

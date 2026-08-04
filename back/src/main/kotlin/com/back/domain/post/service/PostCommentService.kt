@@ -2,6 +2,7 @@ package com.back.domain.post.service
 
 import com.back.domain.post.dto.PostCommentCreateRequest
 import com.back.domain.post.dto.PostCommentResponse
+import com.back.domain.post.dto.PostCommentUpdateRequest
 import com.back.domain.post.entity.PostComment
 import com.back.domain.post.repository.ConcertPostRepository
 import com.back.domain.post.repository.PostCommentRepository
@@ -36,6 +37,18 @@ class PostCommentService(
         }
         return postCommentRepository.findAllByPostId(postId)
             .map { PostCommentResponse.of(it, currentUserId) }
+    }
+
+    @Transactional
+    fun update(postId: Long, commentId: Long, userId: Long, request: PostCommentUpdateRequest): PostCommentResponse {
+        val comment = postCommentRepository
+            .findByCommentIdAndPostPostId(commentId, postId)
+            ?: throw ServiceException(ErrorCode.COMMENT_NOT_FOUND)
+        if (comment.user.userId != userId) {
+            throw ServiceException(ErrorCode.COMMENT_FORBIDDEN)
+        }
+        comment.update(request.content)
+        return PostCommentResponse.of(comment, userId)
     }
 
     @Transactional

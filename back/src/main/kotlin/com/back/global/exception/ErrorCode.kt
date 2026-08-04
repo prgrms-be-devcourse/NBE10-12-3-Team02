@@ -68,7 +68,7 @@ enum class ErrorCode(
 
     // Comment
     COMMENT_NOT_FOUND("404-10", "존재하지 않는 댓글입니다."),
-    COMMENT_FORBIDDEN("403-6", "댓글을 삭제할 권한이 없습니다."),
+    COMMENT_FORBIDDEN("403-6", "댓글을 수정/삭제할 권한이 없습니다."),
 
     // Follow
     FOLLOW_SELF_NOT_ALLOWED("400-13", "자기 자신을 팔로우할 수 없습니다."),

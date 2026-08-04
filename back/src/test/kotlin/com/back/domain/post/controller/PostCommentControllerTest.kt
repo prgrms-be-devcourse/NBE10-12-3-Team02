@@ -135,6 +135,93 @@ class PostCommentControllerTest @Autowired constructor(
     }
 
     @Test
+    @DisplayName("댓글 수정 성공")
+    fun updateComment() {
+        val comment = postCommentRepository.save(PostComment.create(post, userEntity, "수정 전 댓글"))
+        val body = """{"content": "수정 후 댓글"}"""
+
+        mockMvc.perform(
+            put("/api/v1/posts/{postId}/comments/{commentId}", post.postId, comment.commentId)
+                .with(user(securityUser))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(body)
+        )
+            .andDo(print())
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.resultCode").value("200-1"))
+            .andExpect(jsonPath("$.data.content").value("수정 후 댓글"))
+            .andExpect(jsonPath("$.data.isMine").value(true))
+
+        assertThat(postCommentRepository.findById(comment.commentId!!).get().content).isEqualTo("수정 후 댓글")
+    }
+
+    @Test
+    @DisplayName("댓글 수정 실패 - URL의 게시글과 댓글의 게시글이 다름")
+    fun updateCommentWithMismatchedPost() {
+        val comment = postCommentRepository.save(
+            PostComment.create(post, userEntity, "수정되지 않아야 하는 댓글")
+        )
+        val otherPost = concertPostRepository.save(
+            ConcertPost.create(concert, userEntity, "다른 게시글", "다른 게시글 내용", rating = 5, reviewType = ReviewType.REVIEW)
+        )
+        val body = """{"content": "수정 시도"}"""
+
+        mockMvc.perform(
+            put(
+                "/api/v1/posts/{postId}/comments/{commentId}",
+                otherPost.postId,
+                comment.commentId,
+            )
+                .with(user(securityUser))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(body)
+        )
+            .andDo(print())
+            .andExpect(status().isNotFound)
+            .andExpect(jsonPath("$.resultCode").value("404-10"))
+
+        assertThat(postCommentRepository.findById(comment.commentId!!).get().content).isEqualTo("수정되지 않아야 하는 댓글")
+    }
+
+    @Test
+    @DisplayName("댓글 수정 실패 - 본인 댓글 아님")
+    fun updateCommentForbidden() {
+        val otherUser = userRepository.save(User.create("other-editor", "other-editor@test.com", "0000", "타인", LoginType.NORMAL))
+        val comment = postCommentRepository.save(PostComment.create(post, otherUser, "남의 댓글"))
+        val body = """{"content": "수정 시도"}"""
+
+        mockMvc.perform(
+            put("/api/v1/posts/{postId}/comments/{commentId}", post.postId, comment.commentId)
+                .with(user(securityUser))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(body)
+        )
+            .andDo(print())
+            .andExpect(status().isForbidden)
+            .andExpect(jsonPath("$.resultCode").value("403-6"))
+
+        assertThat(postCommentRepository.findById(comment.commentId!!).get().content).isEqualTo("남의 댓글")
+    }
+
+    @Test
+    @DisplayName("댓글 수정 실패 - 빈 내용")
+    fun updateCommentBlank() {
+        val comment = postCommentRepository.save(PostComment.create(post, userEntity, "원본 댓글"))
+        val body = """{"content": ""}"""
+
+        mockMvc.perform(
+            put("/api/v1/posts/{postId}/comments/{commentId}", post.postId, comment.commentId)
+                .with(user(securityUser))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(body)
+        )
+            .andDo(print())
+            .andExpect(status().isBadRequest)
+
+        assertThat(postCommentRepository.findById(comment.commentId!!).get().content).isEqualTo("원본 댓글")
+    }
+
+    @Test
     @DisplayName("댓글 삭제 성공")
     fun deleteComment() {
         val comment = postCommentRepository.save(PostComment.create(post, userEntity, "삭제할 댓글"))
