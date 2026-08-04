@@ -81,6 +81,7 @@ export default function ConcertDetailPage({
       router.replace("/login");
       return;
     }
+    sessionStorage.setItem(`seatEntry:${selectedSchedule}`, "1");
     router.push(`/concerts/${id}/seats?scheduleId=${selectedSchedule}`);
   };
 

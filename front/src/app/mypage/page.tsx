@@ -404,6 +404,15 @@ function MyPageContent() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  useEffect(() => {
+    if (showWithdrawModal) {
+      document.body.style.overflow = "hidden";
+      return () => {
+        document.body.style.overflow = "";
+      };
+    }
+  }, [showWithdrawModal]);
+
   const handleWithdraw = async () => {
     try {
       await apiFetch(`/users/withdraw`, { method: "PATCH" });
@@ -1067,7 +1076,7 @@ function MyPageContent() {
                                     disabled={
                                       cancelingKey === group.tickets[0].ticketId
                                     }
-                                    className="text-xs text-gray-400 hover:text-red-500 border border-gray-200 hover:border-red-300 px-3 py-1 rounded-lg transition disabled:opacity-50"
+                                    className="whitespace-nowrap text-xs text-gray-400 hover:text-red-500 border border-gray-200 hover:border-red-300 px-3 py-1 rounded-lg transition disabled:opacity-50"
                                   >
                                     {cancelingKey === group.tickets[0].ticketId
                                       ? "취소 중..."
@@ -1075,7 +1084,7 @@ function MyPageContent() {
                                   </button>
                                 )}
                                 <span
-                                  className={`px-2 py-1 text-xs rounded-full font-semibold ${statusClass}`}
+                                  className={`whitespace-nowrap px-2 py-1 text-xs rounded-full font-semibold ${statusClass}`}
                                 >
                                   {statusLabel}
                                 </span>
@@ -1460,7 +1469,7 @@ function MyPageContent() {
       </div>
 
       {showWithdrawModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-[100] bg-black/50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl p-8 max-w-sm w-full">
             <h2 className="text-xl font-bold text-center text-gray-800 mb-3">
               정말 탈퇴하시겠어요?

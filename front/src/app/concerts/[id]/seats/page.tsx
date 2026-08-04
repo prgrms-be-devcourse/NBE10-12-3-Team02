@@ -96,6 +96,7 @@ function SeatSelectContent({ params }: { params: Promise<{ id: string }> }) {
   // 대기열 취소 API를 중복으로 부르지 않기 위한 표시.
   const leftQueueRef = useRef(false);
   const proceedingToPaymentRef = useRef(false);
+  const guardCheckedRef = useRef(false);
   // 실제로 대기열에 진입해 대기 중인 상태인지를 기록하는 Ref (Strict Mode/새로고침 시의 오작동 방지)
   const isWaitingRef = useRef(false);
   const lastEventIdRef = useRef<string>("");
@@ -113,6 +114,17 @@ function SeatSelectContent({ params }: { params: Promise<{ id: string }> }) {
   const selectedSeats = Array.from(
     new Set([...(pairSeats ?? []), ...freeSeats]),
   );
+
+  useEffect(() => {
+    if (!scheduleId || guardCheckedRef.current) return;
+    guardCheckedRef.current = true;
+    const flagKey = `seatEntry:${scheduleId}`;
+    if (!sessionStorage.getItem(flagKey)) {
+      router.replace(`/concerts/${id}`);
+      return;
+    }
+    sessionStorage.removeItem(flagKey);
+  }, [id, scheduleId, router]);
 
   // 인원수가 변경되면 선택되어 있던 좌석을 리셋합니다.
   useEffect(() => {
@@ -627,7 +639,7 @@ function SeatSelectContent({ params }: { params: Promise<{ id: string }> }) {
       // eslint-disable-next-line react-hooks/purity
       const activeTimestamp = String(Date.now());
       sessionStorage.setItem("paymentActive", activeTimestamp);
-      router.push(`/payment?${params.toString()}`);
+      router.replace(`/payment?${params.toString()}`);
     } catch (e) {
       await Promise.all(
         occupied.map(({ seatNumber }) =>
