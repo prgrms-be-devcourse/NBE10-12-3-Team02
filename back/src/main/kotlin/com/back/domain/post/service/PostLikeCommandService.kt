@@ -1,11 +1,13 @@
 package com.back.domain.post.service
 
+import com.back.domain.notification.event.PostLikedEvent
 import com.back.domain.post.entity.PostLike
 import com.back.domain.post.repository.ConcertPostRepository
 import com.back.domain.post.repository.PostLikeRepository
 import com.back.domain.user.repository.UserRepository
 import com.back.global.exception.ErrorCode
 import com.back.global.exception.ServiceException
+import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 
@@ -14,6 +16,7 @@ class PostLikeCommandService(
     private val concertPostRepository: ConcertPostRepository,
     private val postLikeRepository: PostLikeRepository,
     private val userRepository: UserRepository,
+    private val eventPublisher: ApplicationEventPublisher,
 ) {
     @Transactional
     fun createIfAbsent(postId: Long, userId: Long) {
@@ -28,6 +31,11 @@ class PostLikeCommandService(
         }
 
         postLikeRepository.saveAndFlush(PostLike.create(post, user))
+
+        val postOwnerId = post.user.userIdOrThrow
+        if (postOwnerId != userId) {
+            eventPublisher.publishEvent(PostLikedEvent(postId, postOwnerId, userId))
+        }
     }
 
     @Transactional

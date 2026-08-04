@@ -40,6 +40,10 @@ class Concert(
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     val concertId: Long? = null
 
+    // 저장 후에는 항상 not-null인 PK. 조회된(영속화된) Concert에서만 사용해야 한다.
+    val concertIdOrThrow: Long
+        get() = checkNotNull(concertId) { "concertId must not be null after persist" }
+
     fun isBookable(): Boolean = endDate.isAfter(LocalDateTime.now())
 
     companion object {

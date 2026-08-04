@@ -11,6 +11,10 @@ open class PostComment protected constructor() : BaseEntity() {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     val commentId: Long? = null
 
+    // 저장 후에는 항상 not-null인 PK. 조회된(영속화된) PostComment에서만 사용해야 한다.
+    val commentIdOrThrow: Long
+        get() = checkNotNull(commentId) { "commentId must not be null after persist" }
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "post_id", nullable = false)
     lateinit var post: ConcertPost

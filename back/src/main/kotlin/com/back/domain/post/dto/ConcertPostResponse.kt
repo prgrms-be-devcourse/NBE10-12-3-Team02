@@ -32,9 +32,9 @@ data class ConcertPostResponse(
             isBookmarked: Boolean = false,
         ): ConcertPostResponse =
             ConcertPostResponse(
-                postId = post.postId!!,
-                concertId = post.concert.concertId!!,
-                userId = post.user.userId!!,
+                postId = post.postIdOrThrow,
+                concertId = post.concert.concertIdOrThrow,
+                userId = post.user.userIdOrThrow,
                 userName = post.user.name,
                 title = post.title,
                 content = post.content,
