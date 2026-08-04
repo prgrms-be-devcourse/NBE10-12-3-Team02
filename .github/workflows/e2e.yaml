@@ -90,6 +90,7 @@ jobs:
         working-directory: e2e
         env:
           SPRING_PROFILES_ACTIVE: test
+          SPRING_DOCKER_COMPOSE_ENABLED: false
           CI: true
         run: |
           pnpm test
