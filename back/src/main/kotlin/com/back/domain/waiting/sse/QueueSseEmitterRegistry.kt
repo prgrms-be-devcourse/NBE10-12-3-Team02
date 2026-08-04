@@ -1,8 +1,11 @@
 package com.back.domain.waiting.sse
 
-import com.back.domain.queue.event.EntryAllowedEvent
-import com.back.domain.queue.event.QueueErrorEvent
-import com.back.domain.queue.event.QueueStatusEvent
+import com.back.domain.waiting.event.EntryAllowedEvent
+import com.back.domain.waiting.event.QueueErrorEvent
+import com.back.domain.waiting.event.QueueStatusEvent
+import com.back.domain.waiting.dto.QueueConnectionEvent
+import com.back.domain.waiting.dto.QueueConnectionState
+import com.back.domain.waiting.service.QueueConnectionSnapshot
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter
@@ -16,6 +19,7 @@ import kotlin.concurrent.withLock
 class QueueSseEmitterRegistry {
     class SynchronizedEmitter(
         val emitter: SseEmitter,
+        val concertId: Long?,
         private val lock: ReentrantLock = ReentrantLock(),
     ) {
         fun send(event: SseEmitter.SseEventBuilder) {
@@ -28,8 +32,13 @@ class QueueSseEmitterRegistry {
     private val emitters =
         ConcurrentHashMap<Long, ConcurrentHashMap<Long, MutableList<SynchronizedEmitter>>>()
 
-    fun register(scheduleId: Long, userId: Long, emitter: SseEmitter): SynchronizedEmitter {
-        val wrapper = SynchronizedEmitter(emitter)
+    fun register(
+        scheduleId: Long,
+        userId: Long,
+        emitter: SseEmitter,
+        concertId: Long? = null,
+    ): SynchronizedEmitter {
+        val wrapper = SynchronizedEmitter(emitter, concertId)
         emitters
             .computeIfAbsent(scheduleId) { ConcurrentHashMap() }
             .computeIfAbsent(userId) { CopyOnWriteArrayList() }
@@ -108,18 +117,55 @@ class QueueSseEmitterRegistry {
         return deliveryResult(deliveredCount)
     }
 
-    fun sendHeartbeat() {
+    fun sendHeartbeat() = sendHeartbeat { _, _ -> null }
+
+    fun sendHeartbeat(
+        stateResolver: (scheduleId: Long, userId: Long) -> QueueConnectionSnapshot?,
+    ) {
         emitters.entries.toList().forEach { (scheduleId, users) ->
             users.entries.toList().forEach { (userId, wrappers) ->
-                wrappers.toList().forEach { wrapper ->
-                    sendOrRemove(
+                val snapshot = runCatching {
+                    stateResolver(scheduleId, userId)
+                }.onFailure { exception ->
+                    // Redis 상태 조회 실패만으로 정상 SSE 연결을 제거하지 않는다.
+                    log.warn(
+                        "대기열 heartbeat 상태 조회 실패, 연결 유지: scheduleId={}, userId={}, error={}",
                         scheduleId,
                         userId,
-                        wrapper,
-                        SseEmitter.event()
-                            .name(QueueSseEventName.HEARTBEAT)
-                            .data(mapOf("serverTime" to Instant.now().toString())),
+                        exception.message,
                     )
+                }.getOrNull()
+
+                wrappers.toList().forEach { wrapper ->
+                    if (snapshot is QueueConnectionSnapshot.Active && wrapper.concertId != null) {
+                        sendAndComplete(
+                            scheduleId,
+                            userId,
+                            wrapper,
+                            SseEmitter.event()
+                                .name(QueueSseEventName.CONNECTED)
+                                .data(
+                                    QueueConnectionEvent(
+                                        concertId = wrapper.concertId,
+                                        scheduleId = scheduleId,
+                                        userId = userId,
+                                        state = QueueConnectionState.ACTIVE,
+                                        rank = 0L,
+                                        myQueueNumber = 0L,
+                                        entryToken = snapshot.entryToken,
+                                    ),
+                                ),
+                        )
+                    } else {
+                        sendOrRemove(
+                            scheduleId,
+                            userId,
+                            wrapper,
+                            SseEmitter.event()
+                                .name(QueueSseEventName.HEARTBEAT)
+                                .data(mapOf("serverTime" to Instant.now().toString())),
+                        )
+                    }
                 }
             }
         }

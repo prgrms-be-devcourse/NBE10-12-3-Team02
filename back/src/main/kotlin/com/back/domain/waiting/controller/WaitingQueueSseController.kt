@@ -47,7 +47,7 @@ class WaitingQueueSseController(
         response.setHeader("X-Accel-Buffering", "no")
 
         val emitter = SseEmitter(sseTimeout.toMillis())
-        val wrapper = registry.register(scheduleId, actor.id, emitter)
+        val wrapper = registry.register(scheduleId, actor.id, emitter, concertId)
 
         try {
             val connectionState = waitingQueueService.getConnectionStateAfterValidation(concertId, scheduleId, actor.id)

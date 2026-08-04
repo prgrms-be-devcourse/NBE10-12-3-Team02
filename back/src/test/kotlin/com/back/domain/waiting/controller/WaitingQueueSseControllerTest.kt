@@ -1,6 +1,6 @@
 package com.back.domain.waiting.controller
 
-import com.back.domain.queue.event.EntryAllowedEvent
+import com.back.domain.waiting.event.EntryAllowedEvent
 import com.back.domain.waiting.dto.QueueConnectionEvent
 import com.back.domain.waiting.dto.QueueConnectionState
 import com.back.domain.waiting.service.WaitingQueueService

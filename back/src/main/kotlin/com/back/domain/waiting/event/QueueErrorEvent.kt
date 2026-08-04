@@ -1,4 +1,4 @@
-package com.back.domain.queue.event
+package com.back.domain.waiting.event
 
 data class QueueErrorEvent(
     val scheduleId: Long,

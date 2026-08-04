@@ -1,8 +1,8 @@
 package com.back.domain.waiting.service
 
 import com.back.domain.concert.service.ConcertService
-import com.back.domain.queue.event.EntryAllowedEvent
-import com.back.domain.queue.event.QueueErrorEvent
+import com.back.domain.waiting.event.EntryAllowedEvent
+import com.back.domain.waiting.event.QueueErrorEvent
 import com.back.domain.schedule.constant.SeatStatus
 import com.back.domain.schedule.repository.ScheduleSeatRepository
 import com.back.domain.user.repository.UserRepository
@@ -12,7 +12,9 @@ import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito.doThrow
 import org.mockito.Mockito.mock
+import org.mockito.Mockito.never
 import org.mockito.Mockito.verify
+import org.mockito.Mockito.verifyNoInteractions
 import org.mockito.Mockito.`when`
 import org.springframework.context.ApplicationEventPublisher
 import java.time.Duration
@@ -60,6 +62,9 @@ class WaitingQueueOutboxPublishingTest {
         `when`(
             scheduleSeatRepository.countBySchedule_ScheduleIdAndSeatStatus(SCHEDULE_ID, SeatStatus.AVAILABLE),
         ).thenReturn(0L)
+        `when`(
+            scheduleSeatRepository.countBySchedule_ScheduleIdAndSeatStatus(SCHEDULE_ID, SeatStatus.HOLD),
+        ).thenReturn(0L)
         `when`(waitingQueueManager.getQueueStatus(SCHEDULE_ID)).thenReturn(QueueStatusDto(0L, 3L))
         val expected = QueueErrorEvent(SCHEDULE_ID, null, "콘서트가 매진되어 대기열이 종료되었습니다.")
 
@@ -70,8 +75,24 @@ class WaitingQueueOutboxPublishingTest {
     }
 
     @Test
-    @DisplayName("Outbox 저장 장애 시 입장 알림을 기존 Spring 이벤트로 대체 발행한다")
+    @DisplayName("AVAILABLE 좌석이 없어도 HOLD 좌석이 남아 있으면 대기열을 유지한다")
     fun t3() {
+        `when`(
+            scheduleSeatRepository.countBySchedule_ScheduleIdAndSeatStatus(SCHEDULE_ID, SeatStatus.AVAILABLE),
+        ).thenReturn(0L)
+        `when`(
+            scheduleSeatRepository.countBySchedule_ScheduleIdAndSeatStatus(SCHEDULE_ID, SeatStatus.HOLD),
+        ).thenReturn(2L)
+
+        service.allowEntry(CONCERT_ID, SCHEDULE_ID)
+
+        verify(waitingQueueManager, never()).clearWaitingQueue(SCHEDULE_ID)
+        verifyNoInteractions(outboxPublisher, eventPublisher)
+    }
+
+    @Test
+    @DisplayName("Outbox 저장 장애 시 입장 알림을 기존 Spring 이벤트로 대체 발행한다")
+    fun t4() {
         val admission = QueueAdmission(USER_ID, "entry-token", System.currentTimeMillis() + 600_000L)
         val expected = EntryAllowedEvent(SCHEDULE_ID, USER_ID, admission.entryToken, admission.expiredAt)
         `when`(
