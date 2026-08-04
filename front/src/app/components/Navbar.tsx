@@ -301,9 +301,7 @@ export default function Navbar() {
                       내 정보
                     </button>
                     <button
-                      onClick={() =>
-                        handleUserMenuClick("/mypage?tab=tickets")
-                      }
+                      onClick={() => handleUserMenuClick("/mypage?tab=tickets")}
                       className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 transition"
                     >
                       내 티켓

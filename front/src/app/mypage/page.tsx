@@ -305,10 +305,12 @@ function MyPageContent() {
     null,
   );
 
-  const [activeTab, setActiveTab] = useState<"info" | "tickets" | "posts">(() => {
-    const t = searchParams.get("tab");
-    return t === "tickets" || t === "posts" ? t : "info";
-  });
+  const [activeTab, setActiveTab] = useState<"info" | "tickets" | "posts">(
+    () => {
+      const t = searchParams.get("tab");
+      return t === "tickets" || t === "posts" ? t : "info";
+    },
+  );
 
   useEffect(() => {
     const t = searchParams.get("tab");
@@ -320,7 +322,9 @@ function MyPageContent() {
     }
   }, [searchParams, activeTab]);
 
-  const [postsSubTab, setPostsSubTab] = useState<"my" | "bookmarks" | "likes">("my");
+  const [postsSubTab, setPostsSubTab] = useState<"my" | "bookmarks" | "likes">(
+    "my",
+  );
 
   const fetchSocialLinkStatus = async () => {
     setSocialLinkLoading(true);
