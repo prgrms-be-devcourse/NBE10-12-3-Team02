@@ -3,6 +3,7 @@ package com.back.domain.waiting.sse
 import com.back.domain.waiting.event.EntryAllowedEvent
 import com.back.domain.waiting.event.QueueErrorEvent
 import com.back.domain.waiting.event.QueueStatusEvent
+import com.back.domain.waiting.service.QueueConnectionSnapshot
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
@@ -224,10 +225,37 @@ class QueueSseEmitterRegistryTest {
         assertThat(result).isEqualTo(QueueSseDeliveryResult.FAILED)
     }
 
+    @Test
+    @DisplayName("heartbeat에서 ACTIVE 상태를 발견하면 입장 상태를 다시 전송하고 연결을 종료한다")
+    fun t13() {
+        val registry = QueueSseEmitterRegistry()
+        val emitter = mock(SseEmitter::class.java)
+        registry.register(SCHEDULE_ID, TARGET_USER_ID, emitter, CONCERT_ID)
+
+        registry.sendHeartbeat { _, _ -> QueueConnectionSnapshot.Active("recovered-entry-token") }
+
+        verify(emitter).send(any(SseEmitter.SseEventBuilder::class.java))
+        verify(emitter).complete()
+    }
+
+    @Test
+    @DisplayName("heartbeat Redis 상태 조회가 실패해도 heartbeat를 보내고 연결을 유지한다")
+    fun t14() {
+        val registry = QueueSseEmitterRegistry()
+        val emitter = mock(SseEmitter::class.java)
+        registry.register(SCHEDULE_ID, TARGET_USER_ID, emitter, CONCERT_ID)
+
+        registry.sendHeartbeat { _, _ -> throw IllegalStateException("redis unavailable") }
+
+        verify(emitter).send(any(SseEmitter.SseEventBuilder::class.java))
+        verify(emitter, never()).complete()
+    }
+
     companion object {
         private const val SCHEDULE_ID = 10L
         private const val OTHER_SCHEDULE_ID = 11L
         private const val TARGET_USER_ID = 101L
         private const val OTHER_USER_ID = 102L
+        private const val CONCERT_ID = 1L
     }
 }
