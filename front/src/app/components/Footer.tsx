@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -16,14 +15,11 @@ export default function Footer() {
           {/* 로고 + 소개 */}
           <div>
             <Link href="/" className="flex items-center mb-3">
-              <Image
-                unoptimized
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
                 src="/images/logo-horizontal.svg"
                 alt="티케팅고"
-                width={160}
-                height={32}
                 className="h-8 w-auto object-contain block"
-                style={{ width: "auto" }}
               />
             </Link>
             <p className="text-sm text-gray-400 leading-relaxed">
