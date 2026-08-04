@@ -3,7 +3,7 @@ package com.back.domain.waiting.outbox.scheduler
 import com.back.domain.waiting.outbox.config.QueueSseOutboxProperties
 import com.back.domain.waiting.outbox.constant.QueueSseOutboxStatus
 import com.back.domain.waiting.outbox.repository.QueueSseOutboxRepository
-import com.back.domain.waiting.outbox.service.QueueSseOutboxProcessor
+import com.back.domain.waiting.outbox.service.QueueSseOutboxDispatcher
 import org.slf4j.LoggerFactory
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.data.domain.PageRequest
@@ -20,11 +20,11 @@ import java.time.LocalDateTime
 )
 class QueueSseOutboxScheduler(
     private val repository: QueueSseOutboxRepository,
-    private val processor: QueueSseOutboxProcessor,
+    private val dispatcher: QueueSseOutboxDispatcher,
     private val properties: QueueSseOutboxProperties,
 ) {
-    @Scheduled(fixedDelayString = "\${queue.sse.outbox.polling-interval}")
-    fun processPendingEvents() {
+    @Scheduled(fixedDelayString = "\${queue.sse.outbox.recovery-interval}")
+    fun recoverPendingEvents() {
         val now = LocalDateTime.now()
         repository.requeueStaleProcessingEvents(
             processingStatus = QueueSseOutboxStatus.PROCESSING,
@@ -41,15 +41,7 @@ class QueueSseOutboxScheduler(
 
         eventIds.forEach { eventId ->
             try {
-                val claimed = repository.claim(
-                    eventId = eventId,
-                    pendingStatus = QueueSseOutboxStatus.PENDING,
-                    processingStatus = QueueSseOutboxStatus.PROCESSING,
-                    claimedAt = LocalDateTime.now(),
-                )
-                if (claimed == 1) {
-                    processor.processClaimedEvent(eventId)
-                }
+                dispatcher.dispatch(eventId)
             } catch (e: Exception) {
                 log.error("대기열 SSE Outbox 스케줄 처리 실패: eventId={}, error={}", eventId, e.message, e)
             }

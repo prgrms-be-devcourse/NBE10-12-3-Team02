@@ -164,6 +164,9 @@ class WaitingQueueManager(
         return waitSize == 0L && activeSize == 0L
     }
 
+    fun hasWaitingUsers(scheduleId: Long): Boolean =
+        (stringRedisTemplate.opsForZSet().size(generateWaitKey(scheduleId)) ?: 0L) > 0L
+
     fun clearWaitingQueue(scheduleId: Long) {
         stringRedisTemplate.delete(generateWaitKey(scheduleId))
     }
@@ -174,6 +177,12 @@ class WaitingQueueManager(
 
     fun removeFromActiveSchedules(scheduleIdStr: String) {
         stringRedisTemplate.opsForSet().remove(ACTIVE_SCHEDULES_KEY, scheduleIdStr)
+    }
+
+    fun clearInactiveSchedule(scheduleId: Long) {
+        // sequence 삭제가 실패하면 활성 회차 목록에 남겨 다음 스케줄러 실행에서 다시 정리한다.
+        stringRedisTemplate.delete(generateSequenceKey(scheduleId))
+        removeFromActiveSchedules(scheduleId.toString())
     }
 
     private fun generateWaitKey(scheduleId: Long): String = "$WAIT_KEY_PREFIX$scheduleId"

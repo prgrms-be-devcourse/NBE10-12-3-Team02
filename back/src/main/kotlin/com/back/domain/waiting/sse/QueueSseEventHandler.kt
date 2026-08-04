@@ -1,8 +1,8 @@
 package com.back.domain.waiting.sse
 
-import com.back.domain.queue.event.EntryAllowedEvent
-import com.back.domain.queue.event.QueueErrorEvent
-import com.back.domain.queue.event.QueueStatusEvent
+import com.back.domain.waiting.event.EntryAllowedEvent
+import com.back.domain.waiting.event.QueueErrorEvent
+import com.back.domain.waiting.event.QueueStatusEvent
 import org.springframework.context.event.EventListener
 import org.springframework.scheduling.annotation.Async
 import org.springframework.stereotype.Component

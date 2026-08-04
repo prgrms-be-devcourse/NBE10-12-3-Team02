@@ -1,9 +1,9 @@
 package com.back.domain.waiting.service
 
 import com.back.domain.concert.service.ConcertService
-import com.back.domain.queue.event.EntryAllowedEvent
-import com.back.domain.queue.event.QueueErrorEvent
-import com.back.domain.queue.event.QueueStatusEvent
+import com.back.domain.waiting.event.EntryAllowedEvent
+import com.back.domain.waiting.event.QueueErrorEvent
+import com.back.domain.waiting.event.QueueStatusEvent
 import com.back.domain.schedule.constant.SeatStatus
 import com.back.domain.schedule.repository.ScheduleSeatRepository
 import com.back.domain.user.repository.UserRepository
@@ -135,6 +135,15 @@ class WaitingQueueService(
         )
 
         if (remainingSeats <= 0) {
+            val heldSeats = scheduleSeatRepository.countBySchedule_ScheduleIdAndSeatStatus(
+                scheduleId,
+                SeatStatus.HOLD,
+            )
+
+            // HOLD 좌석은 결제 미완료 상태이며 만료 또는 취소 후 다시 판매될 수 있다.
+            // 추가 입장만 잠시 멈추고, 실제 결제 완료 좌석만 남을 때까지 대기열은 유지한다.
+            if (heldSeats > 0) return
+
             val status = waitingQueueManager.getQueueStatus(scheduleId)
             if (status.totalWaitingCount > 0) {
                 publishQueueError(

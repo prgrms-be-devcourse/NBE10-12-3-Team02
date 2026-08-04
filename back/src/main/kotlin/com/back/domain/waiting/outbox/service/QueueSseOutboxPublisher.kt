@@ -1,12 +1,14 @@
 package com.back.domain.waiting.outbox.service
 
-import com.back.domain.queue.event.EntryAllowedEvent
-import com.back.domain.queue.event.QueueErrorEvent
+import com.back.domain.waiting.event.EntryAllowedEvent
+import com.back.domain.waiting.event.QueueErrorEvent
 import com.back.domain.waiting.outbox.codec.QueueSseOutboxPayloadCodec
 import com.back.domain.waiting.outbox.config.QueueSseOutboxProperties
 import com.back.domain.waiting.outbox.constant.QueueSseOutboxEventType
 import com.back.domain.waiting.outbox.entity.QueueSseOutboxEvent
+import com.back.domain.waiting.outbox.event.QueueSseOutboxCreatedEvent
 import com.back.domain.waiting.outbox.repository.QueueSseOutboxRepository
+import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Propagation
 import org.springframework.transaction.annotation.Transactional
@@ -19,6 +21,7 @@ class QueueSseOutboxPublisher(
     private val repository: QueueSseOutboxRepository,
     private val payloadCodec: QueueSseOutboxPayloadCodec,
     private val properties: QueueSseOutboxProperties,
+    private val eventPublisher: ApplicationEventPublisher,
 ) {
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     fun publishEntryAllowed(event: EntryAllowedEvent) {
@@ -47,7 +50,7 @@ class QueueSseOutboxPublisher(
         payload: Any,
         expiresAt: LocalDateTime,
     ) {
-        repository.save(
+        val outbox = repository.save(
             QueueSseOutboxEvent.create(
                 eventType = eventType,
                 scheduleId = scheduleId,
@@ -56,5 +59,6 @@ class QueueSseOutboxPublisher(
                 expiresAt = expiresAt,
             ),
         )
+        eventPublisher.publishEvent(QueueSseOutboxCreatedEvent(outbox.eventId))
     }
 }

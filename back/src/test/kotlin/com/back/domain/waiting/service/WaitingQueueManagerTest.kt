@@ -88,6 +88,18 @@ class WaitingQueueManagerTest {
         assertThat(snapshot).isEqualTo(QueueConnectionSnapshot.NotRegistered)
     }
 
+    @Test
+    @DisplayName("비활성 회차를 정리하면 다음 대기열의 sequence가 1부터 다시 시작한다")
+    fun t5() {
+        waitingQueueManager.registerWaiting(SCHEDULE_ID, FIRST_USER_ID)
+        waitingQueueManager.cancelWaiting(SCHEDULE_ID, FIRST_USER_ID)
+
+        waitingQueueManager.clearInactiveSchedule(SCHEDULE_ID)
+        waitingQueueManager.registerWaiting(SCHEDULE_ID, SECOND_USER_ID)
+
+        assertThat(waitingQueueManager.getQueueSequence(SCHEDULE_ID, SECOND_USER_ID)).isEqualTo(1L)
+    }
+
     companion object {
         private const val SCHEDULE_ID = 10L
         private const val FIRST_USER_ID = 101L
