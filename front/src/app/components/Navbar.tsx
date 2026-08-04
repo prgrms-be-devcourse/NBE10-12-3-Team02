@@ -36,6 +36,7 @@ interface NotificationPushPayload {
   actorProfileImgUrl: string;
   targetType: string | null;
   targetId: number | null;
+  createdAt: string | null;
 }
 
 interface PageContent<T> {
@@ -137,7 +138,9 @@ export default function Navbar() {
           const newItem: NotificationItem = {
             ...payload,
             isRead: false,
-            createdAt: new Date().toISOString(),
+            // 서버가 DB 저장 시각을 내려주므로 그대로 쓴다. GET /notifications로 다시
+            // 조회했을 때와 같은 값이어야 하며, 클라이언트에서 임의로 지어내지 않는다.
+            createdAt: payload.createdAt ?? new Date().toISOString(),
           };
           setNotifications((prev) => [newItem, ...prev]);
         }
