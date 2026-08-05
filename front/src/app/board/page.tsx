@@ -18,6 +18,7 @@ interface PostCard {
   content: string;
   rating: number | null;
   reviewType: "EXPECTATION" | "REVIEW";
+  summary: string | null;
   isMine: boolean;
   likeCount: number;
   isLiked: boolean;
@@ -167,6 +168,12 @@ export default function BoardPage() {
                     <div className="mt-1">
                       <RatingStars rating={post.rating} />
                     </div>
+                  )}
+                  {post.reviewType === "REVIEW" && post.summary && (
+                    <p className="mt-1.5 text-xs text-indigo-600 bg-indigo-50 border border-indigo-100 rounded-lg px-2 py-1 leading-relaxed">
+                      <span className="font-semibold">✨ AI 요약:</span>{" "}
+                      {post.summary}
+                    </p>
                   )}
                   <p className="text-sm text-gray-500 mt-1 line-clamp-2 leading-relaxed">
                     {post.content}
