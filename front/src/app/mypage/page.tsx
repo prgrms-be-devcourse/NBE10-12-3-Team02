@@ -17,6 +17,7 @@ import { showAlert, showConfirm, showSuccess, showError } from "@/lib/alert";
 import { getLocalConcertPoster } from "@/lib/concertDetailImages";
 import { formatDateTime } from "@/lib/date";
 import PasswordStrengthMeter from "@/app/components/PasswordStrengthMeter";
+import PosterImage from "@/app/components/PosterImage";
 
 interface TicketSummary {
   ticketId: number;
@@ -1050,7 +1051,7 @@ function MyPageContent() {
                         >
                           <div className="flex-shrink-0 w-36 relative aspect-[3/4] bg-gradient-to-br from-blue-200 to-indigo-300 flex items-center justify-center text-white font-bold text-sm overflow-hidden">
                             {group.urlPoster ? (
-                              <Image
+                              <PosterImage
                                 fill
                                 unoptimized
                                 src={getLocalConcertPoster(group.urlPoster)}
@@ -1309,7 +1310,7 @@ function MyPageContent() {
                           >
                             <div className="relative shrink-0 w-12 h-16 rounded-lg overflow-hidden bg-gradient-to-br from-blue-100 to-indigo-200 flex items-center justify-center">
                               {b.posterUrl ? (
-                                <Image
+                                <PosterImage
                                   fill
                                   unoptimized
                                   src={getLocalConcertPoster(b.posterUrl)}
@@ -1402,7 +1403,7 @@ function MyPageContent() {
                           >
                             <div className="relative shrink-0 w-12 h-16 rounded-lg overflow-hidden bg-gradient-to-br from-blue-100 to-indigo-200 flex items-center justify-center">
                               {l.posterUrl ? (
-                                <Image
+                                <PosterImage
                                   fill
                                   unoptimized
                                   src={getLocalConcertPoster(l.posterUrl)}

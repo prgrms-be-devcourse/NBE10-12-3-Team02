@@ -1,12 +1,12 @@
 "use client";
 
 import { Suspense, useState } from "react";
-import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { ChevronLeft, Printer } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { getLocalConcertPoster } from "@/lib/concertDetailImages";
+import PosterImage from "@/app/components/PosterImage";
 
 interface TicketSummary {
   ticketId: number;
@@ -164,7 +164,7 @@ function TicketDetailContent() {
               style={{ backfaceVisibility: "hidden" }}
             >
               {group.urlPoster ? (
-                <Image
+                <PosterImage
                   fill
                   unoptimized
                   src={getLocalConcertPoster(group.urlPoster)}
