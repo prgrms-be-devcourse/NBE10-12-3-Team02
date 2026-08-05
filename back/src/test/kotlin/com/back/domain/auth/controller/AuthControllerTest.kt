@@ -111,6 +111,7 @@ class AuthControllerTest @Autowired constructor(
                 anyString() ?: "",
                 anyString() ?: "",
                 anyString() ?: "",
+                anyString() ?: "",
                 anyNonNull()
             )
         ).thenReturn(RefreshTokenValidationResult.SUCCESS)

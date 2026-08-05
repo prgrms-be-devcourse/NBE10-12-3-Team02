@@ -9,7 +9,6 @@ import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.context.annotation.Import
-import org.springframework.data.redis.core.StringRedisTemplate
 import org.springframework.test.context.ActiveProfiles
 import java.time.Duration
 
@@ -21,10 +20,8 @@ class RefreshTokenRepositoryTest {
     @Autowired
     private lateinit var refreshTokenRepository: RefreshTokenRepository
 
-    @Autowired
-    private lateinit var stringRedisTemplate: StringRedisTemplate
-
     private val userId = 999L
+    private val sessionId = "session-uuid-1"
     private val oldJti = "old-jti-uuid-1"
     private val oldHash = "old-token-hash-value-1"
     private val newJti = "new-jti-uuid-2"
@@ -37,86 +34,78 @@ class RefreshTokenRepositoryTest {
     }
 
     @Test
-    @DisplayName("토큰 저장 및 검증")
-    fun saveAndVerify() {
-        refreshTokenRepository.save(userId, oldJti, oldHash, ttl)
+    @DisplayName("세션 Family에 Refresh Token을 저장하고 검증한다")
+    fun t1() {
+        refreshTokenRepository.save(userId, sessionId, oldJti, oldHash, ttl)
 
-        val resultSuccess = refreshTokenRepository.verify(userId, oldJti, oldHash)
-        assertThat(resultSuccess).isEqualTo(RefreshTokenValidationResult.SUCCESS)
-
-        val resultMismatch = refreshTokenRepository.verify(userId, oldJti, "wrong-hash")
-        assertThat(resultMismatch).isEqualTo(RefreshTokenValidationResult.MISMATCH)
-
-        val resultNotFound = refreshTokenRepository.verify(userId, "non-existent-jti", oldHash)
-        assertThat(resultNotFound).isEqualTo(RefreshTokenValidationResult.NOT_FOUND)
+        assertThat(refreshTokenRepository.verify(userId, sessionId, oldJti, oldHash))
+            .isEqualTo(RefreshTokenValidationResult.SUCCESS)
+        assertThat(refreshTokenRepository.verify(userId, sessionId, oldJti, "wrong-hash"))
+            .isEqualTo(RefreshTokenValidationResult.MISMATCH)
+        assertThat(refreshTokenRepository.verify(userId, sessionId, "missing-jti", oldHash))
+            .isEqualTo(RefreshTokenValidationResult.NOT_FOUND)
     }
 
     @Test
-    @DisplayName("토큰 교체(rotate) 성공")
-    fun rotate_success() {
-        refreshTokenRepository.save(userId, oldJti, oldHash, ttl)
+    @DisplayName("Rotation 시 이전 토큰을 USED로 남기고 새 토큰을 ACTIVE로 저장한다")
+    fun t2() {
+        refreshTokenRepository.save(userId, sessionId, oldJti, oldHash, ttl)
 
-        val result = refreshTokenRepository.rotate(
-            userId = userId,
-            oldJti = oldJti,
-            requestRefreshTokenHash = oldHash,
-            newJti = newJti,
-            newRefreshTokenHash = newHash,
-            ttl = ttl
-        )
+        val result = rotate(oldHash)
 
         assertThat(result).isEqualTo(RefreshTokenValidationResult.SUCCESS)
-
-        // New JTI should be active
-        val newVerify = refreshTokenRepository.verify(userId, newJti, newHash)
-        assertThat(newVerify).isEqualTo(RefreshTokenValidationResult.SUCCESS)
-
-        // Old JTI has a short grace period TTL (<= 5s) set by Lua script for network race conditions
-        val expireSeconds = stringRedisTemplate.getExpire("auth:refresh:$userId:$oldJti")
-        assertThat(expireSeconds).isGreaterThan(0L).isLessThanOrEqualTo(5L)
+        assertThat(refreshTokenRepository.verify(userId, sessionId, newJti, newHash))
+            .isEqualTo(RefreshTokenValidationResult.SUCCESS)
     }
 
     @Test
-    @DisplayName("토큰 불일치 시 MISMATCH 반환")
-    fun rotate_mismatch() {
-        refreshTokenRepository.save(userId, oldJti, oldHash, ttl)
+    @DisplayName("이미 사용된 Refresh Token을 재사용하면 Family 전체를 폐기한다")
+    fun t3() {
+        refreshTokenRepository.save(userId, sessionId, oldJti, oldHash, ttl)
+        assertThat(rotate(oldHash)).isEqualTo(RefreshTokenValidationResult.SUCCESS)
 
-        val result = refreshTokenRepository.rotate(
-            userId = userId,
-            oldJti = oldJti,
-            requestRefreshTokenHash = "tampered-hash",
-            newJti = newJti,
-            newRefreshTokenHash = newHash,
-            ttl = ttl
-        )
+        val reusedResult = rotate(oldHash)
 
-        assertThat(result).isEqualTo(RefreshTokenValidationResult.MISMATCH)
+        assertThat(reusedResult).isEqualTo(RefreshTokenValidationResult.REUSED)
+        assertThat(refreshTokenRepository.verify(userId, sessionId, newJti, newHash))
+            .isEqualTo(RefreshTokenValidationResult.NOT_FOUND)
     }
 
     @Test
-    @DisplayName("존재하지 않는 토큰 교체 시 NOT_FOUND 반환")
-    fun rotate_notFound() {
-        val result = refreshTokenRepository.rotate(
-            userId = userId,
-            oldJti = "non-existent-jti",
-            requestRefreshTokenHash = oldHash,
-            newJti = newJti,
-            newRefreshTokenHash = newHash,
-            ttl = ttl
-        )
+    @DisplayName("한 세션의 토큰 재사용은 다른 로그인 세션을 폐기하지 않는다")
+    fun t4() {
+        val otherSessionId = "session-uuid-2"
+        refreshTokenRepository.save(userId, sessionId, oldJti, oldHash, ttl)
+        refreshTokenRepository.save(userId, otherSessionId, "other-jti", "other-hash", ttl)
+        rotate(oldHash)
 
-        assertThat(result).isEqualTo(RefreshTokenValidationResult.NOT_FOUND)
+        assertThat(rotate(oldHash)).isEqualTo(RefreshTokenValidationResult.REUSED)
+        assertThat(refreshTokenRepository.verify(userId, otherSessionId, "other-jti", "other-hash"))
+            .isEqualTo(RefreshTokenValidationResult.SUCCESS)
     }
 
     @Test
-    @DisplayName("사용자 토큰 전체 삭제")
-    fun deleteAllByUserId() {
-        refreshTokenRepository.save(userId, "jti-1", "hash-1", ttl)
-        refreshTokenRepository.save(userId, "jti-2", "hash-2", ttl)
+    @DisplayName("사용자의 모든 Refresh Token Family를 삭제한다")
+    fun t5() {
+        refreshTokenRepository.save(userId, sessionId, oldJti, oldHash, ttl)
+        refreshTokenRepository.save(userId, "session-uuid-2", "other-jti", "other-hash", ttl)
 
         refreshTokenRepository.deleteAllByUserId(userId)
 
-        assertThat(refreshTokenRepository.verify(userId, "jti-1", "hash-1")).isEqualTo(RefreshTokenValidationResult.NOT_FOUND)
-        assertThat(refreshTokenRepository.verify(userId, "jti-2", "hash-2")).isEqualTo(RefreshTokenValidationResult.NOT_FOUND)
+        assertThat(refreshTokenRepository.verify(userId, sessionId, oldJti, oldHash))
+            .isEqualTo(RefreshTokenValidationResult.NOT_FOUND)
+        assertThat(refreshTokenRepository.verify(userId, "session-uuid-2", "other-jti", "other-hash"))
+            .isEqualTo(RefreshTokenValidationResult.NOT_FOUND)
     }
+
+    private fun rotate(requestHash: String): RefreshTokenValidationResult =
+        refreshTokenRepository.rotate(
+            userId = userId,
+            sessionId = sessionId,
+            oldJti = oldJti,
+            requestRefreshTokenHash = requestHash,
+            newJti = newJti,
+            newRefreshTokenHash = newHash,
+            ttl = ttl,
+        )
 }
