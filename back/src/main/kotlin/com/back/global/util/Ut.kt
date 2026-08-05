@@ -1,6 +1,8 @@
 package com.back.global.util
 
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.databind.SerializationFeature
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
 import io.jsonwebtoken.Jwts
 import io.jsonwebtoken.security.Keys
 import java.util.*
@@ -38,6 +40,8 @@ object Ut {
 
     object json {
         val objectMapper: ObjectMapper = ObjectMapper()
+            .registerModule(JavaTimeModule())
+            .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS)
 
         fun toString(obj: Any?, defaultValue: String): String = try {
             objectMapper.writeValueAsString(obj)

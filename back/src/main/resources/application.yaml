@@ -11,6 +11,8 @@ spring:
   output:
     ansi:
       enabled: always
+  jackson:
+    time-zone: Asia/Seoul
   datasource:
     hikari:
       auto-commit: false

@@ -29,7 +29,7 @@ class WebConfig(
 
     @Bean
     fun corsConfigurationSource(): CorsConfigurationSource {
-        val config = CorsConfiguration().apply {
+        val apiConfig = CorsConfiguration().apply {
             allowedOrigins = this@WebConfig.allowedOrigins.toList()
             allowedMethods = listOf("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS")
             allowedHeaders = listOf("*")
@@ -37,8 +37,16 @@ class WebConfig(
             allowCredentials = true
         }
 
+        val uploadsConfig = CorsConfiguration().apply {
+            allowedOrigins = this@WebConfig.allowedOrigins.toList()
+            allowedMethods = listOf("GET", "OPTIONS")
+            allowedHeaders = listOf("*")
+            allowCredentials = false
+        }
+
         val source = UrlBasedCorsConfigurationSource()
-        source.registerCorsConfiguration("/api/**", config)
+        source.registerCorsConfiguration("/api/**", apiConfig)
+        source.registerCorsConfiguration("/uploads/**", uploadsConfig)
         return source
     }
 

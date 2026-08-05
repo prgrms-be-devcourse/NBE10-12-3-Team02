@@ -558,6 +558,7 @@ function MyPageContent() {
       setSelectedProfileFile(null);
       setProfileImgError(false);
       setProfileCacheKey(Date.now());
+      window.dispatchEvent(new Event("profile-image-changed"));
       showSuccess("프로필 사진이 변경되었습니다.");
     } catch (e) {
       showError(e instanceof Error ? e.message : "업로드에 실패했습니다.");
@@ -578,6 +579,7 @@ function MyPageContent() {
       setProfilePreviewUrl(null);
       setSelectedProfileFile(null);
       setProfileImgError(true);
+      window.dispatchEvent(new Event("profile-image-changed"));
       showSuccess("기본 이미지로 변경되었습니다.");
     } catch (e) {
       showError(e instanceof Error ? e.message : "삭제에 실패했습니다.");
