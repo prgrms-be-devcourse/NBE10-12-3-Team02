@@ -42,7 +42,7 @@ test.describe('E2E Real-time Seat Hold & SSE Flow', () => {
         const isDisabled = await user2SeatBtn.isDisabled();
         const hasHoldState = (await user2SeatBtn.getAttribute('class'))?.includes('hold') || 
                              (await user2SeatBtn.getAttribute('disabled')) !== null;
-        expect(isDisabled || hasHoldState || true).toBe(true);
+        expect(isDisabled || hasHoldState).toBe(true);
       }
     } finally {
       await user1Context.close();

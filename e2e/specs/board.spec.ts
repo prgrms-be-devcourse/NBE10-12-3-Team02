@@ -41,8 +41,8 @@ test.describe('E2E Scenario 6: Board, Comment & Real-time SSE Notification Flow'
         await likeBtn.click();
       }
 
-      // User 1 화면에서 실시간 SSE 알림 팝업/토스트 또는 댓글 목록 갱신 검증
-      await expect(user1Page.locator('h1, h2, h3, p, [role="alert"], .notification-toast').first()).toBeVisible({ timeout: 10000 });
+      // User 1 화면에서 실시간 SSE 알림 팝업/토스트 수신 검증
+      await expect(user1Page.locator('[role="alert"], .notification-toast, .toast-message, .swal2-popup').first()).toBeVisible({ timeout: 10000 });
     } finally {
       await user1Context.close();
       await user2Context.close();
