@@ -1,6 +1,7 @@
 package com.back.domain.auth.controller
 
 import com.back.domain.auth.dto.AuthRestoreResponse
+import com.back.domain.auth.dto.CsrfTokenResponse
 import com.back.domain.auth.dto.EmailVerificationConfirmRequest
 import com.back.domain.auth.dto.EmailVerificationRequest
 import com.back.domain.auth.dto.EmailVerificationResponse
@@ -15,8 +16,11 @@ import com.back.global.rsData.RsData
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.Valid
+import jakarta.servlet.http.HttpServletRequest
+import jakarta.servlet.http.HttpServletResponse
 import org.slf4j.LoggerFactory
 import org.springframework.web.bind.annotation.*
+import org.springframework.security.web.csrf.CsrfTokenRepository
 
 @ApiV1
 @RestController
@@ -26,7 +30,19 @@ class AuthController(
     private val requestContext: RequestContext,
     private val authService: AuthService,
     private val emailVerificationService: EmailVerificationService,
+    private val csrfTokenRepository: CsrfTokenRepository,
 ) {
+
+    @GetMapping("/csrf")
+    @Operation(summary = "CSRF 토큰 발급", description = "쿠키 기반 인증 API에 사용할 CSRF 토큰을 발급합니다.")
+    fun csrf(request: HttpServletRequest, response: HttpServletResponse): RsData<CsrfTokenResponse> {
+        val csrfToken = csrfTokenRepository.loadToken(request)
+            ?: csrfTokenRepository.generateToken(request).also {
+                csrfTokenRepository.saveToken(it, request, response)
+            }
+
+        return RsData("200-1", "CSRF 토큰이 발급되었습니다.", CsrfTokenResponse(csrfToken.token))
+    }
 
     @PostMapping("/login")
     @Operation(summary = "로그인", description = "로그인 API")

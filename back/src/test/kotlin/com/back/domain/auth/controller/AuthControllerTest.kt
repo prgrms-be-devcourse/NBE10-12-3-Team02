@@ -28,6 +28,7 @@ import org.springframework.test.context.ActiveProfiles
 import org.springframework.test.context.bean.override.mockito.MockitoBean
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.MvcResult
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.*
 import org.springframework.transaction.annotation.Transactional
@@ -101,6 +102,7 @@ class AuthControllerTest @Autowired constructor(
     @DisplayName("토큰 재발급 성공")
     fun t3() {
         val refreshTokenCookie = loginAndGetRefreshTokenCookie()
+        val csrf = issueCsrfCredentials()
 
         `when`(
             refreshTokenRepository.rotate(
@@ -116,6 +118,9 @@ class AuthControllerTest @Autowired constructor(
         mockMvc.perform(
             post("/api/v1/auth/refresh")
                 .cookie(refreshTokenCookie)
+                .cookie(csrf.cookie)
+                .header("Origin", ALLOWED_ORIGIN)
+                .header("X-XSRF-TOKEN", csrf.token)
         )
             .andExpect(status().isOk)
             .andExpect(header().exists("Authorization"))
@@ -128,7 +133,14 @@ class AuthControllerTest @Autowired constructor(
     @Test
     @DisplayName("토큰 재발급 실패 - refreshToken 쿠키 없음")
     fun t4() {
-        mockMvc.perform(post("/api/v1/auth/refresh"))
+        val csrf = issueCsrfCredentials()
+
+        mockMvc.perform(
+            post("/api/v1/auth/refresh")
+                .cookie(csrf.cookie)
+                .header("Origin", ALLOWED_ORIGIN)
+                .header("X-XSRF-TOKEN", csrf.token)
+        )
             .andExpect(status().isUnauthorized)
             .andExpect(jsonPath("$.resultCode").value("401-8"))
             .andExpect(jsonPath("$.msg").value("로그인 후 이용해주세요."))
@@ -138,10 +150,14 @@ class AuthControllerTest @Autowired constructor(
     @DisplayName("로그아웃 성공")
     fun t5() {
         val refreshTokenCookie = loginAndGetRefreshTokenCookie()
+        val csrf = issueCsrfCredentials()
 
         mockMvc.perform(
             post("/api/v1/auth/logout")
                 .cookie(refreshTokenCookie)
+                .cookie(csrf.cookie)
+                .header("Origin", ALLOWED_ORIGIN)
+                .header("X-XSRF-TOKEN", csrf.token)
         )
             .andExpect(status().isOk)
             .andExpect(cookie().maxAge("refreshToken", 0))
@@ -157,11 +173,15 @@ class AuthControllerTest @Autowired constructor(
         val refreshTokenCookie = loginResult.response.getCookie("refreshToken")!!
         val authorization = loginResult.response.getHeader("Authorization")!!
         val accessToken = authorization.substring("Bearer ".length)
+        val csrf = issueCsrfCredentials()
 
         mockMvc.perform(
             post("/api/v1/auth/logout")
                 .header("Authorization", authorization)
                 .cookie(refreshTokenCookie)
+                .cookie(csrf.cookie)
+                .header("Origin", ALLOWED_ORIGIN)
+                .header("X-XSRF-TOKEN", csrf.token)
         )
             .andExpect(status().isOk)
             .andExpect(cookie().maxAge("refreshToken", 0))
@@ -205,6 +225,55 @@ class AuthControllerTest @Autowired constructor(
             .andExpect(jsonPath("$.data.verificationToken").value("verification-token"))
     }
 
+    @Test
+    @DisplayName("CSRF 토큰 발급 성공")
+    fun t9() {
+        mockMvc.perform(get("/api/v1/auth/csrf"))
+            .andExpect(status().isOk)
+            .andExpect(cookie().exists("XSRF-TOKEN"))
+            .andExpect(cookie().httpOnly("XSRF-TOKEN", true))
+            .andExpect(jsonPath("$.data.token").isNotEmpty)
+    }
+
+    @Test
+    @DisplayName("토큰 재발급 실패 - CSRF 토큰 없음")
+    fun t10() {
+        mockMvc.perform(
+            post("/api/v1/auth/refresh")
+                .header("Origin", ALLOWED_ORIGIN)
+        )
+            .andExpect(status().isForbidden)
+    }
+
+    @Test
+    @DisplayName("토큰 재발급 실패 - 허용되지 않은 Origin")
+    fun t11() {
+        val csrf = issueCsrfCredentials()
+
+        mockMvc.perform(
+            post("/api/v1/auth/refresh")
+                .cookie(csrf.cookie)
+                .header("Referer", "https://attacker.example/phishing")
+                .header("X-XSRF-TOKEN", csrf.token)
+        )
+            .andExpect(status().isForbidden)
+            .andExpect(jsonPath("$.msg").value("허용되지 않은 요청 출처입니다."))
+    }
+
+    private fun issueCsrfCredentials(): CsrfCredentials {
+        val result = mockMvc.perform(get("/api/v1/auth/csrf"))
+            .andExpect(status().isOk)
+            .andReturn()
+
+        val cookie = requireNotNull(result.response.getCookie("XSRF-TOKEN"))
+        val token = objectMapper.readTree(result.response.contentAsString)
+            .path("data")
+            .path("token")
+            .asText()
+
+        return CsrfCredentials(cookie, token)
+    }
+
     private fun loginAndGetRefreshTokenCookie(): Cookie {
         val result = mockMvc.perform(
             post("/api/v1/auth/login")
@@ -232,6 +301,7 @@ class AuthControllerTest @Autowired constructor(
     companion object {
         private const val LOGIN_ID = "testuser"
         private const val PASSWORD = "q1w2e3r4"
+        private const val ALLOWED_ORIGIN = "http://localhost:3000"
 
         @Suppress("UNCHECKED_CAST")
         private fun <T> anyNonNull(): T {
@@ -239,4 +309,9 @@ class AuthControllerTest @Autowired constructor(
             return null as T
         }
     }
+
+    private data class CsrfCredentials(
+        val cookie: Cookie,
+        val token: String,
+    )
 }
