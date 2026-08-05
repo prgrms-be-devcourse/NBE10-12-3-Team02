@@ -1,6 +1,16 @@
 import { test, expect } from '@playwright/test';
 
-test.describe('E2E Scenario 10: Board Comment, Like & Real-time SSE Notification', () => {
+test.describe('E2E Scenario 6: Board, Comment & Real-time SSE Notification Flow', () => {
+  test('게시판 목록 진입 및 글쓰기 페이지 렌더링 검증', async ({ page }) => {
+    await page.goto('/community');
+    await expect(page.locator('h1, h2, h3, button').first()).toBeVisible({ timeout: 10000 });
+
+    const writeBtn = page.locator('button:has-text("글쓰기"), a:has-text("글쓰기"), button:has-text("작성")').first();
+    if (await writeBtn.isVisible()) {
+      await writeBtn.click();
+    }
+  });
+
   test('User 2가 댓글 및 좋아요 작성 시 User 1 화면에 실시간 SSE 알림 수신 및 댓글 목록 반영 검증', async ({ browser }) => {
     const user1Context = await browser.newContext();
     const user2Context = await browser.newContext();

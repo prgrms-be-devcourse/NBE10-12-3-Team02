@@ -1,7 +1,7 @@
 # NBE10-12-3-Team02 E2E System Test Package
 
 Playwright 기반 시스템통합 E2E (End-to-End) 테스트 패키지입니다.  
-프론트엔드(Next.js)와 백엔드(Spring Boot) 및 Redis/DB 전체 시스템 연동을 자동으로 검증합니다.
+프론트엔드(Next.js)와 백엔드(Spring Boot) 및 Redis/DB 전체 시스템 연동을 8대 도메인 스펙(총 15개 테스트)으로 검증합니다.
 
 ---
 
@@ -16,7 +16,7 @@ npx playwright install chromium
 
 ### 2. 테스트 실행 (명령어 단 1개로 완전 자동화)
 ```bash
-# 헤드리스 모드로 전체 12개 E2E 테스트 실행 (백엔드 8080 & 프론트엔드 3000 자동 감지/시동)
+# 헤드리스 모드로 전체 15개 E2E 테스트 실행 (백엔드 8080 & 프론트엔드 3000 자동 감지/시동)
 pnpm test
 
 # 대화형 UI 모드로 디버깅 및 시각적 테스트 실행
@@ -34,27 +34,20 @@ pnpm test:report
 
 ---
 
-## 📂 파일 구조 (Structure)
+## 📂 파일 구조 및 8대 스펙 명세 (Structure)
 
 ```text
 e2e/
-├── package.json            # Playwright 의존성 및 실행 스크립트
-├── playwright.config.ts    # 다중 webServer 및 브라우저/리포터 환경설정
-├── tsconfig.json           # TypeScript 모듈 매핑 설정
-├── pages/                  # Page Object Models (페이지 추상화 클래스)
-│   ├── LoginPage.ts        # 로그인 페이지
-│   ├── ConcertListPage.ts  # 메인/공연 목록 페이지
-│   ├── SeatSelectionPage.ts# 실시간 좌석 선택 페이지
-│   ├── PaymentPage.ts      # 결제 및 예매 정보 입력 페이지
-│   ├── BoardPage.ts        # 관람후기/기대평 커뮤니티 페이지
-│   └── MyPage.ts           # 마이페이지 및 프로필 관리
-└── specs/                  # 8대 유저 시나리오 (총 11개 통합 테스트 케이스)
-    ├── auth.spec.ts        # [시나리오 1] 인증/로그인 폼 및 에러 팝업
-    ├── concert.spec.ts     # [시나리오 2] 공연 리스트, 검색, 마감필터, 상세회차
-    ├── queue.spec.ts       # [시나리오 3] 대기열 진입 및 순번 노출
-    ├── seat-booking.spec.ts# [시나리오 4] 실시간 좌석 SSE 스트림 연동
-    ├── payment.spec.ts     # [시나리오 5] 결제 요약 정보 및 동의 체크
-    ├── board-notification.spec.ts # [시나리오 6] 게시판 목록 및 작성 폼
-    ├── mypage.spec.ts      # [시나리오 7] 마이페이지 렌더링
-    └── ticket-verify.spec.ts# [시나리오 8] 모바일 QR 그룹 티켓 검증
+├── specs/
+│   ├── auth.spec.ts          # 1. 로그인 폼 및 비정상 로그인 예외 처리 검증 (2 tests)
+│   ├── concert.spec.ts       # 2. 메인 공연 목록, 마감 탭, 검색, 상세페이지 검증 (3 tests)
+│   ├── queue.spec.ts         # 3. 3인 동시 접속 대기열 정원(2인) 차단 시뮬레이션 (1 test)
+│   ├── seat-booking.spec.ts  # 4. 좌석 선택 & User 1 선점 시 User 2 중복 클릭 차단 검증 (2 tests)
+│   ├── payment.spec.ts       # 5. 결제 요약 정보 & 모의 결제 완료 검증 (1 test)
+│   ├── board.spec.ts         # 6. 게시판 글쓰기, 댓글/좋아요 및 실시간 SSE 알림 통합 검증 (2 tests)
+│   ├── mypage.spec.ts        # 7. 마이페이지 프로필 & 3D 티켓 뒤집기 인터랙션 통합 검증 (2 tests)
+│   └── qr-verify.spec.ts     # 8. 데스크톱 및 모바일 QR 그룹 검증 통합 검증 (2 tests)
+├── playwright.config.ts      # Playwright 엔진 및 다중 webServer 설정
+├── package.json
+└── README.md
 ```
