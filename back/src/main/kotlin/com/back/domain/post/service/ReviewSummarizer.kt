@@ -21,6 +21,8 @@ class ReviewSummarizer(
     companion object {
         private const val MAX_SUMMARY_LENGTH = 30
         private const val SYSTEM_PROMPT =
-            "리뷰를 한 문장, 20자 내외로 요약해줘. 핵심 감상(좋았던 점/아쉬운 점) 위주로 작성해줘."
+            "리뷰를 한 문장, 20자 내외로 요약해줘. 핵심 감상(좋았던 점/아쉬운 점) 위주로 작성해줘. " +
+                "원문에 없는 내용은 절대 추가하지 말고, 원문에 실제로 있는 내용만으로 요약해줘. " +
+                "원문이 짧으면 요약도 그만큼 짧게 유지해줘."
     }
 }
