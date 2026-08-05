@@ -8,7 +8,7 @@ import { Loader2 } from "lucide-react";
 
 interface PaymentTicketResponse {
   ticketNumber: string;
-  urlPoster: string;
+  posterUrl: string;
   concertName: string;
   seatNumber: string;
   scheduleDate: string;

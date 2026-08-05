@@ -5,7 +5,7 @@ import com.back.domain.ticket.entity.Ticket
 data class TicketGroupInfo(
     val scheduleId: Long,
     val concertName: String,
-    val urlPoster: String?,
+    val posterUrl: String?,
     val startDate: String,
     val endDate: String,
     val round: Int,
@@ -22,7 +22,7 @@ data class TicketGroupInfo(
             return TicketGroupInfo(
                 scheduleId = checkNotNull(schedule.scheduleId) { "Schedule ID null" },
                 concertName = concert.concertName,
-                urlPoster = concert.urlPoster,
+                posterUrl = concert.urlPoster,
                 startDate = concert.startDate.toLocalDate().toString(),
                 endDate = concert.endDate.toLocalDate().toString(),
                 round = schedule.round,

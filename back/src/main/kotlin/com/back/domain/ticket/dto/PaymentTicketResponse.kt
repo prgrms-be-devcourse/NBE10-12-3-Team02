@@ -9,7 +9,7 @@ import java.time.LocalDateTime
 
 data class PaymentTicketResponse(
     val ticketNumber: String,
-    val urlPoster: String?,
+    val posterUrl: String?,
     val concertName: String,
     val seatNumber: String,
     val scheduleDate: LocalDateTime,
@@ -20,7 +20,11 @@ data class PaymentTicketResponse(
         fun from(scheduleSeat: ScheduleSeat, schedule: Schedule, ticket: Ticket): PaymentTicketResponse {
             return PaymentTicketResponse(
                 ticketNumber = ticket.ticketNumber,
-                urlPoster = schedule.concert.urlPoster,
+
+
+
+
+                posterUrl = schedule.concert.urlPoster,
                 concertName = schedule.concert.concertName,
                 seatNumber = scheduleSeat.seatNumber,
                 scheduleDate = schedule.scheduleDate,

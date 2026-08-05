@@ -17,7 +17,7 @@ interface ConcertListItem {
   venueName: string;
   startDate: string;
   endDate: string;
-  imageUrl: string;
+  posterUrl: string;
   status: string;
 }
 
@@ -33,7 +33,7 @@ interface ConcertDetailResponse {
   description: string;
   venueName: string;
   location: string;
-  urlPoster: string;
+  posterUrl: string;
 }
 
 type ConcertStatusFilter = "all" | "ongoing" | "closed";
@@ -169,7 +169,7 @@ function HomeContent() {
           detailed.map(
             (concert) =>
               new Promise<number | null>((resolve) => {
-                if (!concert.imageUrl) {
+                if (!concert.posterUrl) {
                   resolve(null);
                   return;
                 }
@@ -177,7 +177,7 @@ function HomeContent() {
                 img.onload = () =>
                   resolve(img.naturalWidth / img.naturalHeight);
                 img.onerror = () => resolve(null);
-                img.src = concert.imageUrl;
+                img.src = concert.posterUrl;
               }),
           ),
         );
@@ -275,12 +275,12 @@ function HomeContent() {
                     className="relative flex h-[28rem] overflow-hidden bg-gray-900"
                   >
                     {/* 배너 전체에 깔리는 흐린 포스터 배경 (왼쪽/오른쪽이 하나로 이어져 보이도록) */}
-                    {concert.imageUrl && (
+                    {concert.posterUrl && (
                       <Image
                         fill
                         unoptimized
                         priority
-                        src={concert.imageUrl}
+                        src={concert.posterUrl}
                         alt=""
                         aria-hidden="true"
                         className="object-cover scale-110 blur-3xl opacity-60"
@@ -297,12 +297,12 @@ function HomeContent() {
                         minWidth: 220,
                       }}
                     >
-                      {concert.imageUrl ? (
+                      {concert.posterUrl ? (
                         <Image
                           fill
                           unoptimized
                           priority
-                          src={concert.imageUrl}
+                          src={concert.posterUrl}
                           alt={concert.concertName}
                           className="object-contain"
                         />
@@ -454,12 +454,12 @@ function HomeContent() {
                   className="bg-white rounded-2xl shadow-sm overflow-hidden hover:shadow-lg hover:-translate-y-1 transition-all duration-200 cursor-pointer flex flex-col"
                 >
                   <div className="h-48 bg-gradient-to-br from-blue-200 to-indigo-300 flex items-center justify-center text-white font-bold relative overflow-hidden">
-                    {concert.imageUrl ? (
+                    {concert.posterUrl ? (
                       <Image
                         fill
                         unoptimized
                         loading={idx < 4 ? "eager" : "lazy"}
-                        src={concert.imageUrl}
+                        src={concert.posterUrl}
                         alt={concert.concertName}
                         sizes="(max-width: 768px) 100vw, 25vw"
                         className="object-cover"
