@@ -13,7 +13,7 @@ RUN chmod +x gradlew
 
 COPY src src
 
-RUN ./gradlew bootJar -x test --no-daemon
+RUN SPRING_PROFILES_ACTIVE=test ./gradlew bootJar --no-daemon
 
 # ---- Run Stage ----
 FROM eclipse-temurin:25-jre

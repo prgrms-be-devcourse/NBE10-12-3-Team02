@@ -85,42 +85,16 @@ jobs:
           if len(diff) > 40000:
               diff = diff[:40000] + "\n... (Diff truncated due to size)"
 
-          # 2. Gemini API 호출 (도메인 맞춤형 수석 엔지니어 프롬프트)
-          prompt = f"""
-          너는 꼼꼼하고 친절한 대용량 트래픽 대기열/티켓팅 시스템 전문 수석 소프트웨어 엔지니어야.
-          현재 프로젝트는 백엔드(`back/`)와 프론트엔드(`front/`)가 함께 있는 모노레포(Monorepo) 구조야.
+          # 2. 독립된 md 지침 파일 읽기 및 Gemini API 호출
+          instruction_path = ".github/prompts/gemini-review-instruction.md"
+          try:
+              with open(instruction_path, "r", encoding="utf-8") as f:
+                  instruction = f.read()
+          except Exception as e:
+              print(f"코드 리뷰 지침 파일 읽기 실패: {e}")
+              instruction = "너는 백엔드(Kotlin), 프론트엔드(Next.js), E2E(Playwright) 전문 수석 리뷰어야."
 
-          [프로젝트 정확한 기술 스택]
-          - Backend (`back/`): Kotlin 2.4.10 (100% 코틀린 프로젝트), Spring Boot 4.0.7 (Virtual Threads 적용), Java 25, Spring Data Redis (StringRedisTemplate / Lettuce), MySQL, Redis 7.2 Sentinel, OAuth2 (Kakao/Naver/Google), JJWT 0.13.0, Bucket4j
-          - Frontend (`front/`): Next.js 16.2.9 (App Router), React 19.2.4, TypeScript 5.x, TailwindCSS 4.x, Node.js 22.x (LTS), pnpm 9.x, STOMP/WebSocket
-
-          아래 Pull Request의 Git Diff를 검토하고 코드 리뷰를 작성해줘.
-
-          리뷰 지침:
-          1. **변경 사항 요약**: 변경된 영역(`back/`, `front/` 또는 전체)과 핵심 목적을 2~3줄로 요약해줘.
-          2. **백엔드 검토 포인트 (`back/`)**:
-             - 관용적인 코틀린(Idiomatic Kotlin) 작성 여부 (Scope 함수 `with/apply/run`, `ifEmpty`, 단일 표현식 함수, Null-safety, 불필요한 `var` 사용 지양)
-             - Spring Boot 4.x & Virtual Threads 호환성 (Virtual Thread 피닝을 일으키는 `synchronized` 블록 지양)
-             - StringRedisTemplate & Redis Lua 스크립트 데이터 조율 시 스레드 세이프 싱글톤 RedisScript 캐싱 및 원자적(Atomic) 동시성 제어 검증
-             - Redis Lua 스크립트가 원자적(Atomic) 동시성을 제어하는 구간 내 불필요한 DB 비관적 락(`FOR UPDATE`) 혼용 지양 (일반 조회 사용 검증)
-             - 좌석 선점(10분 TTL) & Redis ZSET 기반 1초 스케줄러(SKIP LOCKED) 만료 처리 동시성(Race Condition) 검증
-             - 회차당 1인 최대 3매 예매 제한 로직 보호 여부
-             - Refresh Token Rotation (RTR) 탈취 검증 & Access Token 블랙리스트 처리
-          3. **프론트엔드 검토 포인트 (`front/`)**:
-             - React 19 및 Next.js 16 App Router 작성 관례 (useEffect 동기 `setState` 지양, `"use client"` 지시어 적절성, React 19 Hook 활용)
-             - TypeScript 5.x 엄격한 타입 정의 (`any` 사용 금지, 명확한 인터페이스/Type Assertion)
-             - STOMP / WebSocket 소켓 연결 라이프사이클 (페이지 이동 시 disconnect & unsubscribe 명시를 통한 메모리 누수 방지)
-             - TailwindCSS 4.x 스타일링 가이드 준수 및 불필요한 재렌더링 최적화
-          4. **보안 및 코드 품질**:
-             - 보안 이슈 (비밀번호/키 노출, XSS, SQL Injection 등)
-             - 가독성 및 개선 아이디어 (개선된 코드 예시 필수 포함)
-          5. **톤앤매너**: 이모티콘 없이 답변은 한국어로 작성하며, 친절하고 건설적(Constructive)인 톤을 유지해줘.
-
-          Git Diff:
-          ```diff
-          {diff}
-          ```
-          """
+          prompt = f"{instruction}\n\n[Pull Request Git Diff]\n```diff\n{diff}\n```"
 
           try:
               client = genai.Client(api_key=os.environ["GEMINI_API_KEY"])

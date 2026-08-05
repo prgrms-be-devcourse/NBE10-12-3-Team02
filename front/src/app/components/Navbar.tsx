@@ -267,13 +267,10 @@ export default function Navbar() {
     <nav className="print:hidden sticky top-0 z-50 bg-white shadow-sm">
       <div className="max-w-5xl mx-auto px-6 h-16 flex items-center justify-between">
         <Link href="/" onClick={handleLogoClick} className="flex items-center">
-          <Image
-            unoptimized
-            priority
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
             src="/images/logo-horizontal.svg"
             alt="티케팅고"
-            width={160}
-            height={48}
             className="h-12 w-auto object-contain block"
           />
         </Link>
