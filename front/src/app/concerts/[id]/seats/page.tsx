@@ -30,7 +30,6 @@ interface SeatSelectionData {
 interface QueueConnectionEvent {
   state: "ACTIVE" | "WAITING" | "NOT_REGISTERED";
   rank: number;
-  myQueueNumber: number;
   entryToken: string | null;
 }
 
@@ -86,8 +85,7 @@ function SeatSelectContent({ params }: { params: Promise<{ id: string }> }) {
   const [userName, setUserName] = useState<string | null>(null);
 
   // 대기열 관련 상태. entryToken이 생기기 전까지는 좌석 조회/선점/결제가 전부 막혀있다.
-  const [queueRank, setQueueRank] = useState<number | null>(null); // 현재 입장 허용 기준 번호 (Serving Offset)
-  const [myQueueNumber, setMyQueueNumber] = useState<number | null>(null); // 내 고유 절대 순번
+  const [queueRank, setQueueRank] = useState<number | null>(null);
   const [queueTotal, setQueueTotal] = useState<number | null>(null);
   const [entryToken, setEntryToken] = useState<string | null>(null);
   const [queueError, setQueueError] = useState("");
@@ -102,6 +100,7 @@ function SeatSelectContent({ params }: { params: Promise<{ id: string }> }) {
   const lastEventIdRef = useRef<string>("");
   const eTagRef = useRef<string>("");
   const pollingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const reconnectDelayRef = useRef(3000); // 지수 백오프 재연결 딜레이 초기값 (ms)
 
   const [adultCount, setAdultCount] = useState(1);
@@ -159,7 +158,6 @@ function SeatSelectContent({ params }: { params: Promise<{ id: string }> }) {
       try {
         const res = await apiFetch<{
           rank: number;
-          myQueueNumber: number;
           entryToken?: string;
         }>(`/waiting/concerts/${id}/schedules/${scheduleId}/waiting-queue`, {
           method: "POST",
@@ -172,8 +170,7 @@ function SeatSelectContent({ params }: { params: Promise<{ id: string }> }) {
           return;
         }
 
-        setMyQueueNumber(res.data.myQueueNumber);
-        setQueueRank(res.data.myQueueNumber - res.data.rank);
+        setQueueRank(res.data.rank);
         isWaitingRef.current = true;
 
         const controller = new AbortController();
@@ -204,8 +201,7 @@ function SeatSelectContent({ params }: { params: Promise<{ id: string }> }) {
                   isWaitingRef.current = false;
                   controller.abort();
                 } else if (event.state === "WAITING") {
-                  setQueueRank(event.myQueueNumber - event.rank);
-                  setMyQueueNumber(event.myQueueNumber);
+                  setQueueRank(event.rank);
                 } else if (event.state === "NOT_REGISTERED") {
                   setQueueError("대기열 등록 정보를 찾을 수 없습니다.");
                 }
@@ -214,8 +210,19 @@ function SeatSelectContent({ params }: { params: Promise<{ id: string }> }) {
 
               if (message.event === "queue-status") {
                 const event = JSON.parse(message.data) as QueueStatusEvent;
-                setQueueRank(event.currentRank);
                 setQueueTotal(event.totalWaitingCount);
+                if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+                debounceTimerRef.current = setTimeout(async () => {
+                  if (!active) return;
+                  try {
+                    const rankRes = await apiFetch<{ rank: number }>(
+                      `/waiting/concerts/${id}/schedules/${scheduleId}/waiting-queue/rank`,
+                    );
+                    if (active) setQueueRank(rankRes.data.rank);
+                  } catch {
+                    /* 순번 조회 실패 시 기존 값 유지 */
+                  }
+                }, 300);
                 return;
               }
 
@@ -252,6 +259,7 @@ function SeatSelectContent({ params }: { params: Promise<{ id: string }> }) {
 
     return () => {
       active = false;
+      if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
       queueSseAbortRef.current?.abort();
       queueSseAbortRef.current = null;
 
@@ -655,10 +663,7 @@ function SeatSelectContent({ params }: { params: Promise<{ id: string }> }) {
   };
 
   // 대기열 입장 허가(entryToken)를 아직 못 받았으면, 좌석 화면 대신 대기 화면을 보여준다.
-  const remainingRank =
-    myQueueNumber !== null && queueRank !== null
-      ? Math.max(1, myQueueNumber - queueRank)
-      : (queueRank ?? "-");
+  const remainingRank = queueRank ?? "-";
 
   if (!entryToken) {
     return (
