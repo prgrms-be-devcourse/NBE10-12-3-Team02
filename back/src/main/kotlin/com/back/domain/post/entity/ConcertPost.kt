@@ -52,11 +52,6 @@ open class ConcertPost protected constructor() : BaseEntity() {
     lateinit var reviewType: ReviewType
         protected set
 
-    // AI가 생성한 리뷰 한 줄 요약. 리뷰 작성/수정 후 비동기로 채워지므로 그 전까지는 null이다.
-    @Column(length = 50)
-    var summary: String? = null
-        protected set
-
     @OneToMany(
         mappedBy = "post",
         cascade = [CascadeType.ALL],
@@ -85,10 +80,6 @@ open class ConcertPost protected constructor() : BaseEntity() {
         this.title = title
         this.content = content
         this.rating = rating
-    }
-
-    fun applySummary(summary: String) {
-        this.summary = summary
     }
 
     companion object {

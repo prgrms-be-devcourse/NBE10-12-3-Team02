@@ -7,7 +7,6 @@ import com.back.domain.post.dto.ConcertPostUpdateRequest
 import com.back.domain.post.dto.EligibleConcertResponse
 import com.back.domain.post.entity.ConcertPost
 import com.back.domain.post.entity.ReviewType
-import com.back.domain.post.event.ReviewCreatedEvent
 import com.back.domain.post.repository.ConcertPostRepository
 import com.back.domain.post.repository.PostBookmarkRepository
 import com.back.domain.post.repository.PostLikeRepository
@@ -15,7 +14,6 @@ import com.back.domain.ticket.repository.TicketRepository
 import com.back.domain.user.repository.UserRepository
 import com.back.global.exception.ErrorCode
 import com.back.global.exception.ServiceException
-import org.springframework.context.ApplicationEventPublisher
 import org.springframework.dao.DataIntegrityViolationException
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.PageImpl
@@ -33,7 +31,6 @@ class ConcertPostService(
     private val postLikeRepository: PostLikeRepository,
     private val postBookmarkRepository: PostBookmarkRepository,
     private val concertPostCommandService: ConcertPostCommandService,
-    private val eventPublisher: ApplicationEventPublisher,
 ) {
 
     fun create(concertId: Long, userId: Long, request: ConcertPostCreateRequest): ConcertPostResponse {
@@ -119,13 +116,6 @@ class ConcertPostService(
         }
         post.update(request.title, request.content, request.rating)
         // reviewType은 생성 시에만 결정되며 수정 불가
-
-        // update()가 이미 이 메서드 자체의 @Transactional 안에 있어 self-invocation 문제가
-        // 없으므로(create()와 달리 CommandService로 분리할 필요 없이) 여기서 바로 발행해도
-        // AFTER_COMMIT이 정확히 물린다.
-        if (post.reviewType == ReviewType.REVIEW) {
-            eventPublisher.publishEvent(ReviewCreatedEvent(post.postIdOrThrow))
-        }
 
         return toResponse(post, userId)
     }
