@@ -27,7 +27,7 @@ jobs:
     outputs:
       backend: ${{ steps.filter.outputs.backend }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 0
       - uses: dorny/paths-filter@v3
@@ -43,7 +43,7 @@ jobs:
     if: needs.changes.outputs.backend == 'true' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       # Secrets 기반 application-secret.yaml 동적 생성 (Docker 이미지에 포함)
       - name: Create application-secret.yaml from Secret

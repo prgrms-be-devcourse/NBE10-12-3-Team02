@@ -37,7 +37,7 @@ jobs:
       (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'E2E'))
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       # 1. 백엔드 구동용 JDK 25 설정
       - name: Set up JDK 25

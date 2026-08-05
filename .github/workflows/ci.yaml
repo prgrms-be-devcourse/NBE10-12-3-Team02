@@ -29,7 +29,7 @@ jobs:
       run:
         working-directory: back
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       # 1. JDK 25 설정
       - name: Set up JDK 25
@@ -73,7 +73,7 @@ jobs:
       run:
         working-directory: front
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       # 1. Node.js 22.x 먼저 설정
       - name: Set up Node 22
