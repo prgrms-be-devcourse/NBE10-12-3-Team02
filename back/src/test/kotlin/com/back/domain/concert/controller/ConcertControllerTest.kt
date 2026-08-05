@@ -81,7 +81,7 @@ class ConcertControllerTest @Autowired constructor(
         val venue = Venue.create("올림픽체조경기장", "서울", 15000L)
         venueRepository.save(venue)
 
-        schedule = Schedule.create(concert, venue, LocalDateTime.now().plusHours(12), 1)
+        schedule = Schedule.create(concert, venue, LocalDateTime.now().plusDays(7), 1)
         scheduleRepository.save(schedule)
     }
 
