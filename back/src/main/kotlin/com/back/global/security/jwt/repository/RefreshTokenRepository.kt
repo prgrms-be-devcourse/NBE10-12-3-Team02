@@ -11,6 +11,7 @@ import org.springframework.data.redis.core.script.DefaultRedisScript
 import org.springframework.data.redis.core.script.RedisScript
 import org.springframework.stereotype.Repository
 import java.time.Duration
+import java.time.Instant
 
 @Repository
 class RefreshTokenRepository(
@@ -22,6 +23,7 @@ class RefreshTokenRepository(
 ) {
     fun rotate(
         userId: Long,
+        sessionId: String,
         oldJti: String,
         requestRefreshTokenHash: String,
         newJti: String,
@@ -31,77 +33,117 @@ class RefreshTokenRepository(
         val result = stringRedisTemplate.execute(
             ROTATE_SCRIPT,
             listOf(
-                generateKey(RefreshTokenKeyType.TOKEN, userId, oldJti),
-                generateKey(RefreshTokenKeyType.TOKEN, userId, newJti),
+                generateKey(RefreshTokenKeyType.FAMILY, userId, sessionId),
                 generateKey(RefreshTokenKeyType.INDEX, userId),
             ),
+            oldJti,
             requestRefreshTokenHash,
+            newJti,
             newRefreshTokenHash,
             ttl.toSeconds().toString(),
-            oldJti,
-            newJti,
+            Instant.now().toEpochMilli().toString(),
+            sessionId,
         ) ?: throw ServiceException(ErrorCode.AUTH_REFRESH_TOKEN_ROTATION_FAILED)
 
-        return when (result.toInt()) {
-            1 -> RefreshTokenValidationResult.SUCCESS
-            -1 -> RefreshTokenValidationResult.MISMATCH
-            0 -> RefreshTokenValidationResult.NOT_FOUND
-            else -> throw ServiceException(ErrorCode.AUTH_REFRESH_TOKEN_ROTATION_FAILED)
-        }
+        return validationResult(result)
     }
 
-    fun save(userId: Long, jti: String, refreshTokenHash: String, ttl: Duration) {
-        val tokenKey = generateKey(RefreshTokenKeyType.TOKEN, userId, jti)
+    fun save(
+        userId: Long,
+        sessionId: String,
+        jti: String,
+        refreshTokenHash: String,
+        ttl: Duration,
+    ) {
+        val familyKey = generateKey(RefreshTokenKeyType.FAMILY, userId, sessionId)
         val indexKey = generateKey(RefreshTokenKeyType.INDEX, userId)
+        val now = Instant.now().toEpochMilli().toString()
 
-        stringRedisTemplate.opsForValue().set(tokenKey, refreshTokenHash, ttl)
-        stringRedisTemplate.opsForSet().add(indexKey, jti)
+        stringRedisTemplate.opsForHash<String, String>().putAll(
+            familyKey,
+            mapOf(
+                jti to "$ACTIVE_PREFIX$refreshTokenHash",
+                CURRENT_JTI_FIELD to jti,
+                CREATED_AT_FIELD to now,
+                LAST_USED_AT_FIELD to now,
+            ),
+        )
+        stringRedisTemplate.expire(familyKey, ttl)
+        stringRedisTemplate.opsForSet().add(indexKey, sessionId)
         stringRedisTemplate.expire(indexKey, ttl)
     }
 
-    fun verify(userId: Long, jti: String, requestRefreshTokenHash: String): RefreshTokenValidationResult {
-        val tokenKey = generateKey(RefreshTokenKeyType.TOKEN, userId, jti)
-        val savedHash = stringRedisTemplate.opsForValue().get(tokenKey)
+    fun verify(
+        userId: Long,
+        sessionId: String,
+        jti: String,
+        requestRefreshTokenHash: String,
+    ): RefreshTokenValidationResult {
+        val result = stringRedisTemplate.execute(
+            VERIFY_SCRIPT,
+            listOf(
+                generateKey(RefreshTokenKeyType.FAMILY, userId, sessionId),
+                generateKey(RefreshTokenKeyType.INDEX, userId),
+            ),
+            jti,
+            requestRefreshTokenHash,
+            sessionId,
+            Instant.now().toEpochMilli().toString(),
+        ) ?: throw ServiceException(ErrorCode.AUTH_REFRESH_TOKEN_ROTATION_FAILED)
 
-        return when {
-            savedHash == null -> RefreshTokenValidationResult.NOT_FOUND
-            savedHash != requestRefreshTokenHash -> RefreshTokenValidationResult.MISMATCH
-            else -> RefreshTokenValidationResult.SUCCESS
-        }
+        return validationResult(result)
     }
 
-    fun delete(userId: Long, jti: String) {
-        val tokenKey = generateKey(RefreshTokenKeyType.TOKEN, userId, jti)
-        val indexKey = generateKey(RefreshTokenKeyType.INDEX, userId)
-
-        stringRedisTemplate.delete(tokenKey)
-        stringRedisTemplate.opsForSet().remove(indexKey, jti)
+    fun deleteFamily(userId: Long, sessionId: String) {
+        stringRedisTemplate.delete(generateKey(RefreshTokenKeyType.FAMILY, userId, sessionId))
+        stringRedisTemplate.opsForSet().remove(generateKey(RefreshTokenKeyType.INDEX, userId), sessionId)
     }
 
     fun deleteAllByUserId(userId: Long) {
         val indexKey = generateKey(RefreshTokenKeyType.INDEX, userId)
-        val jtis = stringRedisTemplate.opsForSet().members(indexKey) ?: emptySet()
-        if (jtis.isEmpty()) return
+        val sessionIds = stringRedisTemplate.opsForSet().members(indexKey) ?: emptySet()
 
-        val keysToDelete = jtis.map { jti -> generateKey(RefreshTokenKeyType.TOKEN, userId, jti) }
-        stringRedisTemplate.delete(keysToDelete)
+        if (sessionIds.isNotEmpty()) {
+            stringRedisTemplate.delete(
+                sessionIds.map { sessionId ->
+                    generateKey(RefreshTokenKeyType.FAMILY, userId, sessionId)
+                },
+            )
+        }
         stringRedisTemplate.delete(indexKey)
     }
 
-    private fun generateKey(type: RefreshTokenKeyType, userId: Long, jti: String? = null): String =
+    private fun generateKey(type: RefreshTokenKeyType, userId: Long, sessionId: String? = null): String =
         when (type) {
-            RefreshTokenKeyType.TOKEN -> {
-                require(!jti.isNullOrBlank()) { "jti is required for refresh token key" }
-                "$prefix$userId:$jti"
+            RefreshTokenKeyType.FAMILY -> {
+                require(!sessionId.isNullOrBlank()) { "sessionId is required for refresh token family key" }
+                "${prefix}family:$userId:$sessionId"
             }
 
             RefreshTokenKeyType.INDEX -> {
-                require(jti.isNullOrBlank()) { "jti must be empty for refresh token index key" }
+                require(sessionId.isNullOrBlank()) { "sessionId must be empty for refresh token index key" }
                 "$indexPrefix$userId"
             }
         }
 
+    private fun validationResult(result: Long): RefreshTokenValidationResult =
+        when (result.toInt()) {
+            1 -> RefreshTokenValidationResult.SUCCESS
+            0 -> RefreshTokenValidationResult.NOT_FOUND
+            -1 -> RefreshTokenValidationResult.MISMATCH
+            -2 -> RefreshTokenValidationResult.REUSED
+            else -> throw ServiceException(ErrorCode.AUTH_REFRESH_TOKEN_ROTATION_FAILED)
+        }
+
     companion object {
-        private val ROTATE_SCRIPT: RedisScript<Long> = DefaultRedisScript(RefreshTokenLuaScripts.rotateScript(), Long::class.java)
+        private const val ACTIVE_PREFIX = "A:"
+        private const val CURRENT_JTI_FIELD = "currentJti"
+        private const val CREATED_AT_FIELD = "createdAt"
+        private const val LAST_USED_AT_FIELD = "lastUsedAt"
+
+        private val ROTATE_SCRIPT: RedisScript<Long> =
+            DefaultRedisScript(RefreshTokenLuaScripts.rotateScript(), Long::class.java)
+        private val VERIFY_SCRIPT: RedisScript<Long> =
+            DefaultRedisScript(RefreshTokenLuaScripts.verifyScript(), Long::class.java)
     }
 }
