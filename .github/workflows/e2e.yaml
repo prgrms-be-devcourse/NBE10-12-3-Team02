@@ -61,16 +61,18 @@ jobs:
         working-directory: back
         run: chmod +x gradlew
 
-      # 4. Node.js 22 & pnpm v9 설정
-      - name: Set up Node 22
-        uses: actions/setup-node@v5
-        with:
-          node-version: '22'
-
+      # 4. pnpm v9 및 Node.js 22 설정 (공식 가이드 규격)
       - name: Install pnpm
         uses: pnpm/action-setup@v4
         with:
           version: 9
+
+      - name: Set up Node 22
+        uses: actions/setup-node@v5
+        with:
+          node-version: '22'
+          cache: 'pnpm'
+          cache-dependency-path: 'front/pnpm-lock.yaml'
 
       # 5. 프론트엔드 디펜던시 설치 (pnpm dev 실행용)
       - name: Install Frontend Dependencies
