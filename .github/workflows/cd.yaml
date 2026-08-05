@@ -139,7 +139,7 @@ jobs:
               "docker rm -f \"app-$GREEN_COLOR\" >/dev/null 2>&1 || true",
               "docker run -d --name \"app-$GREEN_COLOR\" --network app_redis-net -p \"$GREEN_PORT:8080\" --env-file .env --restart unless-stopped \"$IMAGE\"",
               "HEALTHY=false",
-              "for i in $(seq 1 40); do",
+              "for i in $(seq 1 80); do",
               "  if curl -sf -o /dev/null \"http://127.0.0.1:$GREEN_PORT/actuator/health\"; then HEALTHY=true; break; fi",
               "  sleep 3",
               "done",
@@ -171,22 +171,45 @@ jobs:
 
           echo "command_id=$COMMAND_ID" >> "$GITHUB_OUTPUT"
 
-      - name: Wait for deploy command to finish
-        run: |
-          aws ssm wait command-executed \
-            --command-id "${{ steps.ssm.outputs.command_id }}" \
-            --instance-id "${{ secrets.EC2_INSTANCE_ID }}"
-
-      - name: Check deploy command result
+      - name: Wait and check deploy command result
         if: always()
         run: |
-          STATUS=$(aws ssm get-command-invocation \
-            --command-id "${{ steps.ssm.outputs.command_id }}" \
-            --instance-id "${{ secrets.EC2_INSTANCE_ID }}" \
-            --query "Status" \
-            --output text)
+          COMMAND_ID="${{ steps.ssm.outputs.command_id }}"
+          INSTANCE_ID="${{ secrets.EC2_INSTANCE_ID }}"
 
-          echo "Deploy command status: $STATUS"
+          echo "Waiting for SSM command $COMMAND_ID on instance $INSTANCE_ID..."
+
+          STATUS="InProgress"
+          for i in $(seq 1 60); do
+            STATUS=$(aws ssm get-command-invocation \
+              --command-id "$COMMAND_ID" \
+              --instance-id "$INSTANCE_ID" \
+              --query "Status" \
+              --output text 2>/dev/null || echo "InProgress")
+
+            if [ "$STATUS" = "Success" ] || [ "$STATUS" = "Failed" ] || [ "$STATUS" = "Cancelled" ] || [ "$STATUS" = "TimedOut" ]; then
+              echo "SSM command finished with status: $STATUS"
+              break
+            fi
+
+            sleep 5
+          done
+
+          echo "=== SSM Execution Standard Output ==="
+          aws ssm get-command-invocation \
+            --command-id "$COMMAND_ID" \
+            --instance-id "$INSTANCE_ID" \
+            --query "StandardOutputContent" \
+            --output text || true
+
+          echo "=== SSM Execution Error Output ==="
+          aws ssm get-command-invocation \
+            --command-id "$COMMAND_ID" \
+            --instance-id "$INSTANCE_ID" \
+            --query "StandardErrorContent" \
+            --output text || true
+
+          echo "Deploy command final status: $STATUS"
 
           if [ "$STATUS" != "Success" ]; then
             echo "::error::SSM deploy command finished with status: $STATUS"
