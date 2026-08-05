@@ -262,9 +262,14 @@ export default function ConcertDetailPage({
                 );
                 // 회차 자체는 살아있어도(콘서트 전체 기간 안이어도), 그 회차의 공연 날짜가
                 // 이미 지났으면 예매할 수 없다 — 콘서트 전체 bookable 여부와는 별개로 확인한다.
-                const isSelectedSchedulePast =
-                  !!selectedScheduleData &&
-                  new Date(selectedScheduleData.scheduleDate) < new Date();
+                const isSelectedSchedulePast = (() => {
+                  if (!selectedScheduleData) return false;
+                  const scheduleDate = new Date(selectedScheduleData.scheduleDate);
+                  const deadline = new Date(scheduleDate);
+                  deadline.setDate(deadline.getDate() - 1);
+                  deadline.setHours(17, 0, 0, 0);
+                  return new Date() > deadline;
+                })();
 
                 if (
                   selectedSchedule &&

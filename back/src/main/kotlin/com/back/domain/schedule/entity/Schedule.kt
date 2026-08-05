@@ -43,7 +43,9 @@ open class Schedule protected constructor() : BaseEntity() {
         this.round = round
     }
 
-    fun isExpired(): Boolean = LocalDateTime.now().isAfter(scheduleDate)
+    fun isExpired(): Boolean = LocalDateTime.now().isAfter(
+        scheduleDate.toLocalDate().minusDays(1).atTime(17, 0)
+    )
 
     companion object {
         @JvmStatic
