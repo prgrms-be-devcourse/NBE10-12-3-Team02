@@ -36,7 +36,7 @@ class Concert(
     var urlPoster: String? = urlPoster
         protected set
 
-    // AI가 여러 관람후기를 종합해 생성한 요약. REVIEW가 3건 이상 모이기 전까지는 null이다.
+    // REVIEW가 3건 이상 모이기 전까지는 null이다.
     @Column(length = 1000)
     var reviewSummary: String? = null
         protected set

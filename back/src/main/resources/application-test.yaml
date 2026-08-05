@@ -10,10 +10,7 @@ spring:
       port: 6379
   ai:
     openai:
-      # 테스트에서는 ChatClient 빈 생성만 되면 되고 실제 OpenAI 호출은 전부 mock으로
-      # 대체하므로 값은 형식만 갖춘 더미면 충분하다. spring.profiles.active(test)가
-      # spring.profiles.include(secret)보다 우선하므로 CI에 시크릿이 없어도,
-      # 로컬에 진짜 키가 있어도 테스트에서는 항상 이 값으로 덮어써진다.
+      # CI에 실제 키가 없어도 ChatClient 빈 생성이 실패하지 않게 하는 더미 값 (실제 호출은 테스트에서 전부 mock)
       api-key: test-key-not-real
 custom:
   cors:

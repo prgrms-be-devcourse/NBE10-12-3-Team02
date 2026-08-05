@@ -9,9 +9,8 @@ import org.springframework.stereotype.Service
 import org.springframework.transaction.event.TransactionPhase
 import org.springframework.transaction.event.TransactionalEventListener
 
-// AFTER_COMMIT + @Async 시점엔 이미 HTTP 응답이 나간 뒤라 실패를 유저에게 전달할 방법이 없다.
-// 그래서 이 클래스만 컨벤션인 ErrorCode/ServiceException을 쓰지 않고, 실패 시 로그만 남기고
-// reviewSummary를 이전 값 그대로 둔 채 조용히 넘어간다.
+// AFTER_COMMIT + @Async 시점엔 이미 응답이 나간 뒤라 에러를 유저에게 전달할 방법이 없어,
+// 이 클래스만 컨벤션(ErrorCode/ServiceException)을 쓰지 않고 실패 시 로그만 남기고 조용히 넘어간다.
 @Service
 class ConcertReviewSummaryService(
     private val concertPostRepository: ConcertPostRepository,

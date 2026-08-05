@@ -120,9 +120,7 @@ class ConcertPostService(
         post.update(request.title, request.content, request.rating)
         // reviewType은 생성 시에만 결정되며 수정 불가
 
-        // update()가 이미 이 메서드 자체의 @Transactional 안에 있어 self-invocation 문제가
-        // 없으므로(create()와 달리 CommandService로 분리할 필요 없이) 여기서 바로 발행해도
-        // AFTER_COMMIT이 정확히 물린다.
+        // update() 자체가 이미 @Transactional이라 create()와 달리 CommandService 분리 없이 바로 발행해도 된다.
         if (post.reviewType == ReviewType.REVIEW) {
             eventPublisher.publishEvent(ConcertReviewsUpdatedEvent(post.concert.concertIdOrThrow))
         }
