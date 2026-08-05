@@ -98,7 +98,7 @@ jobs:
       # 8. 실패 시 Playwright HTML 결과 및 트레이스 업로드
       - name: Upload Playwright Report on Failure
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: playwright-e2e-report
           path: e2e/playwright-report/

@@ -59,7 +59,7 @@ jobs:
       # 5. 테스트 실패 시 리포트 업로드
       - name: Upload test report on failure
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: backend-test-report
           path: back/build/reports/tests/test
@@ -89,7 +89,7 @@ jobs:
 
       # 3. Next.js 빌드 캐시 설정
       - name: Restore Next.js build cache
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: front/.next/cache
           key: ${{ runner.os }}-nextjs-${{ hashFiles('front/pnpm-lock.yaml') }}-${{ hashFiles('front/src/**') }}
