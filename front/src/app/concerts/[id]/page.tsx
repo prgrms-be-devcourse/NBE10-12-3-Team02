@@ -22,6 +22,7 @@ interface ConcertDetail {
   detailUrlList: string[];
   prices: Record<string, number>;
   bookable: boolean;
+  reviewSummary: string | null;
 }
 
 interface ScheduleItem {
@@ -194,6 +195,15 @@ export default function ConcertDetailPage({
                   {concert.description}
                 </p>
               </div>
+
+              {concert.reviewSummary && (
+                <div className="mb-6">
+                  <h2 className="font-bold text-gray-700 mb-2">✨ AI 요약</h2>
+                  <p className="text-xs text-indigo-600 bg-indigo-50 border border-indigo-100 rounded-lg px-3 py-2 leading-relaxed whitespace-pre-line">
+                    {concert.reviewSummary}
+                  </p>
+                </div>
+              )}
 
               <div className="mb-6">
                 <h2 className="font-bold text-gray-700 mb-2">
