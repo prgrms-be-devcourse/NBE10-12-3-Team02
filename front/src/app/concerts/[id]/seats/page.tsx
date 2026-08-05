@@ -28,9 +28,11 @@ interface SeatSelectionData {
 }
 
 interface QueueConnectionEvent {
-  state: "ACTIVE" | "WAITING" | "NOT_REGISTERED";
+  state: "ACTIVE" | "WAITING" | "TERMINATED" | "NOT_REGISTERED";
   rank: number;
   entryToken: string | null;
+  errorCode?: string | null;
+  errorMessage?: string | null;
 }
 
 interface QueueStatusEvent {
@@ -202,8 +204,14 @@ function SeatSelectContent({ params }: { params: Promise<{ id: string }> }) {
                   controller.abort();
                 } else if (event.state === "WAITING") {
                   setQueueRank(event.rank);
+                } else if (event.state === "TERMINATED") {
+                  setQueueError(event.errorMessage ?? "대기열 운영이 종료되었습니다.");
+                  isWaitingRef.current = false;
+                  controller.abort();
                 } else if (event.state === "NOT_REGISTERED") {
-                  setQueueError("대기열 등록 정보를 찾을 수 없습니다.");
+                  setQueueError("대기열 등록 정보를 찾을 수 없습니다. 다시 입장해 주세요.");
+                  isWaitingRef.current = false;
+                  controller.abort();
                 }
                 return;
               }

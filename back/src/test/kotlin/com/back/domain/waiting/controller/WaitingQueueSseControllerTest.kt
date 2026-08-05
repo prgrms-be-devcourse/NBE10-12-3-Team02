@@ -2,7 +2,7 @@ package com.back.domain.waiting.controller
 
 import com.back.domain.waiting.event.EntryAllowedEvent
 import com.back.domain.waiting.dto.QueueConnectionEvent
-import com.back.domain.waiting.dto.QueueConnectionState
+import com.back.domain.waiting.constant.QueueConnectionState
 import com.back.domain.waiting.service.WaitingQueueService
 import com.back.domain.waiting.sse.QueueSseEmitterRegistry
 import com.back.global.RedisTestConfig

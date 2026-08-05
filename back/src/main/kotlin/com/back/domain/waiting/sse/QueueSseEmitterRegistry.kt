@@ -4,7 +4,7 @@ import com.back.domain.waiting.event.EntryAllowedEvent
 import com.back.domain.waiting.event.QueueErrorEvent
 import com.back.domain.waiting.event.QueueStatusEvent
 import com.back.domain.waiting.dto.QueueConnectionEvent
-import com.back.domain.waiting.dto.QueueConnectionState
+import com.back.domain.waiting.constant.QueueConnectionState
 import com.back.domain.waiting.service.QueueConnectionSnapshot
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
