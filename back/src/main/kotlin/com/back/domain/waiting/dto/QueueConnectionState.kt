@@ -4,4 +4,5 @@ enum class QueueConnectionState {
     NOT_REGISTERED,
     WAITING,
     ACTIVE,
+    TERMINATED,
 }

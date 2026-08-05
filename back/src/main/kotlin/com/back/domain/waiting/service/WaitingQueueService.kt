@@ -97,11 +97,37 @@ class WaitingQueueService(
                 snapshot.rank, snapshot.myQueueNumber, null,
             )
 
-            QueueConnectionSnapshot.NotRegistered -> QueueConnectionEvent(
-                concertId, scheduleId, userId, QueueConnectionState.NOT_REGISTERED,
-                0L, 0L, null,
+            QueueConnectionSnapshot.NotRegistered -> getNotRegisteredConnectionState(
+                concertId,
+                scheduleId,
+                userId,
             )
         }
+    }
+
+    private fun getNotRegisteredConnectionState(
+        concertId: Long,
+        scheduleId: Long,
+        userId: Long,
+    ): QueueConnectionEvent {
+        val sellableSeatCount = scheduleSeatRepository.countBySchedule_ScheduleIdAndSeatStatusIn(
+            scheduleId,
+            listOf(SeatStatus.AVAILABLE, SeatStatus.HOLD),
+        )
+        val soldOut = sellableSeatCount <= 0
+        val errorCode = ErrorCode.CONCERT_SOLD_OUT.takeIf { soldOut }
+
+        return QueueConnectionEvent(
+            concertId = concertId,
+            scheduleId = scheduleId,
+            userId = userId,
+            state = if (soldOut) QueueConnectionState.TERMINATED else QueueConnectionState.NOT_REGISTERED,
+            rank = 0L,
+            myQueueNumber = 0L,
+            entryToken = null,
+            errorCode = errorCode?.resultCode,
+            errorMessage = errorCode?.message,
+        )
     }
 
     fun validateSseSubscription(concertId: Long, scheduleId: Long, userId: Long) {

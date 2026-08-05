@@ -1,6 +1,7 @@
 package com.back.domain.waiting.service
 
 import com.back.domain.concert.service.ConcertService
+import com.back.domain.schedule.constant.SeatStatus
 import com.back.domain.schedule.repository.ScheduleSeatRepository
 import com.back.domain.user.repository.UserRepository
 import com.back.domain.waiting.dto.QueueConnectionState
@@ -46,6 +47,7 @@ class WaitingQueueConnectionStateTest {
         assertThat(result.state).isEqualTo(QueueConnectionState.ACTIVE)
         assertThat(result.entryToken).isEqualTo("entry-token")
         verify(waitingQueueManager, never()).findWaitingRank(SCHEDULE_ID, USER_ID)
+        verifyNoInteractions(scheduleSeatRepository)
         verifyNoInteractions(userRepository, concertService)
     }
 
@@ -61,6 +63,7 @@ class WaitingQueueConnectionStateTest {
         assertThat(result.rank).isEqualTo(3L)
         assertThat(result.myQueueNumber).isEqualTo(7L)
         assertThat(result.entryToken).isNull()
+        verifyNoInteractions(scheduleSeatRepository)
     }
 
     @Test
@@ -68,12 +71,37 @@ class WaitingQueueConnectionStateTest {
     fun t3() {
         `when`(waitingQueueManager.getConnectionSnapshot(SCHEDULE_ID, USER_ID))
             .thenReturn(QueueConnectionSnapshot.NotRegistered)
+        `when`(
+            scheduleSeatRepository.countBySchedule_ScheduleIdAndSeatStatusIn(
+                SCHEDULE_ID,
+                listOf(SeatStatus.AVAILABLE, SeatStatus.HOLD),
+            ),
+        ).thenReturn(1L)
 
         val result = service.getConnectionStateAfterValidation(CONCERT_ID, SCHEDULE_ID, USER_ID)
 
         assertThat(result.state).isEqualTo(QueueConnectionState.NOT_REGISTERED)
         assertThat(result.rank).isZero()
         assertThat(result.entryToken).isNull()
+    }
+
+    @Test
+    @DisplayName("대기열에 없고 판매 가능한 좌석도 없으면 SSE 재연결 시 매진 종료 원인을 받는다")
+    fun t4() {
+        `when`(waitingQueueManager.getConnectionSnapshot(SCHEDULE_ID, USER_ID))
+            .thenReturn(QueueConnectionSnapshot.NotRegistered)
+        `when`(
+            scheduleSeatRepository.countBySchedule_ScheduleIdAndSeatStatusIn(
+                SCHEDULE_ID,
+                listOf(SeatStatus.AVAILABLE, SeatStatus.HOLD),
+            ),
+        ).thenReturn(0L)
+
+        val result = service.getConnectionStateAfterValidation(CONCERT_ID, SCHEDULE_ID, USER_ID)
+
+        assertThat(result.state).isEqualTo(QueueConnectionState.TERMINATED)
+        assertThat(result.errorCode).isEqualTo("400-5")
+        assertThat(result.errorMessage).isEqualTo("콘서트가 매진되어 대기열이 종료되었습니다.")
     }
 
     companion object {

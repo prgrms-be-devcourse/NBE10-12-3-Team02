@@ -8,4 +8,6 @@ data class QueueConnectionEvent(
     val rank: Long,
     val myQueueNumber: Long,
     val entryToken: String?,
+    val errorCode: String? = null,
+    val errorMessage: String? = null,
 )
