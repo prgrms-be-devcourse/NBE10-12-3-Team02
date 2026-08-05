@@ -15,7 +15,7 @@ on:
       - main
 
 concurrency:
-  group: e2e-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -37,11 +37,11 @@ jobs:
       (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'E2E'))
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       # 1. 백엔드 구동용 JDK 25 설정
       - name: Set up JDK 25
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: '25'
@@ -61,16 +61,18 @@ jobs:
         working-directory: back
         run: chmod +x gradlew
 
-      # 4. Node.js 22 & pnpm v9 설정
-      - name: Set up Node 22
-        uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-
+      # 4. pnpm v9 및 Node.js 22 설정 (공식 가이드 규격)
       - name: Install pnpm
         uses: pnpm/action-setup@v4
         with:
           version: 9
+
+      - name: Set up Node 22
+        uses: actions/setup-node@v5
+        with:
+          node-version: '22'
+          cache: 'pnpm'
+          cache-dependency-path: 'front/pnpm-lock.yaml'
 
       # 5. 프론트엔드 디펜던시 설치 (pnpm dev 실행용)
       - name: Install Frontend Dependencies
@@ -98,7 +100,7 @@ jobs:
       # 8. 실패 시 Playwright HTML 결과 및 트레이스 업로드
       - name: Upload Playwright Report on Failure
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: playwright-e2e-report
           path: e2e/playwright-report/
