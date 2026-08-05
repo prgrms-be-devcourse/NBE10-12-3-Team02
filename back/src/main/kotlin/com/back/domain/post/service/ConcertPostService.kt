@@ -7,6 +7,7 @@ import com.back.domain.post.dto.ConcertPostUpdateRequest
 import com.back.domain.post.dto.EligibleConcertResponse
 import com.back.domain.post.entity.ConcertPost
 import com.back.domain.post.entity.ReviewType
+import com.back.domain.post.event.ConcertReviewsUpdatedEvent
 import com.back.domain.post.repository.ConcertPostRepository
 import com.back.domain.post.repository.PostBookmarkRepository
 import com.back.domain.post.repository.PostLikeRepository
@@ -14,6 +15,7 @@ import com.back.domain.ticket.repository.TicketRepository
 import com.back.domain.user.repository.UserRepository
 import com.back.global.exception.ErrorCode
 import com.back.global.exception.ServiceException
+import org.springframework.context.ApplicationEventPublisher
 import org.springframework.dao.DataIntegrityViolationException
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.PageImpl
@@ -31,6 +33,7 @@ class ConcertPostService(
     private val postLikeRepository: PostLikeRepository,
     private val postBookmarkRepository: PostBookmarkRepository,
     private val concertPostCommandService: ConcertPostCommandService,
+    private val eventPublisher: ApplicationEventPublisher,
 ) {
 
     fun create(concertId: Long, userId: Long, request: ConcertPostCreateRequest): ConcertPostResponse {
@@ -116,6 +119,12 @@ class ConcertPostService(
         }
         post.update(request.title, request.content, request.rating)
         // reviewType은 생성 시에만 결정되며 수정 불가
+
+        // update() 자체가 이미 @Transactional이라 create()와 달리 CommandService 분리 없이 바로 발행해도 된다.
+        if (post.reviewType == ReviewType.REVIEW) {
+            eventPublisher.publishEvent(ConcertReviewsUpdatedEvent(post.concert.concertIdOrThrow))
+        }
+
         return toResponse(post, userId)
     }
 

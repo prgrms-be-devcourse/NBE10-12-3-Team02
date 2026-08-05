@@ -8,6 +8,10 @@ spring:
     redis:
       host: 127.0.0.1
       port: 6379
+  ai:
+    openai:
+      # CI에 실제 키가 없어도 ChatClient 빈 생성이 실패하지 않게 하는 더미 값 (실제 호출은 테스트에서 전부 mock)
+      api-key: test-key-not-real
 custom:
   cors:
     allowed-origins: http://localhost:3000
