@@ -58,7 +58,6 @@ interface MyPostSummary {
   title: string;
   rating: number | null;
   reviewType: "EXPECTATION" | "REVIEW";
-  summary: string | null;
   likeCount: number;
   createdAt: string;
   concertName: string;
@@ -1236,14 +1235,6 @@ function MyPageContent() {
                                   <RatingStars rating={post.rating} />
                                 </div>
                               )}
-                            {post.reviewType === "REVIEW" && post.summary && (
-                              <p className="mb-1 text-xs text-indigo-600 bg-indigo-50 border border-indigo-100 rounded-lg px-2 py-1 leading-relaxed">
-                                <span className="font-semibold">
-                                  ✨ AI 요약:
-                                </span>{" "}
-                                {post.summary}
-                              </p>
-                            )}
                             <p className="text-xs text-blue-600 font-semibold">
                               {post.concertName}
                             </p>
