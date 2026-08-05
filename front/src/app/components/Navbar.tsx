@@ -134,6 +134,32 @@ export default function Navbar() {
         if (msg.event !== "notification" || !msg.data) return;
         const payload = JSON.parse(msg.data) as NotificationPushPayload;
         setUnreadCount((prev) => prev + 1);
+
+        // 브라우저 알림: 권한 허용 + 현재 탭이 숨겨진 경우에만 표시
+        if (
+          typeof Notification !== "undefined" &&
+          Notification.permission === "granted" &&
+          document.hidden
+        ) {
+          const title = payload.type === "LIKE" ? "새 좋아요" : "새 팔로워";
+          const body =
+            payload.type === "LIKE"
+              ? `${payload.actorName}님이 회원님의 게시글을 좋아합니다`
+              : `${payload.actorName}님이 회원님을 팔로우합니다`;
+          const iconUrl = payload.actorProfileImgUrl
+            ? payload.actorProfileImgUrl
+            : `${window.location.origin}/default-avatar.svg`;
+          const browserNotif = new Notification(title, { body, icon: iconUrl });
+          browserNotif.onclick = () => {
+            window.focus();
+            router.push(
+              payload.targetType === "POST" && payload.targetId != null
+                ? `/board/${payload.targetId}`
+                : `/users/${payload.actorId}`,
+            );
+          };
+        }
+
         if (isBellOpenRef.current) {
           const newItem: NotificationItem = {
             ...payload,
@@ -151,7 +177,7 @@ export default function Navbar() {
     });
 
     return () => controller.abort();
-  }, [userName]);
+  }, [userName, router]);
 
   // 알림 드롭다운 외부 클릭
   useEffect(() => {
@@ -179,6 +205,11 @@ export default function Navbar() {
   }, [isUserOpen]);
 
   const handleBellClick = async () => {
+    // 종 아이콘 첫 클릭 시 브라우저 알림 권한 요청 (아직 물어본 적 없을 때만)
+    if (typeof Notification !== "undefined" && Notification.permission === "default") {
+      await Notification.requestPermission();
+    }
+
     const next = !isBellOpen;
     setIsBellOpen(next);
     isBellOpenRef.current = next;
