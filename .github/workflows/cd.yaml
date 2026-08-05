@@ -1,6 +1,6 @@
 name: CD - Build & Deploy Backend (EC2)
 
-# main 브랜치에 백엔드 코드가 머지되면
+# main 브랜치에 백엔드 코드가 머지되거나 커밋 메시지에 [cd] 또는 [deploy] 키워드가 있으면
 # ECR로 Docker 이미지를 push하고, AWS SSM send-command로 EC2에 자동 배포합니다.
 # (프론트엔드는 Vercel 연동을 통해 자동 배포되므로 EC2 배포 대상에서 제외됩니다.)
 on:
@@ -40,7 +40,11 @@ jobs:
   # ── 2. 백엔드 이미지 빌드 → ECR push ──
   build-backend:
     needs: changes
-    if: needs.changes.outputs.backend == 'true' || github.event_name == 'workflow_dispatch'
+    if: |
+      needs.changes.outputs.backend == 'true' ||
+      github.event_name == 'workflow_dispatch' ||
+      contains(github.event.head_commit.message, '[cd]') ||
+      contains(github.event.head_commit.message, '[deploy]')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5

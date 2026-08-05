@@ -1,7 +1,11 @@
 name: CI
 
 # - main 대상 PR 생성 및 PR 커밋 추가(synchronize) 시 통합 검증 게이트
+# - main push 시 커밋 메시지에 [ci] 또는 [test] 키워드가 있으면 강제 수동 실행
 on:
+  push:
+    branches:
+      - main
   pull_request:
     branches:
       - main
@@ -16,6 +20,11 @@ jobs:
   # ── 백엔드: Java 25 + Kotlin 2.4.10 + Spring Boot 4.0.7 테스트 및 컴파일 검증 ──
   backend:
     name: Backend CI
+    if: |
+      github.event_name == 'pull_request' ||
+      github.event_name == 'workflow_dispatch' ||
+      contains(github.event.head_commit.message, '[ci]') ||
+      contains(github.event.head_commit.message, '[test]')
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -60,6 +69,11 @@ jobs:
   # ── 프론트엔드: Node.js 22 + pnpm v9 기반 ci:check + build ──
   frontend:
     name: Frontend CI
+    if: |
+      github.event_name == 'pull_request' ||
+      github.event_name == 'workflow_dispatch' ||
+      contains(github.event.head_commit.message, '[ci]') ||
+      contains(github.event.head_commit.message, '[test]')
     runs-on: ubuntu-latest
     defaults:
       run:
