@@ -11,7 +11,8 @@ data class ConcertDetailResponse(
     val urlPoster: String?,
     val detailUrlList: List<String>,
     val prices: Map<String, Int>,
-    val bookable: Boolean
+    val bookable: Boolean,
+    val reviewSummary: String?
 ) {
     companion object {
         fun of(
@@ -30,7 +31,8 @@ data class ConcertDetailResponse(
             urlPoster = concert.urlPoster,
             detailUrlList = detailUrlList,
             prices = prices,
-            bookable = bookable
+            bookable = bookable,
+            reviewSummary = concert.reviewSummary
         )
     }
 }
