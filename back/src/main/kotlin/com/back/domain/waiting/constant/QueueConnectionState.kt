@@ -1,4 +1,4 @@
-package com.back.domain.waiting.dto
+package com.back.domain.waiting.constant
 
 enum class QueueConnectionState {
     NOT_REGISTERED,

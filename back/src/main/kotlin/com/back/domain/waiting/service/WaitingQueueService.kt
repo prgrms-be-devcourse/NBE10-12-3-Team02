@@ -9,7 +9,7 @@ import com.back.domain.schedule.repository.ScheduleSeatRepository
 import com.back.domain.user.repository.UserRepository
 import com.back.domain.waiting.dto.WaitingQueueResponse
 import com.back.domain.waiting.dto.QueueConnectionEvent
-import com.back.domain.waiting.dto.QueueConnectionState
+import com.back.domain.waiting.constant.QueueConnectionState
 import com.back.domain.waiting.outbox.service.QueueSseOutboxPublisher
 import com.back.global.exception.ErrorCode
 import com.back.global.exception.ServiceException

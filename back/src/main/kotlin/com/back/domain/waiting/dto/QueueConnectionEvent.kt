@@ -1,5 +1,7 @@
 package com.back.domain.waiting.dto
 
+import com.back.domain.waiting.constant.QueueConnectionState
+
 data class QueueConnectionEvent(
     val concertId: Long,
     val scheduleId: Long,
