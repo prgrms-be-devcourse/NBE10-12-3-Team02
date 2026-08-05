@@ -1,6 +1,6 @@
 name: CI
 
-# - main 브랜치 대상 PR 생성 및 PR 커밋 추가(synchronize) 시 1회 통합 검증 게이트
+# - main 브랜치 대상 PR 생성 및 PR 커밋 추가(synchronize) 시 통합 검증 게이트
 # - main 브랜치 머지 직후 최종 검증
 on:
   push:
