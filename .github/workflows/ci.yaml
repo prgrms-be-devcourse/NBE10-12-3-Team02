@@ -1,17 +1,13 @@
 name: CI
 
-# - main 브랜치 대상 PR 생성 및 PR 커밋 추가(synchronize) 시 통합 검증 게이트
-# - main 브랜치 머지 직후 최종 검증
+# - main 대상 PR 생성 및 PR 커밋 추가(synchronize) 시 통합 검증 게이트
 on:
-  push:
-    branches:
-      - main
   pull_request:
     branches:
       - main
   workflow_dispatch:
 
-# 동일 PR/브랜치에 연속 push 발생 시 이전 실행 중인 CI는 즉시 자동 취소 (자원 절약)
+# 동일 PR/브랜치에 연속 push 발생 시 이전 실행 중인 CI는 즉시 자동 취소
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
