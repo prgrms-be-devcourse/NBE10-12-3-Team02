@@ -18,7 +18,6 @@ interface PostDetail {
   content: string;
   rating: number | null;
   reviewType: "EXPECTATION" | "REVIEW";
-  summary: string | null;
   isMine: boolean;
   isBookmarked: boolean;
   likeCount: number;
@@ -505,12 +504,6 @@ export default function PostDetailPage({
                   )}
                 </div>
               </div>
-              {post.reviewType === "REVIEW" && post.summary && (
-                <p className="mt-3 text-xs text-indigo-600 bg-indigo-50 border border-indigo-100 rounded-lg px-2 py-1 leading-relaxed">
-                  <span className="font-semibold">✨ AI 요약:</span>{" "}
-                  {post.summary}
-                </p>
-              )}
               <p className="text-gray-600 text-sm mt-4 leading-relaxed whitespace-pre-wrap">
                 {post.content}
               </p>
