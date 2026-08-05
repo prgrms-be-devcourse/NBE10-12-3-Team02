@@ -1,23 +1,19 @@
 name: CI
 
-# - feat/**, fix/**, refactor/**, test/** 브랜치 push -> 바로 피드백
-# - main 대상 PR                        -> 머지 전 최종 검증 게이트
-# - main push 제외                       -> main push는 CD(배포) 스크립트가 담당
+# - main 브랜치 대상 PR 생성 및 PR 커밋 추가(synchronize) 시 1회 통합 검증 게이트
+# - main 브랜치 머지 직후 최종 검증
 on:
   push:
     branches:
-      - 'feat/**'
-      - 'fix/**'
-      - 'refactor/**'
-      - 'test/**'
+      - main
   pull_request:
     branches:
-      - 'main'
+      - main
   workflow_dispatch:
 
-# 같은 브랜치에 연속 push 발생 시 이전 실행 중인 CI는 자동 취소 (자원 절약)
+# 동일 PR/브랜치에 연속 push 발생 시 이전 실행 중인 CI는 즉시 자동 취소 (자원 절약)
 concurrency:
-  group: ci-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 jobs:
