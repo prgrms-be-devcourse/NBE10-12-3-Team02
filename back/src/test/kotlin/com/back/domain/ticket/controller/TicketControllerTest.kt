@@ -101,7 +101,7 @@ class TicketControllerTest @Autowired constructor(
             Concert.create("싸이 콘서트", "설명", LocalDateTime.now(), LocalDateTime.now().plusDays(1), "poster.jpg")
         )
         val venue = venueRepository.save(Venue.create("공연장", "서울", 15000L))
-        schedule = scheduleRepository.save(Schedule.create(concert, venue, LocalDateTime.now().plusHours(12), 1))
+        schedule = scheduleRepository.save(Schedule.create(concert, venue, LocalDateTime.now().plusDays(7), 1))
 
         seat = scheduleSeatRepository.save(ScheduleSeat.create(schedule, "VIP", "A-1", 150000, HOLD))
         scheduleSeatRepository.save(ScheduleSeat.create(schedule, "VIP", "A-2", 150000, HOLD))

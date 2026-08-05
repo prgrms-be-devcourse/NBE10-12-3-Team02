@@ -62,7 +62,7 @@ class SeatOccupyManagerTest {
             Concert.create("아이유 콘서트", "설명", LocalDateTime.now(), LocalDateTime.now().plusDays(1), "poster.jpg")
         )
         val venue = venueRepository.save(Venue.create("체조경기장", "서울", 10000L))
-        schedule = scheduleRepository.save(Schedule.create(concert, venue, LocalDateTime.now().plusHours(12), 1))
+        schedule = scheduleRepository.save(Schedule.create(concert, venue, LocalDateTime.now().plusDays(7), 1))
         seat = scheduleSeatRepository.save(
             ScheduleSeat.create(schedule, "VIP", "A-1", 150000, SeatStatus.AVAILABLE)
         )
