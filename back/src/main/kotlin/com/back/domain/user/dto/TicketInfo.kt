@@ -5,7 +5,7 @@ import com.fasterxml.jackson.annotation.JsonProperty
 
 data class TicketInfo(
     val ticketId: Long,
-    val urlPoster: String?,
+    val posterUrl: String?,
     val concertName: String,
     val startDate: String,
     val endDate: String,
@@ -26,7 +26,7 @@ data class TicketInfo(
 
             return TicketInfo(
                 ticketId = ticketId,
-                urlPoster = concert.urlPoster,
+                posterUrl = concert.urlPoster,
                 concertName = concert.concertName,
                 startDate = concert.startDate.toLocalDate().toString(),
                 endDate = concert.endDate.toLocalDate().toString(),

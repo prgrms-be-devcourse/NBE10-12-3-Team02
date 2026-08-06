@@ -26,7 +26,7 @@ interface LegacyTicketSummary extends TicketSummary {
 interface TicketGroupInfo {
   scheduleId: number;
   concertName: string;
-  urlPoster: string;
+  posterUrl: string;
   startDate: string;
   endDate: string;
   round: number;
@@ -163,11 +163,11 @@ function TicketDetailContent() {
               className="ticket-face ticket-face-mask absolute inset-0 shadow-xl overflow-hidden bg-gray-900"
               style={{ backfaceVisibility: "hidden" }}
             >
-              {group.urlPoster ? (
+              {group.posterUrl ? (
                 <Image
                   fill
                   unoptimized
-                  src={getLocalConcertPoster(group.urlPoster)}
+                  src={getLocalConcertPoster(group.posterUrl)}
                   alt={group.concertName}
                   sizes="320px"
                   className="object-cover"

@@ -18,7 +18,7 @@ interface ConcertDetail {
   description: string;
   venueName: string;
   location: string;
-  urlPoster: string;
+  posterUrl: string;
   detailUrlList: string[];
   prices: Record<string, number>;
   bookable: boolean;
@@ -102,8 +102,8 @@ export default function ConcertDetailPage({
     );
   }
 
-  const posterUrl = getLocalConcertPoster(concert.urlPoster);
-  const detailImages = getConcertDetailImages(concert.urlPoster);
+  const posterUrl = getLocalConcertPoster(concert.posterUrl);
+  const detailImages = getConcertDetailImages(concert.posterUrl);
   const mapQuery = encodeURIComponent(
     `${stripVenuePrefix(concert.venueName)} ${concert.location}`,
   );
