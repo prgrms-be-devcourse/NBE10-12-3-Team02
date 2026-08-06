@@ -17,7 +17,7 @@ interface ConcertListItem {
   venueName: string;
   startDate: string;
   endDate: string;
-  imageUrl: string;
+  posterUrl: string;
   status: string;
 }
 
@@ -33,7 +33,7 @@ interface ConcertDetailResponse {
   description: string;
   venueName: string;
   location: string;
-  urlPoster: string;
+  posterUrl: string;
 }
 
 type ConcertStatusFilter = "all" | "ongoing" | "closed";
@@ -169,7 +169,7 @@ function HomeContent() {
           detailed.map(
             (concert) =>
               new Promise<number | null>((resolve) => {
-                if (!concert.imageUrl) {
+                if (!concert.posterUrl) {
                   resolve(null);
                   return;
                 }
@@ -177,7 +177,7 @@ function HomeContent() {
                 img.onload = () =>
                   resolve(img.naturalWidth / img.naturalHeight);
                 img.onerror = () => resolve(null);
-                img.src = concert.imageUrl;
+                img.src = concert.posterUrl;
               }),
           ),
         );
@@ -280,7 +280,7 @@ function HomeContent() {
                         fill
                         unoptimized
                         priority
-                        src={concert.imageUrl}
+                        src={concert.posterUrl}
                         alt=""
                         aria-hidden="true"
                         className="object-cover scale-110 blur-3xl opacity-60"
@@ -302,7 +302,7 @@ function HomeContent() {
                           fill
                           unoptimized
                           priority
-                          src={concert.imageUrl}
+                          src={concert.posterUrl}
                           alt={concert.concertName}
                           className="object-contain"
                         />
@@ -459,7 +459,7 @@ function HomeContent() {
                         fill
                         unoptimized
                         loading={idx < 4 ? "eager" : "lazy"}
-                        src={concert.imageUrl}
+                        src={concert.posterUrl}
                         alt={concert.concertName}
                         sizes="(max-width: 768px) 100vw, 25vw"
                         className="object-cover"

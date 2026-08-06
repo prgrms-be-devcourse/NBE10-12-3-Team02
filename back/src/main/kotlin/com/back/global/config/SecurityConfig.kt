@@ -3,12 +3,15 @@ package com.back.global.config
 import com.back.global.exception.ErrorCode
 import com.back.global.rsData.RsData
 import com.back.global.security.filter.CustomAuthenticationFilter
+import com.back.global.security.csrf.AuthCsrfRequestMatcher
+import com.back.global.security.csrf.AuthOriginValidationFilter
 import com.back.global.security.oauth2.converter.CustomTokenResponseConverter
 import com.back.global.security.oauth2.loginhandler.OAuth2LoginFailureHandler
 import com.back.global.security.oauth2.loginhandler.OAuth2LoginSuccessHandler
 import com.back.global.security.oauth2.repository.HttpCookieOAuth2AuthorizationRequestRepository
 import com.back.global.security.oauth2.service.CustomOAuth2UserService
 import com.back.global.util.Ut
+import org.springframework.beans.factory.annotation.Value
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.http.HttpMethod
@@ -24,6 +27,9 @@ import org.springframework.security.oauth2.client.http.OAuth2ErrorResponseErrorH
 import org.springframework.security.oauth2.core.http.converter.OAuth2AccessTokenResponseHttpMessageConverter
 import org.springframework.security.web.SecurityFilterChain
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter
+import org.springframework.security.web.csrf.CookieCsrfTokenRepository
+import org.springframework.security.web.csrf.CsrfFilter
+import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler
 import org.springframework.web.client.RestClient
 
 @Configuration
@@ -32,7 +38,10 @@ class SecurityConfig(
     private val customOAuth2UserService: CustomOAuth2UserService,
     private val oAuth2LoginSuccessHandler: OAuth2LoginSuccessHandler,
     private val oAuth2LoginFailureHandler: OAuth2LoginFailureHandler,
-    private val authorizationRequestRepository: HttpCookieOAuth2AuthorizationRequestRepository
+    private val authorizationRequestRepository: HttpCookieOAuth2AuthorizationRequestRepository,
+    private val authOriginValidationFilter: AuthOriginValidationFilter,
+    @Value("\${custom.cookie.secure:false}") private val cookieSecure: Boolean,
+    @Value("\${custom.cookie.same-site:Lax}") private val cookieSameSite: String,
 ) {
 
     @Bean
@@ -70,6 +79,7 @@ class SecurityConfig(
                     .requestMatchers(HttpMethod.GET, "/api/*/posts/me").authenticated()
                     .requestMatchers(
                         HttpMethod.GET,
+                        "/api/*/auth/csrf",
                         "/api/*/concerts",
                         "/api/*/concerts/*",
                         "/api/*/concerts/*/posts",
@@ -101,11 +111,17 @@ class SecurityConfig(
             .headers { headers ->
                 headers.frameOptions { it.sameOrigin() }
             }
-            .csrf { it.disable() }
+            .csrf { csrf ->
+                csrf
+                    .csrfTokenRepository(csrfTokenRepository())
+                    .csrfTokenRequestHandler(CsrfTokenRequestAttributeHandler())
+                    .requireCsrfProtectionMatcher(AuthCsrfRequestMatcher)
+            }
             .formLogin { it.disable() }
             .logout { it.disable() }
             .httpBasic { it.disable() }
             .sessionManagement { it.disable() }
+            .addFilterBefore(authOriginValidationFilter, CsrfFilter::class.java)
             .addFilterBefore(customAuthenticationFilter, UsernamePasswordAuthenticationFilter::class.java)
             .exceptionHandling { exceptionHandling ->
                 exceptionHandling
@@ -153,4 +169,18 @@ class SecurityConfig(
 
         return http.build()
     }
+
+    @Bean
+    fun csrfTokenRepository(): CookieCsrfTokenRepository =
+        CookieCsrfTokenRepository().apply {
+            setCookieName("XSRF-TOKEN")
+            setHeaderName("X-XSRF-TOKEN")
+            setCookiePath("/api/v1/auth")
+            setCookieCustomizer { cookie ->
+                cookie
+                    .httpOnly(true)
+                    .secure(cookieSecure)
+                    .sameSite(cookieSameSite)
+            }
+        }
 }

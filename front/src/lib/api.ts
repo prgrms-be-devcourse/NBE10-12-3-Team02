@@ -7,6 +7,14 @@ export interface RsData<T> {
 }
 
 let accessToken: string | null = null;
+let csrfToken: string | null = null;
+let csrfTokenPromise: Promise<string> | null = null;
+
+const CSRF_PROTECTED_PATHS = new Set([
+  "/auth/refresh",
+  "/auth/logout",
+  "/auth/restore",
+]);
 
 export function setAccessToken(token: string | null) {
   accessToken = token;
@@ -53,13 +61,38 @@ export class ApiError extends Error {
 // 여러 요청이 동시에 401을 받아도 refresh는 한 번만 실행되도록 하는 잠금장치
 let refreshPromise: Promise<boolean> | null = null;
 
+async function getCsrfToken(): Promise<string> {
+  if (csrfToken) return csrfToken;
+
+  if (!csrfTokenPromise) {
+    csrfTokenPromise = (async () => {
+      const res = await fetch(`${BASE_URL}/api/v1/auth/csrf`, {
+        method: "GET",
+        credentials: "include",
+      });
+
+      if (!res.ok) throw new ApiError("보안 토큰을 발급받지 못했습니다.");
+
+      const body = (await res.json()) as RsData<{ token: string }>;
+      csrfToken = body.data.token;
+      return csrfToken;
+    })().finally(() => {
+      csrfTokenPromise = null;
+    });
+  }
+
+  return csrfTokenPromise;
+}
+
 function refreshAccessToken(): Promise<boolean> {
   if (!refreshPromise) {
     refreshPromise = (async () => {
       try {
+        const token = await getCsrfToken();
         const res = await fetch(`${BASE_URL}/api/v1/auth/refresh`, {
           method: "POST",
           credentials: "include",
+          headers: { "X-XSRF-TOKEN": token },
         });
         if (!res.ok) return false;
         const newAuthHeader = res.headers.get("Authorization");
@@ -83,14 +116,18 @@ export async function apiFetch<T>(
   options: RequestInit = {},
   _isRetry = false,
 ): Promise<RsData<T>> {
+  const headers = new Headers();
+  headers.set("Content-Type", "application/json");
+  if (accessToken) headers.set("Authorization", `Bearer ${accessToken}`);
+  if (CSRF_PROTECTED_PATHS.has(path)) {
+    headers.set("X-XSRF-TOKEN", await getCsrfToken());
+  }
+  new Headers(options.headers).forEach((value, key) => headers.set(key, value));
+
   const res = await fetch(`${BASE_URL}/api/v1${path}`, {
     ...options,
     credentials: "include",
-    headers: {
-      "Content-Type": "application/json",
-      ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
-      ...options.headers,
-    },
+    headers,
   });
 
   // 304 Not Modified 응답 처리 (ETag 폴링용)

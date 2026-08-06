@@ -86,4 +86,11 @@ interface ConcertPostRepository : JpaRepository<ConcertPost, Long> {
     fun findByPostIdAndConcertConcertId(postId: Long, concertId: Long): ConcertPost?
 
     fun existsByConcert_ConcertIdAndUser_UserIdAndReviewType(concertId: Long, userId: Long, reviewType: ReviewType): Boolean
+
+    fun countByConcert_ConcertIdAndReviewType(concertId: Long, reviewType: ReviewType): Long
+
+    fun findTop20ByConcert_ConcertIdAndReviewTypeOrderByCreateDateDesc(
+        concertId: Long,
+        reviewType: ReviewType,
+    ): List<ConcertPost>
 }
