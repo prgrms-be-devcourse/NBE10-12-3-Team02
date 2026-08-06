@@ -80,7 +80,7 @@ function TicketDetailContent() {
   const statusLabel = allInvalid ? "취소됨" : "예매완료";
 
   return (
-    <div className="min-h-screen bg-gray-50 p-10">
+    <div className="min-h-screen bg-gray-50 p-4 md:p-10">
       {/* 진짜 영화 티켓처럼: 네 모서리는 둥글게, 위/아래 테두리는 올록볼록한 절취선 홈으로 마스킹한다.
           인쇄할 때는 화면 전용 UI를 숨기고, 뒤집기(3D transform)도 풀어서 앞/뒷면이 순서대로 나오게 한다. */}
       <style>{`

@@ -107,7 +107,7 @@ export default function MyFollowsPage() {
       : "아직 팔로워가 없습니다.";
 
   return (
-    <div className="min-h-screen bg-gray-50 p-10">
+    <div className="min-h-screen bg-gray-50 p-4 md:p-10">
       <div className="max-w-3xl mx-auto">
         <Link
           href="/mypage"
