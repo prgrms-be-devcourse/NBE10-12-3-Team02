@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { apiFetch, decodeToken, restoreSession } from "@/lib/api";
 import { getLocalConcertPoster } from "@/lib/concertDetailImages";
@@ -64,11 +64,26 @@ function RatingStars({ rating }: { rating: number }) {
   );
 }
 
-export default function BoardPage() {
+function BoardContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [posts, setPosts] = useState<PostCard[]>([]);
   const [loading, setLoading] = useState(true);
-  const [typeFilter, setTypeFilter] = useState<ReviewTypeFilter>("all");
+
+  const typeParam = searchParams.get("type");
+  const typeFilter: ReviewTypeFilter =
+    typeParam === "REVIEW" || typeParam === "EXPECTATION" ? typeParam : "all";
+
+  const handleFilterChange = (key: ReviewTypeFilter) => {
+    const params = new URLSearchParams(searchParams.toString());
+    if (key === "all") {
+      params.delete("type");
+    } else {
+      params.set("type", key);
+    }
+    const qs = params.toString();
+    router.replace(qs ? `/board?${qs}` : "/board", { scroll: false });
+  };
 
   useEffect(() => {
     // accessToken이 준비된 이후 fetch해야 isMine이 정확히 내려옴
@@ -119,7 +134,7 @@ export default function BoardPage() {
           {TYPE_FILTER_OPTIONS.map((f) => (
             <button
               key={f.key}
-              onClick={() => setTypeFilter(f.key)}
+              onClick={() => handleFilterChange(f.key)}
               className={`px-3 py-1.5 rounded-lg text-sm font-semibold border transition ${
                 typeFilter === f.key
                   ? "bg-blue-600 text-white border-blue-600"
@@ -227,5 +242,13 @@ export default function BoardPage() {
         ✏️
       </button>
     </div>
+  );
+}
+
+export default function BoardPage() {
+  return (
+    <Suspense fallback={<div />}>
+      <BoardContent />
+    </Suspense>
   );
 }

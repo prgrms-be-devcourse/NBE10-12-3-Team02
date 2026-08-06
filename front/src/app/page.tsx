@@ -1,6 +1,13 @@
 "use client";
 
-import { Suspense, useState, useEffect, useRef, type ChangeEvent } from "react";
+import {
+  Suspense,
+  useState,
+  useEffect,
+  useRef,
+  type ChangeEvent,
+  type CSSProperties,
+} from "react";
 import Link from "next/link";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { Search, ChevronLeft, ChevronRight } from "lucide-react";
@@ -248,7 +255,7 @@ function HomeContent() {
           </button>
 
           {topConcertsLoading ? (
-            <div className="h-[28rem] flex items-center justify-center text-gray-400">
+            <div className="h-64 md:h-[28rem] flex items-center justify-center text-gray-400">
               불러오는 중...
             </div>
           ) : (
@@ -273,7 +280,7 @@ function HomeContent() {
                 <SwiperSlide key={concert.concertId}>
                   <Link
                     href={`/concerts/${concert.concertId}`}
-                    className="relative flex h-[28rem] overflow-hidden bg-gray-900"
+                    className="relative flex flex-col md:flex-row md:h-[28rem] overflow-hidden bg-gray-900"
                   >
                     {/* 배너 전체에 깔리는 흐린 포스터 배경 (왼쪽/오른쪽이 하나로 이어져 보이도록) */}
                     {concert.posterUrl && (
@@ -292,11 +299,12 @@ function HomeContent() {
 
                     {/* 왼쪽: 포스터 (크게, 잘리지 않도록) */}
                     <div
-                      className="relative flex-shrink-0 overflow-hidden"
-                      style={{
-                        width: `${448 * posterAspectRatio}px`,
-                        minWidth: 220,
-                      }}
+                      className="relative w-full h-56 md:h-auto md:w-[var(--poster-w)] md:min-w-[220px] flex-shrink-0 overflow-hidden"
+                      style={
+                        {
+                          "--poster-w": `${448 * posterAspectRatio}px`,
+                        } as CSSProperties
+                      }
                     >
                       {concert.posterUrl ? (
                         <PosterImage
@@ -313,7 +321,7 @@ function HomeContent() {
                     </div>
 
                     {/* 오른쪽: 제목/장소/소개/버튼 */}
-                    <div className="relative flex-1 min-w-0 text-white p-10 flex flex-col justify-center">
+                    <div className="relative flex-1 min-w-0 text-white p-5 md:p-10 flex flex-col justify-center">
                       {concert.status === "CLOSED" && (
                         <span className="self-start mb-3 bg-red-500 text-white text-xs px-2 py-1 rounded-full font-semibold">
                           마감

@@ -219,10 +219,10 @@ export default function SignupPage() {
   };
 
   return (
-    <div className="h-screen overflow-hidden flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
+    <div className="min-h-screen overflow-y-auto md:h-screen md:overflow-hidden flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 px-4">
       <form
         onSubmit={handleSignup}
-        className="w-96 p-10 bg-white rounded-2xl shadow-xl"
+        className="w-full max-w-sm md:w-96 p-6 md:p-10 bg-white rounded-2xl shadow-xl"
       >
         <div className="text-center">
           <Link href="/" className="flex justify-center">

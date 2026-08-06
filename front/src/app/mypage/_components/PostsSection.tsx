@@ -174,8 +174,8 @@ export function PostsSection() {
 
   return (
     <div className="bg-white rounded-2xl shadow-sm p-8">
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex gap-2">
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-6">
+        <div className="flex flex-wrap gap-2">
           {(
             [
               { key: "my", label: "내 게시글" },
@@ -186,7 +186,7 @@ export function PostsSection() {
             <button
               key={st.key}
               onClick={() => setPostsSubTab(st.key)}
-              className={`px-4 py-2 rounded-lg text-sm font-semibold border transition ${
+              className={`whitespace-nowrap px-4 py-2 rounded-lg text-sm font-semibold border transition ${
                 postsSubTab === st.key
                   ? "bg-blue-600 text-white border-blue-600"
                   : "bg-white text-gray-600 border-gray-200 hover:border-blue-400"
@@ -198,7 +198,7 @@ export function PostsSection() {
         </div>
         <Link
           href="/mypage/follows"
-          className="px-3 py-1.5 bg-white border border-gray-200 hover:border-blue-300 text-gray-600 hover:text-blue-600 text-sm font-semibold rounded-lg transition"
+          className="self-start md:self-auto whitespace-nowrap px-3 py-1.5 bg-white border border-gray-200 hover:border-blue-300 text-gray-600 hover:text-blue-600 text-sm font-semibold rounded-lg transition"
         >
           팔로우 목록 보기
         </Link>

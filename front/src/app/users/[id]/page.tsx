@@ -87,7 +87,7 @@ export default function UserProfilePage({
   const isSelf = me !== null && me.id === profile.userId;
 
   return (
-    <div className="min-h-screen bg-gray-50 p-10">
+    <div className="min-h-screen bg-gray-50 p-4 md:p-10">
       <div className="max-w-md mx-auto">
         <div className="bg-white rounded-2xl shadow-sm p-8">
           <div className="flex flex-col items-center mb-6">

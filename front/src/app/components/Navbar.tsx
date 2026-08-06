@@ -310,8 +310,10 @@ export default function Navbar() {
                   onClick={() => setIsUserOpen((v) => !v)}
                   className="flex items-center gap-1 text-gray-700 hover:text-blue-600 transition"
                 >
-                  <span>{userName}</span>
-                  <ChevronDown size={14} />
+                  <span className="min-w-0 max-w-[6rem] truncate">
+                    {userName}
+                  </span>
+                  <ChevronDown size={14} className="shrink-0" />
                 </button>
                 {isUserOpen && (
                   <div className="absolute right-0 top-9 w-36 bg-white rounded-xl shadow-lg border border-gray-100 z-50 py-1 overflow-hidden">
