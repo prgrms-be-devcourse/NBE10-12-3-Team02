@@ -2,10 +2,10 @@
 
 import { useState, useEffect, use } from "react";
 import { useRouter } from "next/navigation";
-import Image from "next/image";
 import Link from "next/link";
 import { apiFetch, decodeToken, ApiError, restoreSession } from "@/lib/api";
 import { getLocalConcertPoster } from "@/lib/concertDetailImages";
+import PosterImage from "@/app/components/PosterImage";
 import { formatDateTime } from "@/lib/date";
 import { Star, Bookmark, Heart } from "lucide-react";
 
@@ -329,7 +329,7 @@ export default function PostDetailPage({
           <div className="flex gap-4 mb-5">
             <div className="relative shrink-0 w-14 h-18 rounded-lg overflow-hidden bg-gradient-to-br from-blue-100 to-indigo-200 flex items-center justify-center">
               {posterUrl ? (
-                <Image
+                <PosterImage
                   fill
                   unoptimized
                   src={posterUrl}

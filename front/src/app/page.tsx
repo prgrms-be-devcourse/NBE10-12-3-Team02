@@ -1,11 +1,11 @@
 "use client";
 
 import { Suspense, useState, useEffect, useRef, type ChangeEvent } from "react";
-import Image from "next/image";
 import Link from "next/link";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { Search, ChevronLeft, ChevronRight } from "lucide-react";
 import { apiFetch, setAccessToken } from "@/lib/api";
+import PosterImage from "@/app/components/PosterImage";
 import { Swiper, SwiperSlide } from "swiper/react";
 import { Autoplay } from "swiper/modules";
 import type { Swiper as SwiperInstance } from "swiper";
@@ -276,7 +276,7 @@ function HomeContent() {
                   >
                     {/* 배너 전체에 깔리는 흐린 포스터 배경 (왼쪽/오른쪽이 하나로 이어져 보이도록) */}
                     {concert.posterUrl && (
-                      <Image
+                      <PosterImage
                         fill
                         unoptimized
                         priority
@@ -298,7 +298,7 @@ function HomeContent() {
                       }}
                     >
                       {concert.posterUrl ? (
-                        <Image
+                        <PosterImage
                           fill
                           unoptimized
                           priority
@@ -455,7 +455,7 @@ function HomeContent() {
                 >
                   <div className="h-48 bg-gradient-to-br from-blue-200 to-indigo-300 flex items-center justify-center text-white font-bold relative overflow-hidden">
                     {concert.posterUrl ? (
-                      <Image
+                      <PosterImage
                         fill
                         unoptimized
                         loading={idx < 4 ? "eager" : "lazy"}

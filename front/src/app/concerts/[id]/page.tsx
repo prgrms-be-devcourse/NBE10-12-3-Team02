@@ -3,6 +3,7 @@
 import { showAlert } from "@/lib/alert";
 import ConcertPostSection from "./ConcertPostSection";
 import ShareButton from "@/app/components/ShareButton";
+import PosterImage from "@/app/components/PosterImage";
 import { apiFetch, decodeToken } from "@/lib/api";
 import {
   getConcertDetailImages,
@@ -117,7 +118,7 @@ export default function ConcertDetailPage({
             <div className="md:w-1/3 flex flex-col">
               <div className="w-full relative aspect-[3/4] bg-gradient-to-br from-blue-200 to-indigo-300 flex items-center justify-center text-white font-bold text-xl overflow-hidden">
                 {posterUrl ? (
-                  <Image
+                  <PosterImage
                     unoptimized
                     priority
                     loading="eager"
