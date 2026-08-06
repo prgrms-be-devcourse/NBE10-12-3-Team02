@@ -38,6 +38,10 @@ export default defineConfig({
       url: 'http://localhost:8080/api/v1/concerts',
       reuseExistingServer: !process.env.CI,
       timeout: 180 * 1000,
+      env: {
+        SPRING_PROFILES_ACTIVE: 'test',
+        SPRING_DOCKER_COMPOSE_ENABLED: 'false',
+      },
       stdout: 'ignore',
       stderr: 'pipe',
     },

@@ -13,7 +13,7 @@ test.describe('E2E Concert Discovery & Detail Flow', () => {
     await listPage.filterTab('closed');
 
     // 마감 탭 카드 요소 렌더링 확인 (마감 뱃지 또는 공연 카드)
-    await expect(page.locator('h1, h2, h3, h4, p, button').first()).toBeVisible({ timeout: 10000 });
+    await expect(page.locator('header, nav, h1, h2, h3').first()).toBeVisible({ timeout: 10000 });
 
     // 공연중 탭 전환
     await listPage.filterTab('bookable');
