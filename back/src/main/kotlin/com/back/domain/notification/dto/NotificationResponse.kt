@@ -2,6 +2,7 @@ package com.back.domain.notification.dto
 
 import com.back.domain.notification.entity.Notification
 import com.back.domain.notification.entity.NotificationType
+import com.fasterxml.jackson.annotation.JsonProperty
 import java.time.LocalDateTime
 
 data class NotificationResponse(
@@ -12,7 +13,7 @@ data class NotificationResponse(
     val actorProfileImgUrl: String,
     val targetType: String?,
     val targetId: Long?,
-    val isRead: Boolean,
+    @get:JsonProperty("isRead") val isRead: Boolean,
     val createdAt: LocalDateTime?,
 ) {
     companion object {

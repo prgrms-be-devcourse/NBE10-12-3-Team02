@@ -80,6 +80,22 @@ export default function BoardPage() {
     });
   }, []);
 
+  // 다른 사용자가 목록에 있는 게시글에 좋아요를 눌렀을 때, 알림 SSE(Navbar)가 쏘는
+  // 이벤트를 받아 새로고침 없이 좋아요 수를 실시간으로 반영한다.
+  useEffect(() => {
+    const onPostLiked = (e: Event) => {
+      const detail = (e as CustomEvent<{ postId: number }>).detail;
+      if (detail?.postId == null) return;
+      setPosts((prev) =>
+        prev.map((p) =>
+          p.postId === detail.postId ? { ...p, likeCount: p.likeCount + 1 } : p,
+        ),
+      );
+    };
+    window.addEventListener("post-liked", onPostLiked);
+    return () => window.removeEventListener("post-liked", onPostLiked);
+  }, []);
+
   const handleWriteClick = () => {
     if (!decodeToken()) {
       router.push("/login");

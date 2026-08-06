@@ -134,6 +134,11 @@ export default function Navbar() {
         if (msg.event !== "notification" || !msg.data) return;
         const payload = JSON.parse(msg.data) as NotificationPushPayload;
         setUnreadCount((prev) => prev + 1);
+        if (payload.type === "LIKE" && payload.targetType === "POST" && payload.targetId != null) {
+          window.dispatchEvent(
+            new CustomEvent("post-liked", { detail: { postId: payload.targetId } }),
+          );
+        }
         if (isBellOpenRef.current) {
           const newItem: NotificationItem = {
             ...payload,

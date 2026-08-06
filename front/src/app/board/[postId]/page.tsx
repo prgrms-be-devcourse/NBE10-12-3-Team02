@@ -116,6 +116,19 @@ export default function PostDetailPage({
     return () => window.removeEventListener("auth-changed", syncAuth);
   }, []);
 
+  // 다른 사용자가 이 게시글에 좋아요를 눌렀을 때, 알림 SSE(Navbar)가 쏘는 이벤트를
+  // 받아 새로고침 없이 좋아요 수를 실시간으로 반영한다.
+  useEffect(() => {
+    const onPostLiked = (e: Event) => {
+      const detail = (e as CustomEvent<{ postId: number }>).detail;
+      if (detail?.postId === Number(postId)) {
+        setLikeCount((c) => c + 1);
+      }
+    };
+    window.addEventListener("post-liked", onPostLiked);
+    return () => window.removeEventListener("post-liked", onPostLiked);
+  }, [postId]);
+
   useEffect(() => {
     restoreSession().then(() => {
       setPostLoading(true);
