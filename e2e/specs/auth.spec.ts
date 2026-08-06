@@ -1,8 +1,13 @@
 import { test, expect } from '@playwright/test';
 import { LoginPage } from '../pages/LoginPage.js';
 import { MyPage } from '../pages/MyPage.js';
+import { resetTestDatabase } from '../test-hooks.js';
 
 test.describe('E2E Auth & User Onboarding Flow', () => {
+  test.beforeEach(async ({ request }) => {
+    await resetTestDatabase(request);
+  });
+
   test('로그인 페이지 렌더링 및 입력 폼 동작 검증', async ({ page }) => {
     const loginPage = new LoginPage(page);
     await loginPage.goto();
