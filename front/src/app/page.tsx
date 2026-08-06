@@ -275,7 +275,7 @@ function HomeContent() {
                     className="relative flex h-[28rem] overflow-hidden bg-gray-900"
                   >
                     {/* 배너 전체에 깔리는 흐린 포스터 배경 (왼쪽/오른쪽이 하나로 이어져 보이도록) */}
-                    {concert.imageUrl && (
+                    {concert.posterUrl && (
                       <PosterImage
                         fill
                         unoptimized
@@ -297,7 +297,7 @@ function HomeContent() {
                         minWidth: 220,
                       }}
                     >
-                      {concert.imageUrl ? (
+                      {concert.posterUrl ? (
                         <PosterImage
                           fill
                           unoptimized
@@ -454,7 +454,7 @@ function HomeContent() {
                   className="bg-white rounded-2xl shadow-sm overflow-hidden hover:shadow-lg hover:-translate-y-1 transition-all duration-200 cursor-pointer flex flex-col"
                 >
                   <div className="h-48 bg-gradient-to-br from-blue-200 to-indigo-300 flex items-center justify-center text-white font-bold relative overflow-hidden">
-                    {concert.imageUrl ? (
+                    {concert.posterUrl ? (
                       <PosterImage
                         fill
                         unoptimized

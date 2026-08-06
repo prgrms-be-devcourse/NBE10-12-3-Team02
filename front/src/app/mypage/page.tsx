@@ -1050,7 +1050,7 @@ function MyPageContent() {
                           className="w-full flex shadow-md rounded-2xl overflow-hidden text-left hover:shadow-lg transition cursor-pointer"
                         >
                           <div className="flex-shrink-0 w-36 relative aspect-[3/4] bg-gradient-to-br from-blue-200 to-indigo-300 flex items-center justify-center text-white font-bold text-sm overflow-hidden">
-                            {group.urlPoster ? (
+                            {group.posterUrl ? (
                               <PosterImage
                                 fill
                                 unoptimized

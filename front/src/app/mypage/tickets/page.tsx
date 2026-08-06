@@ -163,7 +163,7 @@ function TicketDetailContent() {
               className="ticket-face ticket-face-mask absolute inset-0 shadow-xl overflow-hidden bg-gray-900"
               style={{ backfaceVisibility: "hidden" }}
             >
-              {group.urlPoster ? (
+              {group.posterUrl ? (
                 <PosterImage
                   fill
                   unoptimized
