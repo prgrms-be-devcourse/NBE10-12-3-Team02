@@ -153,9 +153,9 @@ function MyPageContent() {
           </div>
         </div>
 
-        <div className="flex gap-6 items-start">
-          <nav className="w-48 shrink-0">
-            <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
+        <div className="flex flex-col md:flex-row md:items-start gap-6">
+          <nav className="w-full md:w-48 shrink-0">
+            <div className="bg-white rounded-2xl shadow-sm overflow-hidden flex md:block">
               {(
                 [
                   { key: "info", label: "내 정보" },
@@ -169,7 +169,7 @@ function MyPageContent() {
                     setActiveTab(tab.key);
                     router.replace(`/mypage?tab=${tab.key}`, { scroll: false });
                   }}
-                  className={`w-full text-left px-4 py-3.5 text-sm font-semibold border-l-4 transition ${
+                  className={`flex-1 md:w-full text-center md:text-left px-4 py-3.5 text-sm font-semibold transition border-b-2 md:border-b-0 md:border-l-4 ${
                     activeTab === tab.key
                       ? "border-blue-600 bg-blue-50 text-blue-700"
                       : "border-transparent text-gray-600 hover:bg-gray-50"
