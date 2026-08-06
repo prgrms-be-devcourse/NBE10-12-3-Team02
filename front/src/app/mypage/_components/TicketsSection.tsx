@@ -171,9 +171,9 @@ export function TicketsSection({
                 onClick={() => goToTicketDetail(group)}
                 role="button"
                 tabIndex={0}
-                className="w-full flex shadow-md rounded-2xl overflow-hidden text-left hover:shadow-lg transition cursor-pointer"
+                className="w-full flex flex-col md:flex-row shadow-md rounded-2xl overflow-hidden text-left hover:shadow-lg transition cursor-pointer"
               >
-                <div className="flex-shrink-0 w-36 relative aspect-[3/4] bg-gradient-to-br from-blue-200 to-indigo-300 flex items-center justify-center text-white font-bold text-sm overflow-hidden">
+                <div className="self-center md:self-auto flex-shrink-0 w-36 relative aspect-[3/4] bg-gradient-to-br from-blue-200 to-indigo-300 flex items-center justify-center text-white font-bold text-sm overflow-hidden">
                   {group.posterUrl ? (
                     <Image
                       fill
@@ -187,10 +187,10 @@ export function TicketsSection({
                     "포스터"
                   )}
                 </div>
-                <div className="border-l-2 border-dashed border-gray-200 my-4" />
-                <div className="flex-1 bg-white p-6">
+                <div className="border-t-2 md:border-t-0 md:border-l-2 border-dashed border-gray-200 mx-6 md:mx-0 md:my-4" />
+                <div className="flex-1 min-w-0 bg-white p-4 md:p-6">
                   <div className="flex justify-between items-start mb-3">
-                    <h3 className="font-bold text-gray-800 text-lg">
+                    <h3 className="font-bold text-gray-800 text-lg min-w-0">
                       {group.concertName}
                     </h3>
                     <div className="flex items-center gap-2">
