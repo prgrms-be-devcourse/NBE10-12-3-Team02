@@ -1,5 +1,7 @@
 package com.back.domain.follow.dto
 
+import com.fasterxml.jackson.annotation.JsonProperty
+
 data class FollowStatusResponse(
-    val isFollowing: Boolean,
+    @get:JsonProperty("isFollowing") val isFollowing: Boolean,
 )
