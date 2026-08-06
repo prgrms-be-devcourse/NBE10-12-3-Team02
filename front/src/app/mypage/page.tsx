@@ -147,6 +147,53 @@ const PROVIDER_LABELS: Record<string, string> = {
   GOOGLE: "Google",
 };
 
+function renderPagination(
+  currentPage: number,
+  totalPages: number,
+  onPageChange: (page: number) => void,
+  basePage: 0 | 1 = 1,
+) {
+  if (totalPages <= 1) return null;
+  const firstPage = basePage;
+  const lastPage = basePage + totalPages - 1;
+  return (
+    <div className="flex items-center justify-center gap-2 mt-8">
+      <button
+        type="button"
+        onClick={() => onPageChange(Math.max(firstPage, currentPage - 1))}
+        disabled={currentPage === firstPage}
+        className="px-3 py-2 rounded-lg border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-default"
+      >
+        이전
+      </button>
+      {Array.from({ length: totalPages }, (_, i) => firstPage + i).map(
+        (page) => (
+          <button
+            type="button"
+            key={page}
+            onClick={() => onPageChange(page)}
+            className={`w-10 h-10 rounded-lg border text-sm font-semibold ${
+              currentPage === page
+                ? "bg-blue-600 border-blue-600 text-white"
+                : "bg-white border-gray-200 text-gray-600 hover:bg-gray-50"
+            }`}
+          >
+            {page - basePage + 1}
+          </button>
+        ),
+      )}
+      <button
+        type="button"
+        onClick={() => onPageChange(Math.min(lastPage, currentPage + 1))}
+        disabled={currentPage === lastPage}
+        className="px-3 py-2 rounded-lg border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-default"
+      >
+        다음
+      </button>
+    </div>
+  );
+}
+
 function RatingStars({ rating }: { rating: number }) {
   return (
     <div className="flex items-center gap-0.5">
@@ -1126,37 +1173,7 @@ function MyPageContent() {
                   </div>
                 )}
 
-                {totalPages > 1 && (
-                  <div className="flex items-center justify-center gap-2 mt-8">
-                    <button
-                      onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                      disabled={currentPage === 1}
-                      className="px-3 py-2 rounded-lg border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-default"
-                    >
-                      이전
-                    </button>
-                    {Array.from({ length: totalPages }, (_, i) => i + 1).map(
-                      (page) => (
-                        <button
-                          key={page}
-                          onClick={() => setCurrentPage(page)}
-                          className={`w-10 h-10 rounded-lg border text-sm font-semibold ${currentPage === page ? "bg-blue-600 border-blue-600 text-white" : "bg-white border-gray-200 text-gray-600 hover:bg-gray-50"}`}
-                        >
-                          {page}
-                        </button>
-                      ),
-                    )}
-                    <button
-                      onClick={() =>
-                        setCurrentPage((p) => Math.min(totalPages, p + 1))
-                      }
-                      disabled={currentPage === totalPages}
-                      className="px-3 py-2 rounded-lg border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-default"
-                    >
-                      다음
-                    </button>
-                  </div>
-                )}
+                {renderPagination(currentPage, totalPages, setCurrentPage)}
               </div>
             )}
 
@@ -1247,36 +1264,7 @@ function MyPageContent() {
                         ))}
                       </div>
                     )}
-                    {myPostsTotalPages > 1 && (
-                      <div className="flex items-center justify-center gap-2 mt-8">
-                        <button
-                          onClick={() => fetchMyPosts(myPostsPage - 1)}
-                          disabled={myPostsPage === 0}
-                          className="px-3 py-2 rounded-lg border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-default"
-                        >
-                          이전
-                        </button>
-                        {Array.from(
-                          { length: myPostsTotalPages },
-                          (_, i) => i,
-                        ).map((page) => (
-                          <button
-                            key={page}
-                            onClick={() => fetchMyPosts(page)}
-                            className={`w-10 h-10 rounded-lg border text-sm font-semibold ${myPostsPage === page ? "bg-blue-600 border-blue-600 text-white" : "bg-white border-gray-200 text-gray-600 hover:bg-gray-50"}`}
-                          >
-                            {page + 1}
-                          </button>
-                        ))}
-                        <button
-                          onClick={() => fetchMyPosts(myPostsPage + 1)}
-                          disabled={myPostsPage >= myPostsTotalPages - 1}
-                          className="px-3 py-2 rounded-lg border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-default"
-                        >
-                          다음
-                        </button>
-                      </div>
-                    )}
+                    {renderPagination(myPostsPage, myPostsTotalPages, fetchMyPosts, 0)}
                   </>
                 )}
 
@@ -1340,36 +1328,7 @@ function MyPageContent() {
                         ))}
                       </div>
                     )}
-                    {bookmarksTotalPages > 1 && (
-                      <div className="flex items-center justify-center gap-2 mt-8">
-                        <button
-                          onClick={() => fetchBookmarks(bookmarksPage - 1)}
-                          disabled={bookmarksPage === 0}
-                          className="px-3 py-2 rounded-lg border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-default"
-                        >
-                          이전
-                        </button>
-                        {Array.from(
-                          { length: bookmarksTotalPages },
-                          (_, i) => i,
-                        ).map((page) => (
-                          <button
-                            key={page}
-                            onClick={() => fetchBookmarks(page)}
-                            className={`w-10 h-10 rounded-lg border text-sm font-semibold ${bookmarksPage === page ? "bg-blue-600 border-blue-600 text-white" : "bg-white border-gray-200 text-gray-600 hover:bg-gray-50"}`}
-                          >
-                            {page + 1}
-                          </button>
-                        ))}
-                        <button
-                          onClick={() => fetchBookmarks(bookmarksPage + 1)}
-                          disabled={bookmarksPage >= bookmarksTotalPages - 1}
-                          className="px-3 py-2 rounded-lg border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-default"
-                        >
-                          다음
-                        </button>
-                      </div>
-                    )}
+                    {renderPagination(bookmarksPage, bookmarksTotalPages, fetchBookmarks, 0)}
                   </>
                 )}
 
@@ -1433,36 +1392,7 @@ function MyPageContent() {
                         ))}
                       </div>
                     )}
-                    {likesTotalPages > 1 && (
-                      <div className="flex items-center justify-center gap-2 mt-8">
-                        <button
-                          onClick={() => fetchLikes(likesPage - 1)}
-                          disabled={likesPage === 0}
-                          className="px-3 py-2 rounded-lg border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-default"
-                        >
-                          이전
-                        </button>
-                        {Array.from(
-                          { length: likesTotalPages },
-                          (_, i) => i,
-                        ).map((page) => (
-                          <button
-                            key={page}
-                            onClick={() => fetchLikes(page)}
-                            className={`w-10 h-10 rounded-lg border text-sm font-semibold ${likesPage === page ? "bg-blue-600 border-blue-600 text-white" : "bg-white border-gray-200 text-gray-600 hover:bg-gray-50"}`}
-                          >
-                            {page + 1}
-                          </button>
-                        ))}
-                        <button
-                          onClick={() => fetchLikes(likesPage + 1)}
-                          disabled={likesPage >= likesTotalPages - 1}
-                          className="px-3 py-2 rounded-lg border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-default"
-                        >
-                          다음
-                        </button>
-                      </div>
-                    )}
+                    {renderPagination(likesPage, likesTotalPages, fetchLikes, 0)}
                   </>
                 )}
               </div>

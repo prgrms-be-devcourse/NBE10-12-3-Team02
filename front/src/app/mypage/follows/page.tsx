@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { apiFetch, decodeToken, restoreSession } from "@/lib/api";
 import { showAlert } from "@/lib/alert";
 import { formatDateTime } from "@/lib/date";
+import Pagination from "@/app/components/Pagination";
 
 interface FollowUser {
   userId: number;
@@ -174,37 +175,12 @@ export default function MyFollowsPage() {
             </div>
           )}
 
-          {totalPages > 1 && (
-            <div className="flex items-center justify-center gap-2 mt-8">
-              <button
-                onClick={() => fetchList(tab, page - 1)}
-                disabled={page === 0}
-                className="px-3 py-2 rounded-lg border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-default"
-              >
-                이전
-              </button>
-              {Array.from({ length: totalPages }, (_, i) => i).map((p) => (
-                <button
-                  key={p}
-                  onClick={() => fetchList(tab, p)}
-                  className={`w-10 h-10 rounded-lg border text-sm font-semibold ${
-                    page === p
-                      ? "bg-blue-600 border-blue-600 text-white"
-                      : "bg-white border-gray-200 text-gray-600 hover:bg-gray-50"
-                  }`}
-                >
-                  {p + 1}
-                </button>
-              ))}
-              <button
-                onClick={() => fetchList(tab, page + 1)}
-                disabled={page >= totalPages - 1}
-                className="px-3 py-2 rounded-lg border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-default"
-              >
-                다음
-              </button>
-            </div>
-          )}
+          <Pagination
+            currentPage={page}
+            totalPages={totalPages}
+            onPageChange={(p) => fetchList(tab, p)}
+            basePage={0}
+          />
         </div>
       </div>
     </div>
