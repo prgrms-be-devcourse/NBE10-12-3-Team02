@@ -3,6 +3,7 @@
 import { showAlert } from "@/lib/alert";
 import ConcertPostSection from "./ConcertPostSection";
 import ShareButton from "@/app/components/ShareButton";
+import PosterImage from "@/app/components/PosterImage";
 import { apiFetch, decodeToken } from "@/lib/api";
 import {
   getConcertDetailImages,
@@ -18,10 +19,11 @@ interface ConcertDetail {
   description: string;
   venueName: string;
   location: string;
-  urlPoster: string;
+  posterUrl: string;
   detailUrlList: string[];
   prices: Record<string, number>;
   bookable: boolean;
+  reviewSummary: string | null;
 }
 
 interface ScheduleItem {
@@ -101,8 +103,8 @@ export default function ConcertDetailPage({
     );
   }
 
-  const posterUrl = getLocalConcertPoster(concert.urlPoster);
-  const detailImages = getConcertDetailImages(concert.urlPoster);
+  const posterUrl = getLocalConcertPoster(concert.posterUrl);
+  const detailImages = getConcertDetailImages(concert.posterUrl);
   const mapQuery = encodeURIComponent(
     `${stripVenuePrefix(concert.venueName)} ${concert.location}`,
   );
@@ -116,7 +118,7 @@ export default function ConcertDetailPage({
             <div className="md:w-1/3 flex flex-col">
               <div className="w-full relative aspect-[3/4] bg-gradient-to-br from-blue-200 to-indigo-300 flex items-center justify-center text-white font-bold text-xl overflow-hidden">
                 {posterUrl ? (
-                  <Image
+                  <PosterImage
                     unoptimized
                     priority
                     loading="eager"
@@ -194,6 +196,15 @@ export default function ConcertDetailPage({
                   {concert.description}
                 </p>
               </div>
+
+              {concert.reviewSummary && (
+                <div className="mb-6">
+                  <h2 className="font-bold text-gray-700 mb-2">✨ AI 요약</h2>
+                  <p className="text-xs text-indigo-600 bg-indigo-50 border border-indigo-100 rounded-lg px-3 py-2 leading-relaxed whitespace-pre-line">
+                    {concert.reviewSummary}
+                  </p>
+                </div>
+              )}
 
               <div className="mb-6">
                 <h2 className="font-bold text-gray-700 mb-2">

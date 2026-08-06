@@ -36,6 +36,11 @@ class Concert(
     var urlPoster: String? = urlPoster
         protected set
 
+    // REVIEW가 3건 이상 모이기 전까지는 null이다.
+    @Column(length = 1000)
+    var reviewSummary: String? = null
+        protected set
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     val concertId: Long? = null
@@ -45,6 +50,10 @@ class Concert(
         get() = checkNotNull(concertId) { "concertId must not be null after persist" }
 
     fun isBookable(): Boolean = endDate.isAfter(LocalDateTime.now())
+
+    fun applyReviewSummary(summary: String) {
+        this.reviewSummary = summary
+    }
 
     companion object {
         fun create(

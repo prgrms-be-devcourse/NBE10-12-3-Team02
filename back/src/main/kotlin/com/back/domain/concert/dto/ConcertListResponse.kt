@@ -9,7 +9,7 @@ data class ConcertListResponse(
     val venueName: String,
     val startDate: LocalDateTime,
     val endDate: LocalDateTime,
-    val imageUrl: String?,
+    val posterUrl: String?,
     val status: String
 ) {
     companion object {
@@ -19,7 +19,7 @@ data class ConcertListResponse(
             venueName = venueName,
             startDate = concert.startDate,
             endDate = concert.endDate,
-            imageUrl = concert.urlPoster,
+            posterUrl = concert.urlPoster,
             status = if (concert.endDate.isAfter(LocalDateTime.now())) "AVAILABLE" else "CLOSED"
         )
     }

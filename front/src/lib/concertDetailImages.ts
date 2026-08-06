@@ -101,14 +101,14 @@ export function extractKopisId(url?: string | null) {
   );
 }
 
-export function getLocalConcertPoster(urlPoster?: string | null) {
-  const kopisId = extractKopisId(urlPoster);
+export function getLocalConcertPoster(posterUrl?: string | null) {
+  const kopisId = extractKopisId(posterUrl);
   return kopisId
-    ? (CONCERT_POSTER_IMAGES[kopisId] ?? urlPoster ?? "")
-    : (urlPoster ?? "");
+    ? (CONCERT_POSTER_IMAGES[kopisId] ?? posterUrl ?? "")
+    : (posterUrl ?? "");
 }
 
-export function getConcertDetailImages(urlPoster: string) {
-  const kopisId = extractKopisId(urlPoster);
+export function getConcertDetailImages(posterUrl: string) {
+  const kopisId = extractKopisId(posterUrl);
   return kopisId ? (CONCERT_DETAIL_IMAGES[kopisId] ?? []) : [];
 }

@@ -1,6 +1,6 @@
 package com.back.global.security.jwt.constant
 
 enum class RefreshTokenKeyType {
-    TOKEN,
+    FAMILY,
     INDEX
 }

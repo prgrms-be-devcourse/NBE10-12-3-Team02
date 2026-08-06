@@ -22,8 +22,9 @@ class JwtTokenProvider(
         return try {
             val payload = Ut.jwt.payload(refreshTokenSecret, refreshToken)
             val userId = getLongClaim(payload, "id")
+            val sessionId = getStringClaim(payload, "sid")
             val jti = getStringClaim(payload, "jti")
-            RefreshTokenPayload(userId, jti)
+            RefreshTokenPayload(userId, sessionId, jti)
         } catch (e: RuntimeException) {
             null
         }
@@ -75,12 +76,12 @@ class JwtTokenProvider(
         )
     }
 
-    fun createRefreshToken(user: User, jti: String): String {
+    fun createRefreshToken(user: User, sessionId: String, jti: String): String {
         val userId = user.userId ?: throw IllegalArgumentException("User ID must not be null")
         return Ut.jwt.toString(
             refreshTokenSecret,
             refreshTokenExpireSeconds,
-            mapOf("id" to userId, "name" to user.name, "jti" to jti)
+            mapOf("id" to userId, "name" to user.name, "sid" to sessionId, "jti" to jti)
         )
     }
 }

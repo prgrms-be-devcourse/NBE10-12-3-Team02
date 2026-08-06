@@ -55,11 +55,12 @@ class AuthService(
         val newAccessToken = jwtTokenProvider.createAccessToken(user)
 
         val newJti = UUID.randomUUID().toString()
-        val newRefreshToken = jwtTokenProvider.createRefreshToken(user, newJti)
+        val newRefreshToken = jwtTokenProvider.createRefreshToken(user, payload.sessionId, newJti)
         val newRefreshTokenHash = TokenHashUtil.sha256(newRefreshToken)
 
         val rotateResult = refreshTokenRepository.rotate(
             payload.userId,
+            payload.sessionId,
             payload.jti,
             requestRefreshTokenHash,
             newJti,
@@ -67,7 +68,7 @@ class AuthService(
             refreshTokenTtl()
         )
 
-        handleValidationFailure(rotateResult, payload.userId)
+        handleValidationFailure(rotateResult, payload.userId, payload.sessionId)
 
         return TokenResponse(newAccessToken, newRefreshToken)
     }
@@ -80,11 +81,12 @@ class AuthService(
 
         val result = refreshTokenRepository.verify(
             payload.userId,
+            payload.sessionId,
             payload.jti,
             requestRefreshTokenHash
         )
 
-        handleValidationFailure(result, payload.userId)
+        handleValidationFailure(result, payload.userId, payload.sessionId)
 
         val user = userRepository.findByUserIdAndDeletedAtIsNull(payload.userId)
             ?: throw ServiceException(ErrorCode.USER_NOT_FOUND)
@@ -92,13 +94,19 @@ class AuthService(
         return jwtTokenProvider.createAccessToken(user)
     }
 
-    private fun handleValidationFailure(validationResult: RefreshTokenValidationResult, userId: Long) {
+    private fun handleValidationFailure(
+        validationResult: RefreshTokenValidationResult,
+        userId: Long,
+        sessionId: String,
+    ) {
         when (validationResult) {
             RefreshTokenValidationResult.SUCCESS -> return
             RefreshTokenValidationResult.MISMATCH -> {
-                refreshTokenRepository.deleteAllByUserId(userId)
+                refreshTokenRepository.deleteFamily(userId, sessionId)
                 throw ServiceException(ErrorCode.AUTH_REFRESH_TOKEN_MISMATCH)
             }
+            RefreshTokenValidationResult.REUSED ->
+                throw ServiceException(ErrorCode.AUTH_REFRESH_TOKEN_MISMATCH)
             RefreshTokenValidationResult.NOT_FOUND ->
                 throw ServiceException(ErrorCode.AUTH_INVALID_REFRESH_TOKEN)
         }
@@ -108,7 +116,7 @@ class AuthService(
         if (refreshToken.isNullOrBlank()) return
         val payload = jwtTokenProvider.parseRefreshToken(refreshToken)
         if (payload != null) {
-            refreshTokenRepository.delete(payload.userId, payload.jti)
+            refreshTokenRepository.deleteFamily(payload.userId, payload.sessionId)
         }
     }
 
@@ -134,12 +142,14 @@ class AuthService(
         val userId = user.userId ?: throw IllegalArgumentException("User ID must not be null")
         val accessToken = jwtTokenProvider.createAccessToken(user)
 
+        val refreshTokenSessionId = UUID.randomUUID().toString()
         val refreshTokenJti = UUID.randomUUID().toString()
-        val refreshToken = jwtTokenProvider.createRefreshToken(user, refreshTokenJti)
+        val refreshToken = jwtTokenProvider.createRefreshToken(user, refreshTokenSessionId, refreshTokenJti)
         val refreshTokenHash = TokenHashUtil.sha256(refreshToken)
 
         refreshTokenRepository.save(
             userId,
+            refreshTokenSessionId,
             refreshTokenJti,
             refreshTokenHash,
             refreshTokenTtl()

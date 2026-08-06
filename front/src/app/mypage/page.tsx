@@ -17,7 +17,7 @@ import { showAlert, showConfirm, showSuccess, showError } from "@/lib/alert";
 import { getLocalConcertPoster } from "@/lib/concertDetailImages";
 import { formatDateTime } from "@/lib/date";
 import PasswordStrengthMeter from "@/app/components/PasswordStrengthMeter";
-import Pagination from "@/app/components/Pagination";
+import PosterImage from "@/app/components/PosterImage";
 
 interface TicketSummary {
   ticketId: number;
@@ -37,7 +37,7 @@ interface LegacyTicketSummary extends TicketSummary {
 interface TicketGroupInfo {
   scheduleId: number;
   concertName: string;
-  urlPoster: string;
+  posterUrl: string;
   startDate: string;
   endDate: string;
   round: number;
@@ -146,6 +146,53 @@ const PROVIDER_LABELS: Record<string, string> = {
   NAVER: "네이버",
   GOOGLE: "Google",
 };
+
+function renderPagination(
+  currentPage: number,
+  totalPages: number,
+  onPageChange: (page: number) => void,
+  basePage: 0 | 1 = 1,
+) {
+  if (totalPages <= 1) return null;
+  const firstPage = basePage;
+  const lastPage = basePage + totalPages - 1;
+  return (
+    <div className="flex items-center justify-center gap-2 mt-8">
+      <button
+        type="button"
+        onClick={() => onPageChange(Math.max(firstPage, currentPage - 1))}
+        disabled={currentPage === firstPage}
+        className="px-3 py-2 rounded-lg border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-default"
+      >
+        이전
+      </button>
+      {Array.from({ length: totalPages }, (_, i) => firstPage + i).map(
+        (page) => (
+          <button
+            type="button"
+            key={page}
+            onClick={() => onPageChange(page)}
+            className={`w-10 h-10 rounded-lg border text-sm font-semibold ${
+              currentPage === page
+                ? "bg-blue-600 border-blue-600 text-white"
+                : "bg-white border-gray-200 text-gray-600 hover:bg-gray-50"
+            }`}
+          >
+            {page - basePage + 1}
+          </button>
+        ),
+      )}
+      <button
+        type="button"
+        onClick={() => onPageChange(Math.min(lastPage, currentPage + 1))}
+        disabled={currentPage === lastPage}
+        className="px-3 py-2 rounded-lg border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-default"
+      >
+        다음
+      </button>
+    </div>
+  );
+}
 
 function RatingStars({ rating }: { rating: number }) {
   return (
@@ -1050,11 +1097,11 @@ function MyPageContent() {
                           className="w-full flex shadow-md rounded-2xl overflow-hidden text-left hover:shadow-lg transition cursor-pointer"
                         >
                           <div className="flex-shrink-0 w-36 relative aspect-[3/4] bg-gradient-to-br from-blue-200 to-indigo-300 flex items-center justify-center text-white font-bold text-sm overflow-hidden">
-                            {group.urlPoster ? (
-                              <Image
+                            {group.posterUrl ? (
+                              <PosterImage
                                 fill
                                 unoptimized
-                                src={getLocalConcertPoster(group.urlPoster)}
+                                src={getLocalConcertPoster(group.posterUrl)}
                                 alt={group.concertName}
                                 sizes="144px"
                                 className="object-cover"
@@ -1126,11 +1173,7 @@ function MyPageContent() {
                   </div>
                 )}
 
-                <Pagination
-                  currentPage={currentPage}
-                  totalPages={totalPages}
-                  onPageChange={setCurrentPage}
-                />
+                {renderPagination(currentPage, totalPages, setCurrentPage)}
               </div>
             )}
 
@@ -1221,12 +1264,7 @@ function MyPageContent() {
                         ))}
                       </div>
                     )}
-                    <Pagination
-                      currentPage={myPostsPage}
-                      totalPages={myPostsTotalPages}
-                      onPageChange={fetchMyPosts}
-                      basePage={0}
-                    />
+                    {renderPagination(myPostsPage, myPostsTotalPages, fetchMyPosts, 0)}
                   </>
                 )}
 
@@ -1260,7 +1298,7 @@ function MyPageContent() {
                           >
                             <div className="relative shrink-0 w-12 h-16 rounded-lg overflow-hidden bg-gradient-to-br from-blue-100 to-indigo-200 flex items-center justify-center">
                               {b.posterUrl ? (
-                                <Image
+                                <PosterImage
                                   fill
                                   unoptimized
                                   src={getLocalConcertPoster(b.posterUrl)}
@@ -1290,12 +1328,7 @@ function MyPageContent() {
                         ))}
                       </div>
                     )}
-                    <Pagination
-                      currentPage={bookmarksPage}
-                      totalPages={bookmarksTotalPages}
-                      onPageChange={fetchBookmarks}
-                      basePage={0}
-                    />
+                    {renderPagination(bookmarksPage, bookmarksTotalPages, fetchBookmarks, 0)}
                   </>
                 )}
 
@@ -1329,7 +1362,7 @@ function MyPageContent() {
                           >
                             <div className="relative shrink-0 w-12 h-16 rounded-lg overflow-hidden bg-gradient-to-br from-blue-100 to-indigo-200 flex items-center justify-center">
                               {l.posterUrl ? (
-                                <Image
+                                <PosterImage
                                   fill
                                   unoptimized
                                   src={getLocalConcertPoster(l.posterUrl)}
@@ -1359,12 +1392,7 @@ function MyPageContent() {
                         ))}
                       </div>
                     )}
-                    <Pagination
-                      currentPage={likesPage}
-                      totalPages={likesTotalPages}
-                      onPageChange={fetchLikes}
-                      basePage={0}
-                    />
+                    {renderPagination(likesPage, likesTotalPages, fetchLikes, 0)}
                   </>
                 )}
               </div>
